@@ -1,0 +1,13 @@
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### IDEs ###
+.idea/
+*.iml
+.vscode/
+
+### Mac OS ###
+.DS_Store
