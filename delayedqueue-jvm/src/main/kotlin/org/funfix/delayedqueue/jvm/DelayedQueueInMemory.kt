@@ -10,7 +10,6 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
-import org.funfix.tasks.jvm.Task
 
 /**
  * In-memory implementation of [DelayedQueue] using concurrent data structures.
@@ -308,7 +307,10 @@ private constructor(
         }
     }
 
-    private fun deleteOldCron(configHash: CronConfigHash, keyPrefix: String) {
+    /**
+     * Deletes messages with a specific config hash (current configuration). Used by uninstallTick.
+     */
+    private fun deleteCurrentCron(configHash: CronConfigHash, keyPrefix: String) {
         val keyPrefixWithHash = "$keyPrefix/${configHash.value}/"
         lock.withLock {
             val toRemove =
@@ -323,7 +325,35 @@ private constructor(
         }
     }
 
-    private fun deleteOldCronForPrefix(keyPrefix: String) {
+    /**
+     * Deletes OLD cron messages (those with DIFFERENT config hashes than the current one). Used by
+     * installTick to remove outdated configurations while preserving the current one. This avoids
+     * wasteful deletions when the configuration hasn't changed.
+     *
+     * This matches the JDBC implementation contract.
+     */
+    private fun deleteOldCron(configHash: CronConfigHash, keyPrefix: String) {
+        val keyPrefixWithSlash = "$keyPrefix/"
+        val currentHashPrefix = "$keyPrefix/${configHash.value}/"
+        lock.withLock {
+            val toRemove =
+                map.entries.filter { (key, msg) ->
+                    key.startsWith(keyPrefixWithSlash) &&
+                        !key.startsWith(currentHashPrefix) &&
+                        msg.deliveryType == DeliveryType.FIRST_DELIVERY
+                }
+            for ((key, msg) in toRemove) {
+                map.remove(key)
+                order.remove(msg)
+            }
+        }
+    }
+
+    /**
+     * Deletes ALL messages with a given prefix (ignoring config hash). Only used by the periodic
+     * install methods that need to clear everything.
+     */
+    private fun deleteAllForPrefix(keyPrefix: String) {
         val keyPrefixWithSlash = "$keyPrefix/"
         lock.withLock {
             val toRemove =
@@ -338,142 +368,15 @@ private constructor(
         }
     }
 
-    private val cronService =
-        object : CronService<A> {
-            override fun installTick(
-                configHash: CronConfigHash,
-                keyPrefix: String,
-                messages: List<CronMessage<A>>,
-            ) {
-                deleteOldCronForPrefix(keyPrefix)
-                for (cronMsg in messages) {
-                    val scheduledMsg = cronMsg.toScheduled(configHash, keyPrefix, canUpdate = false)
-                    offerIfNotExists(
-                        scheduledMsg.key,
-                        scheduledMsg.payload,
-                        scheduledMsg.scheduleAt,
-                    )
-                }
-            }
-
-            override fun uninstallTick(configHash: CronConfigHash, keyPrefix: String) {
-                deleteOldCron(configHash, keyPrefix)
-            }
-
-            override fun install(
-                configHash: CronConfigHash,
-                keyPrefix: String,
-                scheduleInterval: Duration,
-                generateMany: CronMessageBatchGenerator<A>,
-            ): AutoCloseable {
-                require(!scheduleInterval.isZero && !scheduleInterval.isNegative) {
-                    "scheduleInterval must be positive"
-                }
-                return installLoop(
-                    configHash = configHash,
-                    keyPrefix = keyPrefix,
-                    scheduleInterval = scheduleInterval,
-                    generateMany = generateMany,
-                )
-            }
-
-            override fun installDailySchedule(
-                keyPrefix: String,
-                schedule: CronDailySchedule,
-                generator: CronMessageGenerator<A>,
-            ): AutoCloseable {
-                return installLoop(
-                    configHash = CronConfigHash.fromDailyCron(schedule),
-                    keyPrefix = keyPrefix,
-                    scheduleInterval = schedule.scheduleInterval,
-                    generateMany = { now ->
-                        val times = schedule.getNextTimes(now)
-                        val batch = ArrayList<CronMessage<A>>(times.size)
-                        for (time in times) {
-                            batch.add(generator(time))
-                        }
-                        Collections.unmodifiableList(batch)
-                    },
-                )
-            }
-
-            override fun installPeriodicTick(
-                keyPrefix: String,
-                period: Duration,
-                generator: CronPayloadGenerator<A>,
-            ): AutoCloseable {
-                require(!period.isZero && !period.isNegative) { "period must be positive" }
-                val scheduleInterval = Duration.ofSeconds(1).coerceAtLeast(period.dividedBy(4))
-                return installLoop(
-                    configHash = CronConfigHash.fromPeriodicTick(period),
-                    keyPrefix = keyPrefix,
-                    scheduleInterval = scheduleInterval,
-                    generateMany = { now ->
-                        val periodMillis = period.toMillis()
-                        val timestamp =
-                            Instant.ofEpochMilli(
-                                ((now.toEpochMilli() + periodMillis) / periodMillis) * periodMillis
-                            )
-                        listOf(
-                            CronMessage(
-                                payload = generator.invoke(timestamp),
-                                scheduleAt = timestamp,
-                            )
-                        )
-                    },
-                )
-            }
-
-            private fun installLoop(
-                configHash: CronConfigHash,
-                keyPrefix: String,
-                scheduleInterval: Duration,
-                generateMany: CronMessageBatchGenerator<A>,
-            ): AutoCloseable {
-                val task =
-                    Task.fromBlockingIO {
-                        var isFirst = true
-                        while (!Thread.interrupted()) {
-                            try {
-                                val now = clock.instant()
-                                val messages = generateMany(now)
-                                val canUpdate = isFirst
-                                isFirst = false
-
-                                deleteOldCronForPrefix(keyPrefix)
-                                for (cronMsg in messages) {
-                                    val scheduledMsg =
-                                        cronMsg.toScheduled(configHash, keyPrefix, canUpdate)
-                                    if (canUpdate) {
-                                        offerOrUpdate(
-                                            scheduledMsg.key,
-                                            scheduledMsg.payload,
-                                            scheduledMsg.scheduleAt,
-                                        )
-                                    } else {
-                                        offerIfNotExists(
-                                            scheduledMsg.key,
-                                            scheduledMsg.payload,
-                                            scheduledMsg.scheduleAt,
-                                        )
-                                    }
-                                }
-
-                                Thread.sleep(scheduleInterval.toMillis())
-                            } catch (_: InterruptedException) {
-                                Thread.currentThread().interrupt()
-                                break
-                            }
-                        }
-                    }
-
-                val fiber = task.runFiber()
-                return AutoCloseable {
-                    fiber.cancel()
-                    fiber.joinBlockingUninterruptible()
-                }
-            }
-        }
+    private val cronService: CronService<A> =
+        org.funfix.delayedqueue.jvm.internals.CronServiceImpl(
+            queue = this,
+            clock = clock,
+            deleteCurrentCron = { configHash, keyPrefix ->
+                deleteCurrentCron(configHash, keyPrefix)
+            },
+            deleteOldCron = { configHash, keyPrefix -> deleteOldCron(configHash, keyPrefix) },
+        )
 
     /** Internal message representation with metadata. */
     private data class Message<A>(

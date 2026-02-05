@@ -73,7 +73,7 @@ public class CronServiceTest {
     }
     
     @Test
-    public void installTick_deletesOldMessagesWithSamePrefix() throws InterruptedException, SQLException {
+    public void installTick_deletesOldMessagesWithDifferentHash() throws InterruptedException, SQLException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -81,23 +81,24 @@ public class CronServiceTest {
             clock
         );
         
-        var configHash = CronConfigHash.fromPeriodicTick(Duration.ofHours(1));
+        var oldHash = CronConfigHash.fromPeriodicTick(Duration.ofHours(1));
+        var newHash = CronConfigHash.fromPeriodicTick(Duration.ofHours(2));
         
-        // Install first set of messages
-        queue.getCron().installTick(configHash, "prefix-", List.of(
+        // Install first set of messages with oldHash
+        queue.getCron().installTick(oldHash, "prefix-", List.of(
             new CronMessage<>("old-msg", clock.now().plusSeconds(5))
         ));
         
-        var oldKey = CronMessage.key(configHash, "prefix-", clock.now().plusSeconds(5));
+        var oldKey = CronMessage.key(oldHash, "prefix-", clock.now().plusSeconds(5));
         assertTrue(queue.containsMessage(oldKey));
         
-        // Install new set - should delete old ones
-        queue.getCron().installTick(configHash, "prefix-", List.of(
+        // Install new set with newHash - should delete old ones (different hash)
+        queue.getCron().installTick(newHash, "prefix-", List.of(
             new CronMessage<>("new-msg", clock.now().plusSeconds(10))
         ));
         
         assertFalse(queue.containsMessage(oldKey));
-        var newKey = CronMessage.key(configHash, "prefix-", clock.now().plusSeconds(10));
+        var newKey = CronMessage.key(newHash, "prefix-", clock.now().plusSeconds(10));
         assertTrue(queue.containsMessage(newKey));
     }
 
@@ -470,7 +471,7 @@ public class CronServiceTest {
     }
     
     @Test
-    public void installTick_withEmptyList_deletesOldMessages() throws InterruptedException, SQLException {
+    public void installTick_withEmptyList_keepsMessagesWithSameHash() throws InterruptedException, SQLException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -487,11 +488,11 @@ public class CronServiceTest {
         var key = CronMessage.key(configHash, "cron-", clock.now().plusSeconds(10));
         assertTrue(queue.containsMessage(key));
         
-        // Install empty list
+        // Install empty list with SAME hash - old messages are NOT deleted (same hash)
         queue.getCron().installTick(configHash, "cron-", List.of());
         
-        // Old message should be deleted
-        assertFalse(queue.containsMessage(key));
+        // Old message should still exist (same hash = no deletion)
+        assertTrue(queue.containsMessage(key));
     }
 
     @Test

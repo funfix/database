@@ -167,8 +167,8 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
     }
 
     /**
-     * Deletes cron messages matching a specific config hash and key prefix. Used to clean up
-     * current cron configuration.
+     * Deletes cron messages matching a specific config hash and key prefix. Used by uninstallTick
+     * to remove the current cron configuration.
      */
     fun deleteCurrentCron(
         connection: Connection,
@@ -185,8 +185,22 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
     }
 
     /**
-     * Deletes old cron messages (those with a different config hash). Used when cron configuration
-     * changes.
+     * Deletes ALL cron messages with a given prefix (ignoring config hash). This is used as a
+     * fallback or for complete cleanup of a prefix.
+     */
+    fun deleteAllForPrefix(connection: Connection, kind: String, keyPrefix: String): Int {
+        val sql = "DELETE FROM $tableName WHERE pKind = ? AND pKey LIKE ?"
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, kind)
+            stmt.setString(2, "$keyPrefix/%")
+            stmt.executeUpdate()
+        }
+    }
+
+    /**
+     * Deletes OLD cron messages (those with a DIFFERENT config hash than the current one). Used by
+     * installTick to remove outdated configurations while preserving the current one. This avoids
+     * wasteful deletions when the configuration hasn't changed.
      */
     fun deleteOldCron(
         connection: Connection,

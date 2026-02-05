@@ -1,8 +1,6 @@
 package org.funfix.delayedqueue.jvm
 
-/**
- * CronService contract tests for in-memory implementation.
- */
+/** CronService contract tests for in-memory implementation. */
 class CronServiceInMemoryContractTest : CronServiceContractTest() {
     override fun createQueue(clock: TestClock): DelayedQueue<String> =
         DelayedQueueInMemory.create(

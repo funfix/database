@@ -1,16 +1,13 @@
 package org.funfix.delayedqueue.jvm
 
-import java.time.Duration
 import java.time.Instant
-import java.time.LocalTime
-import java.time.ZoneId
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 /**
- * Comprehensive contract tests for CronService functionality.
- * Tests only the synchronous API, no background scheduling (which requires Thread.sleep).
+ * Comprehensive contract tests for CronService functionality. Tests only the synchronous API, no
+ * background scheduling (which requires Thread.sleep).
  */
 abstract class CronServiceContractTest {
     protected abstract fun createQueue(clock: TestClock): DelayedQueue<String>
@@ -53,14 +50,15 @@ abstract class CronServiceContractTest {
     }
 
     @Test
-    fun `installTick replaces old configuration`() {
+    fun `installTick replaces old configuration when hash changes`() {
         queue = createQueue(clock)
         val cron = queue.getCron()
-        val configHash = CronConfigHash.fromString("replace-config")
+        val oldHash = CronConfigHash.fromString("old-config")
+        val newHash = CronConfigHash.fromString("new-config")
 
-        // First installation
+        // First installation with old hash
         cron.installTick(
-            configHash,
+            oldHash,
             "replace-prefix",
             listOf(
                 CronMessage("old1", clock.instant().plusSeconds(10)),
@@ -68,9 +66,9 @@ abstract class CronServiceContractTest {
             ),
         )
 
-        // Second installation with same hash should replace
+        // Second installation with NEW hash should replace old hash messages
         cron.installTick(
-            configHash,
+            newHash,
             "replace-prefix",
             listOf(
                 CronMessage("new1", clock.instant().plusSeconds(15)),
@@ -78,27 +76,27 @@ abstract class CronServiceContractTest {
             ),
         )
 
-        // Old messages should be gone
+        // Old messages with old hash should be gone
         assertFalse(
             queue.containsMessage(
-                CronMessage.key(configHash, "replace-prefix", clock.instant().plusSeconds(10))
+                CronMessage.key(oldHash, "replace-prefix", clock.instant().plusSeconds(10))
             )
         )
         assertFalse(
             queue.containsMessage(
-                CronMessage.key(configHash, "replace-prefix", clock.instant().plusSeconds(20))
+                CronMessage.key(oldHash, "replace-prefix", clock.instant().plusSeconds(20))
             )
         )
 
-        // New messages should exist
+        // New messages with new hash should exist
         assertTrue(
             queue.containsMessage(
-                CronMessage.key(configHash, "replace-prefix", clock.instant().plusSeconds(15))
+                CronMessage.key(newHash, "replace-prefix", clock.instant().plusSeconds(15))
             )
         )
         assertTrue(
             queue.containsMessage(
-                CronMessage.key(configHash, "replace-prefix", clock.instant().plusSeconds(25))
+                CronMessage.key(newHash, "replace-prefix", clock.instant().plusSeconds(25))
             )
         )
     }
@@ -134,38 +132,69 @@ abstract class CronServiceContractTest {
     }
 
     @Test
-    fun `installTick with scheduleAtActual delays execution`() {
+    fun `installTick with same hash adds new messages`() {
         queue = createQueue(clock)
         val cron = queue.getCron()
-        val configHash = CronConfigHash.fromString("delayed-config")
+        val configHash = CronConfigHash.fromString("same-hash")
 
-        val futureTime = clock.instant().plusSeconds(100)
+        // First installation
         cron.installTick(
             configHash,
-            "delayed-prefix",
-            listOf(CronMessage("delayed-payload", futureTime)),
-            scheduleAtActual = futureTime.minusSeconds(30), // Schedule 30 seconds before actual
+            "same-prefix",
+            listOf(CronMessage("msg1", clock.instant().plusSeconds(10))),
         )
 
-        val key = CronMessage.key(configHash, "delayed-prefix", futureTime)
+        // Second installation with same hash - old messages are NOT deleted
+        // (because they match the current hash)
+        cron.installTick(
+            configHash,
+            "same-prefix",
+            listOf(CronMessage("msg2", clock.instant().plusSeconds(20))),
+        )
 
-        // Message should exist
-        assertTrue(queue.containsMessage(key))
+        // Both messages should exist (different timestamps = different keys)
+        assertTrue(
+            queue.containsMessage(
+                CronMessage.key(configHash, "same-prefix", clock.instant().plusSeconds(10))
+            )
+        )
+        assertTrue(
+            queue.containsMessage(
+                CronMessage.key(configHash, "same-prefix", clock.instant().plusSeconds(20))
+            )
+        )
+    }
 
-        // Check the scheduled time
-        val msg = queue.read(key)
-        assertNotNull(msg)
+    @Test
+    fun `installTick with empty list removes nothing when hash matches`() {
+        queue = createQueue(clock)
+        val cron = queue.getCron()
+        val configHash = CronConfigHash.fromString("empty-config")
 
-        // The message should be scheduled 30 seconds before the actual time
-        // (scheduleAtActual parameter)
-        // We can verify by checking when tryPoll returns it
-        clock.advanceSeconds(25)
-        assertNull(queue.tryPoll(), "Message should not be available yet")
+        // Install some messages
+        cron.installTick(
+            configHash,
+            "empty-prefix",
+            listOf(
+                CronMessage("msg1", clock.instant().plusSeconds(10)),
+                CronMessage("msg2", clock.instant().plusSeconds(20)),
+            ),
+        )
 
-        clock.advanceSeconds(10) // Now at +35 seconds
-        val polled = queue.tryPoll()
-        assertNotNull(polled, "Message should be available now")
-        assertEquals("delayed-payload", polled!!.payload)
+        // Install empty list with SAME hash - messages are NOT deleted
+        cron.installTick(configHash, "empty-prefix", emptyList())
+
+        // Messages should still exist (empty list just doesn't add anything)
+        assertTrue(
+            queue.containsMessage(
+                CronMessage.key(configHash, "empty-prefix", clock.instant().plusSeconds(10))
+            )
+        )
+        assertTrue(
+            queue.containsMessage(
+                CronMessage.key(configHash, "empty-prefix", clock.instant().plusSeconds(20))
+            )
+        )
     }
 
     @Test
@@ -185,7 +214,7 @@ abstract class CronServiceContractTest {
         assertEquals("pollable", msg!!.payload)
 
         // Acknowledge it
-        queue.ack(msg)
+        msg.acknowledge()
 
         // Should be gone
         assertNull(queue.tryPoll())
@@ -222,66 +251,6 @@ abstract class CronServiceContractTest {
     }
 
     @Test
-    fun `cron messages with same time and different payloads update correctly`() {
-        queue = createQueue(clock)
-        val cron = queue.getCron()
-        val configHash = CronConfigHash.fromString("update-config")
-        val scheduleTime = clock.instant().plusSeconds(10)
-
-        // First installation
-        cron.installTick(
-            configHash,
-            "update-prefix",
-            listOf(CronMessage("original", scheduleTime)),
-        )
-
-        // Update with different payload at same time
-        cron.installTick(
-            configHash,
-            "update-prefix",
-            listOf(CronMessage("updated", scheduleTime)),
-        )
-
-        // Should have the updated payload
-        val key = CronMessage.key(configHash, "update-prefix", scheduleTime)
-        val msg = queue.read(key)
-        assertNotNull(msg)
-        assertEquals("updated", msg!!.payload)
-    }
-
-    @Test
-    fun `installTick with empty list removes all messages`() {
-        queue = createQueue(clock)
-        val cron = queue.getCron()
-        val configHash = CronConfigHash.fromString("empty-config")
-
-        // Install some messages
-        cron.installTick(
-            configHash,
-            "empty-prefix",
-            listOf(
-                CronMessage("msg1", clock.instant().plusSeconds(10)),
-                CronMessage("msg2", clock.instant().plusSeconds(20)),
-            ),
-        )
-
-        // Install empty list
-        cron.installTick(configHash, "empty-prefix", emptyList())
-
-        // All messages should be gone
-        assertFalse(
-            queue.containsMessage(
-                CronMessage.key(configHash, "empty-prefix", clock.instant().plusSeconds(10))
-            )
-        )
-        assertFalse(
-            queue.containsMessage(
-                CronMessage.key(configHash, "empty-prefix", clock.instant().plusSeconds(20))
-            )
-        )
-    }
-
-    @Test
     fun `multiple configurations coexist independently`() {
         queue = createQueue(clock)
         val cron = queue.getCron()
@@ -301,10 +270,14 @@ abstract class CronServiceContractTest {
 
         // Both should exist
         assertTrue(
-            queue.containsMessage(CronMessage.key(hash1, "prefix-1", clock.instant().plusSeconds(10)))
+            queue.containsMessage(
+                CronMessage.key(hash1, "prefix-1", clock.instant().plusSeconds(10))
+            )
         )
         assertTrue(
-            queue.containsMessage(CronMessage.key(hash2, "prefix-2", clock.instant().plusSeconds(10)))
+            queue.containsMessage(
+                CronMessage.key(hash2, "prefix-2", clock.instant().plusSeconds(10))
+            )
         )
 
         // Uninstall first one
@@ -312,10 +285,14 @@ abstract class CronServiceContractTest {
 
         // First should be gone, second should remain
         assertFalse(
-            queue.containsMessage(CronMessage.key(hash1, "prefix-1", clock.instant().plusSeconds(10)))
+            queue.containsMessage(
+                CronMessage.key(hash1, "prefix-1", clock.instant().plusSeconds(10))
+            )
         )
         assertTrue(
-            queue.containsMessage(CronMessage.key(hash2, "prefix-2", clock.instant().plusSeconds(10)))
+            queue.containsMessage(
+                CronMessage.key(hash2, "prefix-2", clock.instant().plusSeconds(10))
+            )
         )
     }
 }

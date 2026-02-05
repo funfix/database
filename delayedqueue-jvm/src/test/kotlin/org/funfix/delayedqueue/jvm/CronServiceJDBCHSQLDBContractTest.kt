@@ -1,8 +1,6 @@
 package org.funfix.delayedqueue.jvm
 
-/**
- * CronService contract tests for JDBC implementation with HSQLDB.
- */
+/** CronService contract tests for JDBC implementation with HSQLDB. */
 class CronServiceJDBCHSQLDBContractTest : CronServiceContractTest() {
     private var currentQueue: DelayedQueueJDBC<String>? = null
 

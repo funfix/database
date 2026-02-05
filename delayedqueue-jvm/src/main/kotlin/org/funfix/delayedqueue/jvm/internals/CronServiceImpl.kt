@@ -94,13 +94,28 @@ internal class CronServiceImpl<A>(
         )
     }
 
+    /**
+     * Installs cron ticks for a specific configuration.
+     *
+     * This deletes ticks for OLD configurations (those with different hashes) while preserving
+     * ticks from the CURRENT configuration (same hash). This avoids wasteful deletions when the
+     * configuration hasn't changed.
+     *
+     * @param configHash identifies the configuration (used to detect config changes)
+     * @param keyPrefix prefix for all messages in this configuration
+     * @param messages list of cron messages to install
+     * @param canUpdate whether to update existing messages (false for installTick, varies for
+     *   install)
+     */
     private fun installTick0(
         configHash: CronConfigHash,
         keyPrefix: String,
         messages: List<CronMessage<A>>,
         canUpdate: Boolean,
     ) {
-        // Delete old messages from previous config
+        // Delete messages with this prefix that have DIFFERENT config hashes.
+        // Messages with the CURRENT config hash are preserved (nothing to delete if config
+        // unchanged).
         deleteOldCron(configHash, keyPrefix)
 
         // Batch offer all messages
