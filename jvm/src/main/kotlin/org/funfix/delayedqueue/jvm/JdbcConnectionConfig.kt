@@ -10,10 +10,12 @@ package org.funfix.delayedqueue.jvm
  * @property pool optional connection pool configuration
  */
 @JvmRecord
-public data class JdbcConnectionConfig @JvmOverloads constructor(
+public data class JdbcConnectionConfig
+@JvmOverloads
+constructor(
     val url: String,
     val driver: JdbcDriver,
     val username: String? = null,
     val password: String? = null,
-    val pool: JdbcDatabasePoolConfig? = null
+    val pool: JdbcDatabasePoolConfig? = null,
 )

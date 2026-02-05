@@ -19,7 +19,9 @@ import kotlin.time.toJavaDuration
  * @property initializationFailTimeout time to wait for pool initialization
  */
 @JvmRecord
-public data class JdbcDatabasePoolConfig @JvmOverloads constructor(
+public data class JdbcDatabasePoolConfig
+@JvmOverloads
+constructor(
     val connectionTimeout: Duration = 30.seconds.toJavaDuration(),
     val idleTimeout: Duration = 10.minutes.toJavaDuration(),
     val maxLifetime: Duration = 30.minutes.toJavaDuration(),
@@ -27,5 +29,5 @@ public data class JdbcDatabasePoolConfig @JvmOverloads constructor(
     val maximumPoolSize: Int = 10,
     val minimumIdle: Int? = null,
     val leakDetectionThreshold: Duration? = null,
-    val initializationFailTimeout: Duration? = null
+    val initializationFailTimeout: Duration? = null,
 )

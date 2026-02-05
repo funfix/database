@@ -1,9 +1,8 @@
-package org.funfix.delayedqueue.jvm.internals
+package org.funfix.delayedqueue.jvm.internals.utils
 
+import java.util.concurrent.ExecutionException
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.atomic.AtomicBoolean
 
 class ExecutionTests {
     @Test
@@ -15,20 +14,17 @@ class ExecutionTests {
     @Test
     fun `runBlockingIO propagates ExecutionException`() = sneakyRaises {
         val ex = ExecutionException("fail", null)
-        val thrown = assertThrows(ExecutionException::class.java) {
-            runBlockingIO { throw ex }
-        }
+        val thrown = assertThrows(ExecutionException::class.java) { runBlockingIO { throw ex } }
         assertEquals(ex, thrown)
     }
 
     @Test
     fun `runBlockingIO propagates InterruptedException`() {
         val interrupted = InterruptedException("interrupted")
-        val thrown = assertThrows(InterruptedException::class.java) {
-            sneakyRaises {
-                runBlockingIO { throw interrupted }
+        val thrown =
+            assertThrows(InterruptedException::class.java) {
+                sneakyRaises { runBlockingIO { throw interrupted } }
             }
-        }
         assertEquals(interrupted, thrown)
     }
 
@@ -47,9 +43,10 @@ class ExecutionTests {
     @Test
     fun `runBlockingIOUninterruptible propagates ExecutionException`() = sneakyRaises {
         val ex = ExecutionException("fail", null)
-        val thrown = assertThrows(ExecutionException::class.java) {
-            runBlockingIOUninterruptible { throw ex }
-        }
+        val thrown =
+            assertThrows(ExecutionException::class.java) {
+                runBlockingIOUninterruptible { throw ex }
+            }
         assertEquals(ex, thrown)
     }
 
@@ -57,10 +54,10 @@ class ExecutionTests {
     fun `runBlockingIOUninterruptible does not propagate InterruptedException`() = sneakyRaises {
         val interrupted = InterruptedException("interrupted")
         // Should not throw InterruptedException, but wrap it
-        val thrown = assertThrows(ExecutionException::class.java) {
-            runBlockingIOUninterruptible { throw interrupted }
-        }
+        val thrown =
+            assertThrows(ExecutionException::class.java) {
+                runBlockingIOUninterruptible { throw interrupted }
+            }
         assertTrue(thrown.cause is InterruptedException)
     }
 }
-

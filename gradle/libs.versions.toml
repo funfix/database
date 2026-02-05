@@ -6,6 +6,7 @@ kover = "0.9.5"
 publish-plugin = "0.36.0"
 versions-plugin = "0.53.0"
 detekt = "1.23.8"
+ktfmt-plugin = "0.25.0"
 
 [libraries]
 # Plugins specified in buildSrc/build.gradle.kts
@@ -16,6 +17,7 @@ gradle-versions-plugin = { module = "com.github.ben-manes:gradle-versions-plugin
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kover-gradle-plugin = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version.ref = "kover" }
 vanniktech-publish-plugin = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "publish-plugin" }
+ktfmt-gradle-plugin = { module = "com.ncorti.ktfmt.gradle:com.ncorti.ktfmt.gradle.gradle.plugin", version.ref = "ktfmt-plugin" }
 
 # Libraries
 funfix-tasks-jvm = { module = "org.funfix:tasks-jvm", version = "0.4.0" }

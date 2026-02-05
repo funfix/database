@@ -1,19 +1,11 @@
 package org.funfix.delayedqueue.jvm
 
-/**
- * JDBC driver configurations.
- */
-public enum class JdbcDriver(
-    public val className: String
-) {
-    /**
-     * Microsoft SQL Server driver.
-     */
+/** JDBC driver configurations. */
+public enum class JdbcDriver(public val className: String) {
+    /** Microsoft SQL Server driver. */
     MsSqlServer("com.microsoft.sqlserver.jdbc.SQLServerDriver"),
 
-    /**
-     * SQLite driver.
-     */
+    /** SQLite driver. */
     Sqlite("org.sqlite.JDBC");
 
     public companion object {
@@ -25,12 +17,10 @@ public enum class JdbcDriver(
          */
         @JvmStatic
         public operator fun invoke(className: String): JdbcDriver? =
-            entries.firstOrNull {
-                it.className.equals(className, ignoreCase = true)
-            }
-//
-//        @JvmStatic
-//        public fun fromClassName(className: String): JdbcDriver? =
-//            invoke(className)
+            entries.firstOrNull { it.className.equals(className, ignoreCase = true) }
+        //
+        //        @JvmStatic
+        //        public fun fromClassName(className: String): JdbcDriver? =
+        //            invoke(className)
     }
 }

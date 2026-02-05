@@ -1,18 +1,14 @@
-package org.funfix.delayedqueue.jvm.internals
+package org.funfix.delayedqueue.jvm.internals.utils
 
 import java.util.concurrent.ExecutionException
 import org.funfix.tasks.jvm.Task
 import org.funfix.tasks.jvm.TaskExecutors
 
-internal val DB_EXECUTOR by lazy {
-    TaskExecutors.sharedBlockingIO()
-}
+internal val DB_EXECUTOR by lazy { TaskExecutors.sharedBlockingIO() }
 
 context(_: Raise<InterruptedException>)
 internal fun <T> runBlockingIO(block: () -> T): T {
-    val fiber = Task.fromBlockingIO { block() }
-        .ensureRunningOnExecutor(DB_EXECUTOR)
-        .runFiber()
+    val fiber = Task.fromBlockingIO { block() }.ensureRunningOnExecutor(DB_EXECUTOR).runFiber()
 
     try {
         return fiber.awaitBlocking()
@@ -27,9 +23,7 @@ internal fun <T> runBlockingIO(block: () -> T): T {
 
 context(_: Raise<InterruptedException>)
 internal fun <T> runBlockingIOUninterruptible(block: () -> T): T {
-    val fiber = Task.fromBlockingIO { block() }
-        .ensureRunningOnExecutor(DB_EXECUTOR)
-        .runFiber()
+    val fiber = Task.fromBlockingIO { block() }.ensureRunningOnExecutor(DB_EXECUTOR).runFiber()
 
     fiber.joinBlockingUninterruptible()
     try {

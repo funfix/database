@@ -1,6 +1,5 @@
-package org.funfix.delayedqueue.jvm.internals
+package org.funfix.delayedqueue.jvm.internals.utils
 
-import java.sql.Connection
 import java.sql.SQLException
 import javax.sql.DataSource
 import org.funfix.delayedqueue.jvm.JdbcConnectionConfig
@@ -17,10 +16,7 @@ class DatabaseTests {
 
     @BeforeEach
     fun setUp() {
-        config = JdbcConnectionConfig(
-            url = "jdbc:sqlite::memory:",
-            driver = JdbcDriver.Sqlite
-        )
+        config = JdbcConnectionConfig(url = "jdbc:sqlite::memory:", driver = JdbcDriver.Sqlite)
         dataSource = ConnectionPool.createDataSource(config)
         database = Database(dataSource, dataSource as AutoCloseable)
     }
@@ -49,11 +45,12 @@ class DatabaseTests {
     fun `Database withConnection executes block and closes connection`() = sneakyRaises {
         var connectionClosedAfter = false
         var connectionRef: SafeConnection? = null
-        val result = database.withConnection { safeConn ->
-            connectionRef = safeConn
-            safeConn.execute<Boolean>("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-            "done"
-        }
+        val result =
+            database.withConnection { safeConn ->
+                connectionRef = safeConn
+                safeConn.execute<Boolean>("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+                "done"
+            }
         // Connection is closed after block
         connectionClosedAfter = connectionRef?.underlying?.isClosed ?: false
         assertEquals("done", result)
@@ -68,12 +65,13 @@ class DatabaseTests {
         database.withTransaction { safeConn ->
             safeConn.execute<Boolean>("INSERT INTO test (name) VALUES ('foo')")
         }
-        val count = database.withConnection { safeConn ->
-            safeConn.query("SELECT COUNT(*) FROM test") { rs ->
-                rs.next()
-                rs.getInt(1)
+        val count =
+            database.withConnection { safeConn ->
+                safeConn.query("SELECT COUNT(*) FROM test") { rs ->
+                    rs.next()
+                    rs.getInt(1)
+                }
             }
-        }
         assertEquals(1, count)
     }
 
@@ -92,12 +90,13 @@ class DatabaseTests {
                 }
             }
         }
-        val count = database.withConnection { safeConn ->
-            safeConn.query("SELECT COUNT(*) FROM test") { rs ->
-                rs.next()
-                rs.getInt(1)
+        val count =
+            database.withConnection { safeConn ->
+                safeConn.query("SELECT COUNT(*) FROM test") { rs ->
+                    rs.next()
+                    rs.getInt(1)
+                }
             }
-        }
         assertEquals(0, count)
     }
 
@@ -106,10 +105,11 @@ class DatabaseTests {
         database.withConnection { safeConn ->
             safeConn.execute<Boolean>("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
             safeConn.execute<Boolean>("INSERT INTO test (name) VALUES ('foo')")
-            val result = safeConn.query("SELECT name FROM test") { rs ->
-                rs.next()
-                rs.getString(1)
-            }
+            val result =
+                safeConn.query("SELECT name FROM test") { rs ->
+                    rs.next()
+                    rs.getString(1)
+                }
             assertEquals("foo", result)
         }
     }

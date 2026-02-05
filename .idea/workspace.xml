@@ -5,30 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3597ea95-2dee-4a8d-a2f5-b44210addc8b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/buildSrc/src/main/kotlin/delayedqueue.versions.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gradle/libs.versions.toml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/internals/database.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/internals/execution.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/internals/raise.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/internals/DatabaseTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/internals/ExecutionTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/internals/RaiseTests.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/kotlinc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/kotlinc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/buildSrc/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/buildSrc/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/buildSrc/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/buildSrc/settings.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/buildSrc/src/main/kotlin/delayedqueue.base.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/buildSrc/src/main/kotlin/delayedqueue.base.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/buildSrc/src/main/kotlin/delayedqueue.publish.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/buildSrc/src/main/kotlin/delayedqueue.publish.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jvm/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/DatabaseUtils.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/jvm/src/test/java/org/funfix/delayedqueue/jvm/JdbcConnectionConfigTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/test/java/org/funfix/delayedqueue/api/JdbcConnectionConfigTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jvm/src/test/java/org/funfix/delayedqueue/jvm/JdbcDatabasePoolConfigTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/test/java/org/funfix/delayedqueue/api/JdbcDatabasePoolConfigTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jvm/src/test/java/org/funfix/delayedqueue/jvm/JdbcDriverTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/test/java/org/funfix/delayedqueue/api/JdbcDriverTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/settings.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle/libs.versions.toml" beforeDir="false" afterPath="$PROJECT_DIR$/gradle/libs.versions.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/internals/database.kt" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/internals/utils/database.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/internals/execution.kt" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/internals/utils/execution.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/internals/raise.kt" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/internals/utils/raise.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/internals/DatabaseTests.kt" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/internals/utils/DatabaseTests.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/internals/ExecutionTests.kt" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/internals/utils/ExecutionTests.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/internals/RaiseTests.kt" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/internals/utils/RaiseTests.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -108,6 +96,7 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="K2MoveDeclarationsDialog.RECENT_PACKAGE_KEY">
+      <recent name="org.funfix.delayedqueue.jvm.internals.utils" />
       <recent name="org.funfix.delayedqueue.jvm.internals" />
     </key>
   </component>

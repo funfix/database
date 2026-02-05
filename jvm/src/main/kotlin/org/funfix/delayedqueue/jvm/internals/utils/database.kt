@@ -1,8 +1,9 @@
-package org.funfix.delayedqueue.jvm.internals
+package org.funfix.delayedqueue.jvm.internals.utils
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
+import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Statement
 import java.util.concurrent.ExecutionException
@@ -13,13 +14,10 @@ import org.funfix.tasks.jvm.TaskCancellationException
 import org.funfix.tasks.jvm.TaskExecutors
 import org.slf4j.LoggerFactory
 
-private val logger =
-    LoggerFactory.getLogger(ConnectionPool::class.java)
+private val logger = LoggerFactory.getLogger(ConnectionPool::class.java)
 
-internal class Database(
-    val source: DataSource,
-    private val closeRef: AutoCloseable
-): AutoCloseable {
+internal class Database(val source: DataSource, private val closeRef: AutoCloseable) :
+    AutoCloseable {
     override fun close() {
         closeRef.close()
     }
@@ -32,32 +30,27 @@ internal class Database(
     }
 }
 
-@JvmInline
-internal value class SafeConnection(
-    val underlying: Connection
-)
+@JvmInline internal value class SafeConnection(val underlying: Connection)
 
 context(_: Raise<SQLException>)
-internal inline fun <T> runSQLOperation(block: () -> T): T =
-    block()
+internal inline fun <T> runSQLOperation(block: () -> T): T = block()
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
-internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T =
-    runBlockingIO {
-        runSQLOperation {
-            source.connection.let {
+internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T = runBlockingIO {
+    runSQLOperation {
+        source.connection.let {
+            try {
+                block(SafeConnection(it))
+            } finally {
                 try {
-                    block(SafeConnection(it))
-                } finally {
-                    try {
-                        it.close()
-                    } catch (e: SQLException) {
-                        logger.warn("While closing JDBC connection", e)
-                    }
+                    it.close()
+                } catch (e: SQLException) {
+                    logger.warn("While closing JDBC connection", e)
                 }
             }
         }
     }
+}
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
 internal fun <T> Database.withTransaction(block: (SafeConnection) -> T) =
@@ -82,36 +75,33 @@ internal fun <T> Database.withTransaction(block: (SafeConnection) -> T) =
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
 internal fun <T> SafeConnection.execute(sql: String): Boolean =
-    withStatement({ it.createStatement() }) { statement ->
-        statement.execute(sql)
-    }
+    withStatement({ it.createStatement() }) { statement -> statement.execute(sql) }
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
-internal fun <T> SafeConnection.query(sql: String, block: (java.sql.ResultSet) -> T): T =
+internal fun <T> SafeConnection.query(sql: String, block: (ResultSet) -> T): T =
     withStatement({ it.prepareStatement(sql) }) { statement ->
-        statement.executeQuery().use { resultSet ->
-            block(resultSet)
-        }
+        statement.executeQuery().use { resultSet -> block(resultSet) }
     }
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
-internal fun <Stm: Statement, T> SafeConnection.withStatement(
+internal fun <Stm : Statement, T> SafeConnection.withStatement(
     createStatement: (Connection) -> Stm,
-    block: (Stm) -> T
-): T = createStatement(underlying).use { statement ->
+    block: (Stm) -> T,
+): T =
+    createStatement(underlying).use { statement ->
         val executor = TaskExecutors.sharedBlockingIO()
-        val task = Task
-            .fromBlockingIO { block(statement) }
-            .ensureRunningOnExecutor(executor)
-            .withCancellation {
-                executor.execute {
-                    try {
-                        statement.cancel()
-                    } catch (e: SQLException) {
-                        logger.warn("While closing JDBC statement", e)
+        val task =
+            Task.fromBlockingIO { block(statement) }
+                .ensureRunningOnExecutor(executor)
+                .withCancellation {
+                    executor.execute {
+                        try {
+                            statement.cancel()
+                        } catch (e: SQLException) {
+                            logger.warn("While closing JDBC statement", e)
+                        }
                     }
                 }
-            }
         val fiber = task.runFiber(TaskExecutors.sharedBlockingIO())
         try {
             return fiber.awaitBlocking()
@@ -145,9 +135,7 @@ internal object ConnectionPool {
             hikariConfig.keepaliveTime = pool.keepaliveTime.toMillis()
             hikariConfig.maximumPoolSize = pool.maximumPoolSize
             pool.minimumIdle?.let { hikariConfig.minimumIdle = it }
-            pool.leakDetectionThreshold?.let {
-                hikariConfig.leakDetectionThreshold = it.toMillis()
-            }
+            pool.leakDetectionThreshold?.let { hikariConfig.leakDetectionThreshold = it.toMillis() }
             pool.initializationFailTimeout?.let {
                 hikariConfig.initializationFailTimeout = it.toMillis()
             }

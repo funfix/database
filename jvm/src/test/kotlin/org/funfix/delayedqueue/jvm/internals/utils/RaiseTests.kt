@@ -1,38 +1,32 @@
-package org.funfix.delayedqueue.jvm.internals
+package org.funfix.delayedqueue.jvm.internals.utils
 
+import java.io.IOException
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import java.io.IOException
 
 class RaiseTests {
     @Test
     fun `sneakyRaises provides context receiver`() {
-        val result = sneakyRaises {
-            123
-        }
+        val result = sneakyRaises { 123 }
         assertEquals(123, result)
     }
 
     @Test
     fun `raise throws exception in context`() {
-        val thrown = assertThrows(IOException::class.java) {
-            sneakyRaises {
-                raise(IOException("fail"))
-            }
-        }
+        val thrown =
+            assertThrows(IOException::class.java) { sneakyRaises { raise(IOException("fail")) } }
         assertEquals("fail", thrown.message)
     }
 
     @Test
     fun `sneakyRaises block can catch exception`() {
-        val result = try {
-            sneakyRaises {
-                raise(IllegalArgumentException("bad"))
+        val result =
+            try {
+                sneakyRaises { raise(IllegalArgumentException("bad")) }
+                @Suppress("KotlinUnreachableCode") "no error"
+            } catch (e: IllegalArgumentException) {
+                e.message
             }
-            "no error"
-        } catch (e: IllegalArgumentException) {
-            e.message
-        }
         assertEquals("bad", result)
     }
 
@@ -43,4 +37,3 @@ class RaiseTests {
         assertNotNull(Raise._PRIVATE)
     }
 }
-

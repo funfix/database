@@ -6,6 +6,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm")
     id("io.gitlab.arturbosch.detekt")
     id("org.jetbrains.dokka")
+    id("com.ncorti.ktfmt.gradle")
 }
 
 repositories {
@@ -67,4 +68,9 @@ tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
 
 dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting")
+}
+
+ktfmt {
+    kotlinLangStyle() // Use the default Kotlin style
+    // Optionally, configure more options here
 }

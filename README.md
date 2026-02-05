@@ -5,6 +5,27 @@
 
 A Kotlin library for delayed queue implementations on the JVM, designed with maximum Java API compatibility and stability.
 
+## Code Formatting (ktfmt)
+
+This project enforces consistent Kotlin code style using [ktfmt](https://github.com/facebook/ktfmt) via the [com.ncorti.ktfmt.gradle](https://github.com/cortinico/ktfmt-gradle) Gradle plugin. Formatting is automatically checked in CI and can be run locally:
+
+- **Check formatting:**
+  ```sh
+  ./gradlew ktfmtCheck
+  ```
+- **Apply formatting:**
+  ```sh
+  ./gradlew ktfmtFormat
+  ```
+
+You can also run these tasks for a specific subproject, e.g.:
+  ```sh
+  ./gradlew :jvm:ktfmtCheck
+  ./gradlew :jvm:ktfmtFormat
+  ```
+
+The formatting rules are configured in the shared convention plugin (`buildSrc/src/main/kotlin/delayedqueue.base.gradle.kts`).
+
 ## Features
 
 - **Java 21+ Target**: Built for modern JVM applications with virtual threads support
