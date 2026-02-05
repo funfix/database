@@ -167,6 +167,19 @@ private constructor(
     }
 
     override fun tryPollMany(batchMaxSize: Int): AckEnvelope<List<A>> {
+        // Handle edge case: non-positive batch size
+        if (batchMaxSize <= 0) {
+            val now = clock.instant()
+            return AckEnvelope(
+                payload = emptyList(),
+                messageId = MessageId(UUID.randomUUID().toString()),
+                timestamp = now,
+                source = ackEnvSource,
+                deliveryType = DeliveryType.FIRST_DELIVERY,
+                acknowledge = AcknowledgeFun {},
+            )
+        }
+
         val messages = ArrayList<A>()
         val acks = ArrayList<AcknowledgeFun>()
         var source = ackEnvSource

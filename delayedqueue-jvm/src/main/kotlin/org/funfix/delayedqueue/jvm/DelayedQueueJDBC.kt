@@ -99,7 +99,7 @@ private constructor(
                         pKind = pKind,
                         payload = serialized,
                         scheduledAt = scheduleAt,
-                        scheduledAtInitially = existing.data.scheduledAtInitially,
+                        scheduledAtInitially = scheduleAt,
                         lockUuid = null,
                         createdAt = now,
                     )
@@ -275,6 +275,19 @@ private constructor(
 
     @Throws(SQLException::class, InterruptedException::class)
     override fun tryPollMany(batchMaxSize: Int): AckEnvelope<List<A>> = sneakyRaises {
+        // Handle edge case: non-positive batch size
+        if (batchMaxSize <= 0) {
+            val now = Instant.now(clock)
+            return@sneakyRaises AckEnvelope(
+                payload = emptyList(),
+                messageId = MessageId(UUID.randomUUID().toString()),
+                timestamp = now,
+                source = ackEnvSource,
+                deliveryType = DeliveryType.FIRST_DELIVERY,
+                acknowledge = AcknowledgeFun {},
+            )
+        }
+
         database.withTransaction { connection ->
             val now = Instant.now(clock)
             val lockUuid = UUID.randomUUID().toString()
