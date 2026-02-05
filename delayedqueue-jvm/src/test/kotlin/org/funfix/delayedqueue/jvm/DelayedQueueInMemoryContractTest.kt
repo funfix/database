@@ -1,13 +1,8 @@
 package org.funfix.delayedqueue.jvm
 
-import java.time.Duration
-
-/**
- * Tests for DelayedQueueInMemory using the shared contract.
- */
+/** Tests for DelayedQueueInMemory using the shared contract. */
 class DelayedQueueInMemoryContractTest : DelayedQueueContractTest() {
-    override fun createQueue(): DelayedQueue<String> =
-        DelayedQueueInMemory.create()
+    override fun createQueue(): DelayedQueue<String> = DelayedQueueInMemory.create()
 
     override fun createQueue(timeConfig: DelayedQueueTimeConfig): DelayedQueue<String> =
         DelayedQueueInMemory.create(timeConfig)
@@ -18,6 +13,12 @@ class DelayedQueueInMemoryContractTest : DelayedQueueContractTest() {
             ackEnvSource = "test",
             clock = clock,
         )
+
+    override fun createQueueWithClock(
+        clock: TestClock,
+        timeConfig: DelayedQueueTimeConfig,
+    ): DelayedQueue<String> =
+        DelayedQueueInMemory.create(timeConfig = timeConfig, ackEnvSource = "test", clock = clock)
 
     override fun cleanup() {
         // In-memory queue is garbage collected, no cleanup needed

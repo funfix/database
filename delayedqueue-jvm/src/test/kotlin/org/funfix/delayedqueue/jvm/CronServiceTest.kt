@@ -8,9 +8,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
-/**
- * Comprehensive tests for CronService functionality.
- */
+/** Comprehensive tests for CronService functionality. */
 class CronServiceTest {
     private val clock = TestClock(Instant.parse("2024-01-01T10:00:00Z"))
     private lateinit var queue: DelayedQueue<String>
@@ -47,8 +45,16 @@ class CronServiceTest {
         cron.installTick(configHash, "test-prefix", messages)
 
         // Both messages should exist
-        assertTrue(queue.containsMessage(CronMessage.key(configHash, "test-prefix", clock.instant().plusSeconds(10))))
-        assertTrue(queue.containsMessage(CronMessage.key(configHash, "test-prefix", clock.instant().plusSeconds(20))))
+        assertTrue(
+            queue.containsMessage(
+                CronMessage.key(configHash, "test-prefix", clock.instant().plusSeconds(10))
+            )
+        )
+        assertTrue(
+            queue.containsMessage(
+                CronMessage.key(configHash, "test-prefix", clock.instant().plusSeconds(20))
+            )
+        )
     }
 
     @Test
@@ -66,14 +72,26 @@ class CronServiceTest {
         cron.installTick(configHash, "test-prefix", messages)
 
         // Verify messages exist
-        assertTrue(queue.containsMessage(CronMessage.key(configHash, "test-prefix", clock.instant().plusSeconds(10))))
+        assertTrue(
+            queue.containsMessage(
+                CronMessage.key(configHash, "test-prefix", clock.instant().plusSeconds(10))
+            )
+        )
 
         // Uninstall
         cron.uninstallTick(configHash, "test-prefix")
 
         // Messages should be gone
-        assertFalse(queue.containsMessage(CronMessage.key(configHash, "test-prefix", clock.instant().plusSeconds(10))))
-        assertFalse(queue.containsMessage(CronMessage.key(configHash, "test-prefix", clock.instant().plusSeconds(20))))
+        assertFalse(
+            queue.containsMessage(
+                CronMessage.key(configHash, "test-prefix", clock.instant().plusSeconds(10))
+            )
+        )
+        assertFalse(
+            queue.containsMessage(
+                CronMessage.key(configHash, "test-prefix", clock.instant().plusSeconds(20))
+            )
+        )
     }
 
     @Test
@@ -90,7 +108,11 @@ class CronServiceTest {
             listOf(CronMessage("old-payload", clock.instant().plusSeconds(10))),
         )
 
-        assertTrue(queue.containsMessage(CronMessage.key(configHashOld, "test-prefix", clock.instant().plusSeconds(10))))
+        assertTrue(
+            queue.containsMessage(
+                CronMessage.key(configHashOld, "test-prefix", clock.instant().plusSeconds(10))
+            )
+        )
 
         // Install new config
         cron.installTick(
@@ -100,8 +122,16 @@ class CronServiceTest {
         )
 
         // Old should be gone, new should exist
-        assertFalse(queue.containsMessage(CronMessage.key(configHashOld, "test-prefix", clock.instant().plusSeconds(10))))
-        assertTrue(queue.containsMessage(CronMessage.key(configHashNew, "test-prefix", clock.instant().plusSeconds(20))))
+        assertFalse(
+            queue.containsMessage(
+                CronMessage.key(configHashOld, "test-prefix", clock.instant().plusSeconds(10))
+            )
+        )
+        assertTrue(
+            queue.containsMessage(
+                CronMessage.key(configHashNew, "test-prefix", clock.instant().plusSeconds(20))
+            )
+        )
     }
 
     @Test
@@ -111,11 +141,7 @@ class CronServiceTest {
         val configHash = CronConfigHash.fromString("periodic-config")
 
         val resource =
-            cron.install(
-                configHash,
-                "periodic-prefix",
-                Duration.ofMillis(100),
-            ) { now ->
+            cron.install(configHash, "periodic-prefix", Duration.ofMillis(100)) { now ->
                 listOf(CronMessage("message-at-${now.epochSecond}", now.plusSeconds(60)))
             }
 
@@ -138,11 +164,7 @@ class CronServiceTest {
         val configHash = CronConfigHash.fromString("stoppable-config")
 
         val resource =
-            cron.install(
-                configHash,
-                "stoppable-prefix",
-                Duration.ofMillis(50),
-            ) { now ->
+            cron.install(configHash, "stoppable-prefix", Duration.ofMillis(50)) { now ->
                 listOf(CronMessage("periodic-message", now.plusSeconds(60)))
             }
 
@@ -195,10 +217,7 @@ class CronServiceTest {
         val cron = queue.getCron()
 
         val resource =
-            cron.installPeriodicTick(
-                "tick-prefix",
-                Duration.ofMillis(100),
-            ) { futureTime ->
+            cron.installPeriodicTick("tick-prefix", Duration.ofMillis(100)) { futureTime ->
                 "tick-${futureTime.epochSecond}"
             }
 
@@ -240,8 +259,16 @@ class CronServiceTest {
         msg2.acknowledge()
 
         // Should be gone
-        assertFalse(queue.containsMessage(CronMessage.key(configHash, "poll-prefix", clock.instant().minusSeconds(10))))
-        assertFalse(queue.containsMessage(CronMessage.key(configHash, "poll-prefix", clock.instant().minusSeconds(5))))
+        assertFalse(
+            queue.containsMessage(
+                CronMessage.key(configHash, "poll-prefix", clock.instant().minusSeconds(10))
+            )
+        )
+        assertFalse(
+            queue.containsMessage(
+                CronMessage.key(configHash, "poll-prefix", clock.instant().minusSeconds(5))
+            )
+        )
     }
 
     @Test
@@ -259,7 +286,7 @@ class CronServiceTest {
                     payload = "delayed-payload",
                     scheduleAt = nominalTime,
                     scheduleAtActual = actualTime,
-                ),
+                )
             )
 
         cron.installTick(configHash, "delayed-prefix", messages)

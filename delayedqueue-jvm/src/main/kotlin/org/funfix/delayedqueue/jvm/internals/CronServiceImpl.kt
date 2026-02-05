@@ -3,7 +3,6 @@ package org.funfix.delayedqueue.jvm.internals
 import java.sql.SQLException
 import java.time.Clock
 import java.time.Duration
-import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -16,7 +15,6 @@ import org.funfix.delayedqueue.jvm.CronMessageGenerator
 import org.funfix.delayedqueue.jvm.CronPayloadGenerator
 import org.funfix.delayedqueue.jvm.CronService
 import org.funfix.delayedqueue.jvm.DelayedQueue
-import org.funfix.delayedqueue.jvm.ScheduledMessage
 import org.slf4j.LoggerFactory
 
 /**
@@ -74,9 +72,7 @@ internal class CronServiceImpl<A>(
             keyPrefix = keyPrefix,
             scheduleInterval = schedule.scheduleInterval,
             generateMany = { now ->
-                schedule.getNextTimes(now).map { futureTime ->
-                    generator(futureTime)
-                }
+                schedule.getNextTimes(now).map { futureTime -> generator(futureTime) }
             },
         )
 
@@ -132,39 +128,32 @@ internal class CronServiceImpl<A>(
         scheduleInterval: Duration,
         generateMany: CronMessageBatchGenerator<A>,
     ): AutoCloseable {
-        val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { runnable ->
-            Thread(runnable, "cron-$keyPrefix").apply {
-                isDaemon = true
+        val executor: ScheduledExecutorService =
+            Executors.newSingleThreadScheduledExecutor { runnable ->
+                Thread(runnable, "cron-$keyPrefix").apply { isDaemon = true }
             }
-        }
 
         val isFirst = AtomicBoolean(true)
 
-        val task =
-            Runnable {
-                try {
-                    val now = clock.instant()
-                    val firstRun = isFirst.getAndSet(false)
-                    val messages = generateMany(now)
+        val task = Runnable {
+            try {
+                val now = clock.instant()
+                val firstRun = isFirst.getAndSet(false)
+                val messages = generateMany(now)
 
-                    installTick0(
-                        configHash = configHash,
-                        keyPrefix = keyPrefix,
-                        messages = messages,
-                        canUpdate = firstRun,
-                    )
-                } catch (e: Exception) {
-                    logger.error("Error in cron task for $keyPrefix", e)
-                }
+                installTick0(
+                    configHash = configHash,
+                    keyPrefix = keyPrefix,
+                    messages = messages,
+                    canUpdate = firstRun,
+                )
+            } catch (e: Exception) {
+                logger.error("Error in cron task for $keyPrefix", e)
             }
+        }
 
         // Schedule with fixed delay, starting immediately
-        executor.scheduleWithFixedDelay(
-            task,
-            0,
-            scheduleInterval.toMillis(),
-            TimeUnit.MILLISECONDS,
-        )
+        executor.scheduleWithFixedDelay(task, 0, scheduleInterval.toMillis(), TimeUnit.MILLISECONDS)
 
         return AutoCloseable {
             executor.shutdown()

@@ -23,8 +23,8 @@ internal data class DBTableRow(
     val createdAt: Instant,
 ) {
     /**
-     * Checks if this row is a duplicate of another (same key, payload, and initial schedule).
-     * Used to detect idempotent updates.
+     * Checks if this row is a duplicate of another (same key, payload, and initial schedule). Used
+     * to detect idempotent updates.
      */
     fun isDuplicate(other: DBTableRow): Boolean =
         pKey == other.pKey &&
@@ -39,7 +39,4 @@ internal data class DBTableRow(
  * @property id Auto-generated row ID from database
  * @property data The actual row data
  */
-internal data class DBTableRowWithId(
-    val id: Long,
-    val data: DBTableRow,
-)
+internal data class DBTableRowWithId(val id: Long, val data: DBTableRow)

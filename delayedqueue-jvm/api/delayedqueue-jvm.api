@@ -60,6 +60,7 @@ public final class org/funfix/delayedqueue/jvm/CronConfigHash : java/lang/Record
 	public fun equals (Ljava/lang/Object;)Z
 	public static final fun fromDailyCron (Lorg/funfix/delayedqueue/jvm/CronDailySchedule;)Lorg/funfix/delayedqueue/jvm/CronConfigHash;
 	public static final fun fromPeriodicTick (Ljava/time/Duration;)Lorg/funfix/delayedqueue/jvm/CronConfigHash;
+	public static final fun fromString (Ljava/lang/String;)Lorg/funfix/delayedqueue/jvm/CronConfigHash;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 	public final fun value ()Ljava/lang/String;
@@ -68,6 +69,7 @@ public final class org/funfix/delayedqueue/jvm/CronConfigHash : java/lang/Record
 public final class org/funfix/delayedqueue/jvm/CronConfigHash$Companion {
 	public final fun fromDailyCron (Lorg/funfix/delayedqueue/jvm/CronDailySchedule;)Lorg/funfix/delayedqueue/jvm/CronConfigHash;
 	public final fun fromPeriodicTick (Ljava/time/Duration;)Lorg/funfix/delayedqueue/jvm/CronConfigHash;
+	public final fun fromString (Ljava/lang/String;)Lorg/funfix/delayedqueue/jvm/CronConfigHash;
 }
 
 public final class org/funfix/delayedqueue/jvm/CronDailySchedule : java/lang/Record {
@@ -184,6 +186,34 @@ public final class org/funfix/delayedqueue/jvm/DelayedQueueInMemory$Companion {
 	public static synthetic fun create$default (Lorg/funfix/delayedqueue/jvm/DelayedQueueInMemory$Companion;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/time/Clock;ILjava/lang/Object;)Lorg/funfix/delayedqueue/jvm/DelayedQueueInMemory;
 }
 
+public final class org/funfix/delayedqueue/jvm/DelayedQueueJDBC : java/lang/AutoCloseable, org/funfix/delayedqueue/jvm/DelayedQueue {
+	public static final field Companion Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC$Companion;
+	public synthetic fun <init> (Lorg/funfix/delayedqueue/jvm/internals/utils/Database;Lorg/funfix/delayedqueue/jvm/internals/jdbc/SQLVendorAdapter;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/time/Clock;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun close ()V
+	public fun containsMessage (Ljava/lang/String;)Z
+	public static final fun create (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public static final fun create (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public static final fun create (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/time/Clock;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public fun dropAllMessages (Ljava/lang/String;)I
+	public fun dropMessage (Ljava/lang/String;)Z
+	public fun getCron ()Lorg/funfix/delayedqueue/jvm/CronService;
+	public fun getTimeConfig ()Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;
+	public fun offerBatch (Ljava/util/List;)Ljava/util/List;
+	public fun offerIfNotExists (Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)Lorg/funfix/delayedqueue/jvm/OfferOutcome;
+	public fun offerOrUpdate (Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)Lorg/funfix/delayedqueue/jvm/OfferOutcome;
+	public fun poll ()Lorg/funfix/delayedqueue/jvm/AckEnvelope;
+	public fun read (Ljava/lang/String;)Lorg/funfix/delayedqueue/jvm/AckEnvelope;
+	public fun tryPoll ()Lorg/funfix/delayedqueue/jvm/AckEnvelope;
+	public fun tryPollMany (I)Lorg/funfix/delayedqueue/jvm/AckEnvelope;
+}
+
+public final class org/funfix/delayedqueue/jvm/DelayedQueueJDBC$Companion {
+	public final fun create (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public final fun create (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public final fun create (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/time/Clock;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public static synthetic fun create$default (Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC$Companion;Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/time/Clock;ILjava/lang/Object;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+}
+
 public final class org/funfix/delayedqueue/jvm/DelayedQueueTimeConfig : java/lang/Record {
 	public static final field Companion Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig$Companion;
 	public static final field DEFAULT Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;
@@ -274,6 +304,7 @@ public final class org/funfix/delayedqueue/jvm/JdbcDatabasePoolConfig : java/lan
 
 public final class org/funfix/delayedqueue/jvm/JdbcDriver : java/lang/Enum {
 	public static final field Companion Lorg/funfix/delayedqueue/jvm/JdbcDriver$Companion;
+	public static final field HSQLDB Lorg/funfix/delayedqueue/jvm/JdbcDriver;
 	public static final field MsSqlServer Lorg/funfix/delayedqueue/jvm/JdbcDriver;
 	public static final field Sqlite Lorg/funfix/delayedqueue/jvm/JdbcDriver;
 	public final fun getClassName ()Ljava/lang/String;
@@ -296,6 +327,17 @@ public final class org/funfix/delayedqueue/jvm/MessageId : java/lang/Record {
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 	public final fun value ()Ljava/lang/String;
+}
+
+public abstract interface class org/funfix/delayedqueue/jvm/MessageSerializer {
+	public static final field Companion Lorg/funfix/delayedqueue/jvm/MessageSerializer$Companion;
+	public abstract fun deserialize (Ljava/lang/String;)Ljava/lang/Object;
+	public static fun forStrings ()Lorg/funfix/delayedqueue/jvm/MessageSerializer;
+	public abstract fun serialize (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class org/funfix/delayedqueue/jvm/MessageSerializer$Companion {
+	public final fun forStrings ()Lorg/funfix/delayedqueue/jvm/MessageSerializer;
 }
 
 public abstract interface class org/funfix/delayedqueue/jvm/OfferOutcome {

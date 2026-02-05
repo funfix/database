@@ -8,10 +8,7 @@ import java.sql.Connection
  * @property sql The SQL statement(s) to execute for this migration
  * @property needsExecution Function that tests if this migration needs to be executed
  */
-internal data class Migration(
-    val sql: String,
-    val needsExecution: (Connection) -> Boolean,
-) {
+internal data class Migration(val sql: String, val needsExecution: (Connection) -> Boolean) {
     companion object {
         /**
          * Creates a migration that checks if a table exists.
@@ -22,9 +19,7 @@ internal data class Migration(
         fun createTableIfNotExists(tableName: String, sql: String): Migration =
             Migration(
                 sql = sql,
-                needsExecution = { connection ->
-                    !tableExists(connection, tableName)
-                },
+                needsExecution = { connection -> !tableExists(connection, tableName) },
             )
 
         /**
@@ -34,11 +29,7 @@ internal data class Migration(
          * @param columnName The column to look for
          * @param sql The SQL to execute if column doesn't exist
          */
-        fun addColumnIfNotExists(
-            tableName: String,
-            columnName: String,
-            sql: String,
-        ): Migration =
+        fun addColumnIfNotExists(tableName: String, columnName: String, sql: String): Migration =
             Migration(
                 sql = sql,
                 needsExecution = { connection ->
@@ -52,11 +43,7 @@ internal data class Migration(
          *
          * @param sql The SQL to execute
          */
-        fun alwaysRun(sql: String): Migration =
-            Migration(
-                sql = sql,
-                needsExecution = { _ -> true },
-            )
+        fun alwaysRun(sql: String): Migration = Migration(sql = sql, needsExecution = { _ -> true })
 
         private fun tableExists(connection: Connection, tableName: String): Boolean {
             val metadata = connection.metaData
@@ -78,9 +65,7 @@ internal data class Migration(
     }
 }
 
-/**
- * Executes migrations on a database connection.
- */
+/** Executes migrations on a database connection. */
 internal object MigrationRunner {
     /**
      * Runs all migrations that need execution.
@@ -99,9 +84,7 @@ internal object MigrationRunner {
                         .split(";")
                         .map { it.trim() }
                         .filter { it.isNotEmpty() }
-                        .forEach { sql ->
-                            stmt.execute(sql)
-                        }
+                        .forEach { sql -> stmt.execute(sql) }
                 }
                 executed++
             }

@@ -1,7 +1,6 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc
 
 import java.sql.Connection
-import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.time.Duration
 import java.time.Instant
@@ -10,13 +9,11 @@ import org.funfix.delayedqueue.jvm.JdbcDriver
 /**
  * Describes actual SQL queries executed — can be overridden to provide driver-specific queries.
  *
- * This allows for database-specific optimizations like MS-SQL's `WITH (UPDLOCK, READPAST)`
- * or different `LIMIT` syntax across databases.
+ * This allows for database-specific optimizations like MS-SQL's `WITH (UPDLOCK, READPAST)` or
+ * different `LIMIT` syntax across databases.
  */
 internal sealed class SQLVendorAdapter(protected val tableName: String) {
-    /**
-     * Checks if a key exists in the database.
-     */
+    /** Checks if a key exists in the database. */
     fun checkIfKeyExists(connection: Connection, key: String, kind: String): Boolean {
         val sql = "SELECT 1 FROM $tableName WHERE pKey = ? AND pKind = ?"
         return connection.prepareStatement(sql).use { stmt ->
@@ -27,14 +24,13 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
     }
 
     /**
-     * Inserts a single row into the database.
-     * Returns true if inserted, false if key already exists.
+     * Inserts a single row into the database. Returns true if inserted, false if key already
+     * exists.
      */
     abstract fun insertOneRow(connection: Connection, row: DBTableRow): Boolean
 
     /**
-     * Inserts multiple rows in a batch.
-     * Returns the list of keys that were successfully inserted.
+     * Inserts multiple rows in a batch. Returns the list of keys that were successfully inserted.
      */
     fun insertBatch(connection: Connection, rows: List<DBTableRow>): List<String> {
         if (rows.isEmpty()) return emptyList()
@@ -54,7 +50,8 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
                 stmt.setString(3, row.payload)
                 stmt.setTimestamp(4, java.sql.Timestamp.from(row.scheduledAt))
                 stmt.setTimestamp(5, java.sql.Timestamp.from(row.scheduledAtInitially))
-                row.lockUuid?.let { stmt.setString(6, it) } ?: stmt.setNull(6, java.sql.Types.VARCHAR)
+                row.lockUuid?.let { stmt.setString(6, it) }
+                    ?: stmt.setNull(6, java.sql.Types.VARCHAR)
                 stmt.setTimestamp(7, java.sql.Timestamp.from(row.createdAt))
                 stmt.addBatch()
             }
@@ -69,8 +66,8 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
     }
 
     /**
-     * Updates an existing row with optimistic locking (compare-and-swap).
-     * Only updates if the current row matches what's in the database.
+     * Updates an existing row with optimistic locking (compare-and-swap). Only updates if the
+     * current row matches what's in the database.
      */
     fun guardedUpdate(
         connection: Connection,
@@ -103,9 +100,7 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
         }
     }
 
-    /**
-     * Selects one row by its key.
-     */
+    /** Selects one row by its key. */
     fun selectByKey(connection: Connection, kind: String, key: String): DBTableRowWithId? {
         val sql =
             """
@@ -128,9 +123,7 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
         }
     }
 
-    /**
-     * Deletes one row by key and kind.
-     */
+    /** Deletes one row by key and kind. */
     fun deleteOneRow(connection: Connection, key: String, kind: String): Boolean {
         val sql = "DELETE FROM $tableName WHERE pKey = ? AND pKind = ?"
         return connection.prepareStatement(sql).use { stmt ->
@@ -140,9 +133,7 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
         }
     }
 
-    /**
-     * Deletes rows with a specific lock UUID.
-     */
+    /** Deletes rows with a specific lock UUID. */
     fun deleteRowsWithLock(connection: Connection, lockUuid: String): Int {
         val sql = "DELETE FROM $tableName WHERE lockUuid = ?"
         return connection.prepareStatement(sql).use { stmt ->
@@ -151,9 +142,7 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
         }
     }
 
-    /**
-     * Deletes a row by its fingerprint (id and createdAt).
-     */
+    /** Deletes a row by its fingerprint (id and createdAt). */
     fun deleteRowByFingerprint(connection: Connection, row: DBTableRowWithId): Boolean {
         val sql =
             """
@@ -168,9 +157,7 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
         }
     }
 
-    /**
-     * Deletes all rows with a specific kind (used for cleanup in tests).
-     */
+    /** Deletes all rows with a specific kind (used for cleanup in tests). */
     fun dropAllMessages(connection: Connection, kind: String): Int {
         val sql = "DELETE FROM $tableName WHERE pKind = ?"
         return connection.prepareStatement(sql).use { stmt ->
@@ -180,10 +167,15 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
     }
 
     /**
-     * Deletes cron messages matching a specific config hash and key prefix.
-     * Used to clean up current cron configuration.
+     * Deletes cron messages matching a specific config hash and key prefix. Used to clean up
+     * current cron configuration.
      */
-    fun deleteCurrentCron(connection: Connection, kind: String, keyPrefix: String, configHash: String): Int {
+    fun deleteCurrentCron(
+        connection: Connection,
+        kind: String,
+        keyPrefix: String,
+        configHash: String,
+    ): Int {
         val sql = "DELETE FROM $tableName WHERE pKind = ? AND pKey LIKE ?"
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setString(1, kind)
@@ -193,10 +185,15 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
     }
 
     /**
-     * Deletes old cron messages (those with a different config hash).
-     * Used when cron configuration changes.
+     * Deletes old cron messages (those with a different config hash). Used when cron configuration
+     * changes.
      */
-    fun deleteOldCron(connection: Connection, kind: String, keyPrefix: String, configHash: String): Int {
+    fun deleteOldCron(
+        connection: Connection,
+        kind: String,
+        keyPrefix: String,
+        configHash: String,
+    ): Int {
         val sql =
             """
             DELETE FROM $tableName
@@ -213,8 +210,8 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
     }
 
     /**
-     * Acquires many messages optimistically by updating them with a lock.
-     * Returns the number of messages acquired.
+     * Acquires many messages optimistically by updating them with a lock. Returns the number of
+     * messages acquired.
      */
     abstract fun acquireManyOptimistically(
         connection: Connection,
@@ -225,18 +222,14 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
         now: Instant,
     ): Int
 
-    /**
-     * Selects the first available message for processing (with locking if supported).
-     */
+    /** Selects the first available message for processing (with locking if supported). */
     abstract fun selectFirstAvailableWithLock(
         connection: Connection,
         kind: String,
         now: Instant,
     ): DBTableRowWithId?
 
-    /**
-     * Selects all messages with a specific lock UUID.
-     */
+    /** Selects all messages with a specific lock UUID. */
     fun selectAllAvailableWithLock(
         connection: Connection,
         lockUuid: String,
@@ -267,8 +260,8 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
     }
 
     /**
-     * Acquires a specific row by updating its scheduledAt and lockUuid.
-     * Returns true if the row was successfully acquired.
+     * Acquires a specific row by updating its scheduledAt and lockUuid. Returns true if the row was
+     * successfully acquired.
      */
     fun acquireRowByUpdate(
         connection: Connection,
@@ -299,22 +292,17 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
     }
 
     companion object {
-        /**
-         * Creates the appropriate vendor adapter for the given JDBC driver.
-         */
+        /** Creates the appropriate vendor adapter for the given JDBC driver. */
         fun create(driver: JdbcDriver, tableName: String): SQLVendorAdapter =
             when (driver) {
                 JdbcDriver.HSQLDB -> HSQLDBAdapter(tableName)
                 JdbcDriver.MsSqlServer,
-                JdbcDriver.Sqlite,
-                -> TODO("MS-SQL and SQLite support not yet implemented")
+                JdbcDriver.Sqlite -> TODO("MS-SQL and SQLite support not yet implemented")
             }
     }
 }
 
-/**
- * HSQLDB-specific adapter.
- */
+/** HSQLDB-specific adapter. */
 private class HSQLDBAdapter(tableName: String) : SQLVendorAdapter(tableName) {
     override fun insertOneRow(connection: Connection, row: DBTableRow): Boolean {
         // HSQLDB doesn't have INSERT IGNORE, so we check first
@@ -402,9 +390,7 @@ private class HSQLDBAdapter(tableName: String) : SQLVendorAdapter(tableName) {
     }
 }
 
-/**
- * Extension function to convert ResultSet to DBTableRowWithId.
- */
+/** Extension function to convert ResultSet to DBTableRowWithId. */
 private fun ResultSet.toDBTableRowWithId(): DBTableRowWithId =
     DBTableRowWithId(
         id = getLong("id"),

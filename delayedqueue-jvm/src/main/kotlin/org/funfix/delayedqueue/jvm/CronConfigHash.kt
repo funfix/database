@@ -39,9 +39,7 @@ public data class CronConfigHash(public val value: String) {
         }
 
         /** Creates a ConfigHash from an arbitrary string. */
-        @JvmStatic
-        public fun fromString(text: String): CronConfigHash =
-            CronConfigHash(md5(text))
+        @JvmStatic public fun fromString(text: String): CronConfigHash = CronConfigHash(md5(text))
 
         private fun md5(input: String): String {
             val md = MessageDigest.getInstance("MD5")

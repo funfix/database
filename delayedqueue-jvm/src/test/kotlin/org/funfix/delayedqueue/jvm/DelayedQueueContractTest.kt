@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test
 /**
  * Comprehensive test suite for DelayedQueue implementations.
  *
- * This abstract test class can be extended by both in-memory and JDBC implementations
- * to ensure they all meet the same contract.
+ * This abstract test class can be extended by both in-memory and JDBC implementations to ensure
+ * they all meet the same contract.
  */
 abstract class DelayedQueueContractTest {
     protected abstract fun createQueue(): DelayedQueue<String>
@@ -17,6 +17,11 @@ abstract class DelayedQueueContractTest {
     protected abstract fun createQueue(timeConfig: DelayedQueueTimeConfig): DelayedQueue<String>
 
     protected abstract fun createQueueWithClock(clock: TestClock): DelayedQueue<String>
+
+    protected open fun createQueueWithClock(
+        clock: TestClock,
+        timeConfig: DelayedQueueTimeConfig,
+    ): DelayedQueue<String> = createQueueWithClock(clock)
 
     protected abstract fun cleanup()
 
@@ -130,7 +135,10 @@ abstract class DelayedQueueContractTest {
 
             // Should not be available yet (unless clock is real-time, then it's expected)
             if (queue is DelayedQueueInMemory<*>) {
-                assertNull(result, "Future message should not be available in in-memory with test clock")
+                assertNull(
+                    result,
+                    "Future message should not be available in in-memory with test clock",
+                )
             }
         } finally {
             cleanup()
@@ -279,11 +287,13 @@ abstract class DelayedQueueContractTest {
                 listOf(
                     BatchedMessage(
                         input = 1,
-                        message = ScheduledMessage("key1", "payload1", clock.instant().plusSeconds(10)),
+                        message =
+                            ScheduledMessage("key1", "payload1", clock.instant().plusSeconds(10)),
                     ),
                     BatchedMessage(
                         input = 2,
-                        message = ScheduledMessage("key2", "payload2", clock.instant().plusSeconds(20)),
+                        message =
+                            ScheduledMessage("key2", "payload2", clock.instant().plusSeconds(20)),
                     ),
                 )
 
@@ -313,7 +323,13 @@ abstract class DelayedQueueContractTest {
                     listOf(
                         BatchedMessage(
                             input = 1,
-                            message = ScheduledMessage("key1", "updated", Instant.now().plusSeconds(20), canUpdate = true),
+                            message =
+                                ScheduledMessage(
+                                    "key1",
+                                    "updated",
+                                    Instant.now().plusSeconds(20),
+                                    canUpdate = true,
+                                ),
                         ),
                         BatchedMessage(
                             input = 2,
@@ -335,7 +351,13 @@ abstract class DelayedQueueContractTest {
                 listOf(
                     BatchedMessage(
                         input = 1,
-                        message = ScheduledMessage("key1", "updated", clock.instant().plusSeconds(20), canUpdate = true),
+                        message =
+                            ScheduledMessage(
+                                "key1",
+                                "updated",
+                                clock.instant().plusSeconds(20),
+                                canUpdate = true,
+                            ),
                     ),
                     BatchedMessage(
                         input = 2,
@@ -413,12 +435,11 @@ abstract class DelayedQueueContractTest {
         val clock = TestClock(Instant.parse("2024-01-01T10:00:00Z"))
         val queue = createQueueWithClock(clock)
         try {
-            val pollThread =
-                Thread {
-                    // This should block briefly then return
-                    val msg = queue.poll()
-                    assertEquals("payload1", msg.payload)
-                }
+            val pollThread = Thread {
+                // This should block briefly then return
+                val msg = queue.poll()
+                assertEquals("payload1", msg.payload)
+            }
 
             pollThread.start()
             Thread.sleep(100) // Let poll start waiting
@@ -442,17 +463,7 @@ abstract class DelayedQueueContractTest {
             )
         val clock = TestClock(Instant.parse("2024-01-01T10:00:00Z"))
         try {
-            // Only run this test for in-memory with controllable clock
-            val queue =
-                if (this is DelayedQueueInMemoryContractTest) {
-                    DelayedQueueInMemory.create<String>(
-                        timeConfig = timeConfig,
-                        ackEnvSource = "test",
-                        clock = clock,
-                    )
-                } else {
-                    return // Skip for JDBC
-                }
+            val queue = createQueueWithClock(clock, timeConfig)
 
             queue.offerOrUpdate("key1", "payload1", clock.instant().minusSeconds(10))
 

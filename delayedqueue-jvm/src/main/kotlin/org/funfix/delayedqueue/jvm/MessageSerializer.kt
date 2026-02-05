@@ -26,9 +26,7 @@ public interface MessageSerializer<A> {
     public fun deserialize(serialized: String): A
 
     public companion object {
-        /**
-         * Creates a serializer for String payloads (identity serialization).
-         */
+        /** Creates a serializer for String payloads (identity serialization). */
         @JvmStatic
         public fun forStrings(): MessageSerializer<String> =
             object : MessageSerializer<String> {

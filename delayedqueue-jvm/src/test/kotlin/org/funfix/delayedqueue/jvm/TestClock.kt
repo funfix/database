@@ -6,9 +6,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.concurrent.atomic.AtomicReference
 
-/**
- * A controllable clock for testing that allows manual time advancement.
- */
+/** A controllable clock for testing that allows manual time advancement. */
 class TestClock(initialTime: Instant = Instant.EPOCH) : Clock() {
     private val current = AtomicReference(initialTime)
 

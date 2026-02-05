@@ -1,8 +1,6 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc
 
-/**
- * HSQLDB-specific migrations for the DelayedQueue table.
- */
+/** HSQLDB-specific migrations for the DelayedQueue table. */
 internal object HSQLDBMigrations {
     /**
      * Gets the list of migrations for HSQLDB.
@@ -41,7 +39,8 @@ internal object HSQLDBMigrations {
 
                     CREATE INDEX ${tableName}__LockUuidPlusIdIndex
                     ON $tableName (lockUuid, id);
-                    """.trimIndent(),
-            ),
+                    """
+                        .trimIndent(),
+            )
         )
 }
