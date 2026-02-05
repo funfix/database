@@ -2,6 +2,9 @@ package org.funfix.delayedqueue.jvm
 
 /** JDBC driver configurations. */
 public enum class JdbcDriver(public val className: String) {
+    /** HSQLDB (HyperSQL Database) driver. */
+    HSQLDB("org.hsqldb.jdbc.JDBCDriver"),
+
     /** Microsoft SQL Server driver. */
     MsSqlServer("com.microsoft.sqlserver.jdbc.SQLServerDriver"),
 

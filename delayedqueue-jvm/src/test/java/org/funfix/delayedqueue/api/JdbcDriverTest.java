@@ -90,6 +90,7 @@ class JdbcDriverTest {
      */
     private String switchOnDriver(JdbcDriver driver) {
         return switch (driver) {
+            case HSQLDB -> "hsqldb";
             case MsSqlServer -> "mssqlserver";
             case Sqlite -> "sqlite";
         };
@@ -128,6 +129,7 @@ class JdbcDriverTest {
         JdbcDriver driver = JdbcDriver.Sqlite;
         String result = switch (driver) {
             //noinspection DataFlowIssue
+            case HSQLDB -> "hsqldb";
             case Sqlite -> "sqlite";
             case MsSqlServer -> "mssql";
         };
@@ -135,6 +137,7 @@ class JdbcDriverTest {
 
         driver = JdbcDriver.MsSqlServer;
         result = switch (driver) {
+            case HSQLDB -> "hsqldb";
             case Sqlite -> "sqlite";
             //noinspection DataFlowIssue
             case MsSqlServer -> "mssql";
