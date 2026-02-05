@@ -340,8 +340,12 @@ private constructor(
                 scheduleInterval: Duration,
                 generateMany: (Instant) -> List<CronMessage<A>>,
             ): AutoCloseable {
-                // TODO: Background thread management
-                return AutoCloseable {}
+                return installLoop(
+                    configHash = configHash,
+                    keyPrefix = keyPrefix,
+                    scheduleInterval = scheduleInterval,
+                    generateMany = generateMany,
+                )
             }
 
             override fun installDailySchedule(
@@ -349,8 +353,12 @@ private constructor(
                 schedule: DailyCronSchedule,
                 generator: (Instant) -> CronMessage<A>,
             ): AutoCloseable {
-                // TODO: Background thread management
-                return AutoCloseable {}
+                return installLoop(
+                    configHash = ConfigHash.fromDailyCron(schedule),
+                    keyPrefix = keyPrefix,
+                    scheduleInterval = schedule.scheduleInterval,
+                    generateMany = { now -> schedule.getNextTimes(now).map(generator) },
+                )
             }
 
             override fun installPeriodicTick(
@@ -358,8 +366,71 @@ private constructor(
                 period: Duration,
                 generator: (Instant) -> A,
             ): AutoCloseable {
-                // TODO: Background thread management
-                return AutoCloseable {}
+                val scheduleInterval = Duration.ofSeconds(1).coerceAtLeast(period.dividedBy(4))
+                return installLoop(
+                    configHash = ConfigHash.fromPeriodicTick(period),
+                    keyPrefix = keyPrefix,
+                    scheduleInterval = scheduleInterval,
+                    generateMany = { now ->
+                        val periodMillis = period.toMillis()
+                        val timestamp =
+                            Instant.ofEpochMilli(
+                                ((now.toEpochMilli() + periodMillis) / periodMillis) * periodMillis
+                            )
+                        listOf(CronMessage(payload = generator(timestamp), scheduleAt = timestamp))
+                    },
+                )
+            }
+
+            private fun installLoop(
+                configHash: ConfigHash,
+                keyPrefix: String,
+                scheduleInterval: Duration,
+                generateMany: (Instant) -> List<CronMessage<A>>,
+            ): AutoCloseable {
+                val task =
+                    org.funfix.tasks.jvm.Task.fromBlockingIO {
+                        var isFirst = true
+                        while (!Thread.interrupted()) {
+                            try {
+                                val now = clock.now()
+                                val messages = generateMany(now)
+                                val canUpdate = isFirst
+                                isFirst = false
+
+                                deleteOldCron(keyPrefix)
+                                for (cronMsg in messages) {
+                                    val scheduledMsg =
+                                        cronMsg.toScheduled(configHash, keyPrefix, canUpdate)
+                                    if (canUpdate) {
+                                        offerOrUpdate(
+                                            scheduledMsg.key,
+                                            scheduledMsg.payload,
+                                            scheduledMsg.scheduleAt,
+                                        )
+                                    } else {
+                                        offerIfNotExists(
+                                            scheduledMsg.key,
+                                            scheduledMsg.payload,
+                                            scheduledMsg.scheduleAt,
+                                        )
+                                    }
+                                }
+
+                                Thread.sleep(scheduleInterval.toMillis())
+                            } catch (e: InterruptedException) {
+                                Thread.currentThread().interrupt()
+                                break
+                            }
+                        }
+                    }
+
+                val fiber = task.runFiber()
+
+                return AutoCloseable {
+                    fiber.cancel()
+                    fiber.joinBlockingUninterruptible()
+                }
             }
         }
 

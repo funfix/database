@@ -43,7 +43,7 @@ class DatabaseTests {
 
     @Test
     fun `Database withConnection executes block and closes connection`() = sneakyRaises {
-        var connectionClosedAfter = false
+        var connectionClosedAfter: Boolean
         var connectionRef: SafeConnection? = null
         val result =
             database.withConnection { safeConn ->

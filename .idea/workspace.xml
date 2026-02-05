@@ -5,22 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3597ea95-2dee-4a8d-a2f5-b44210addc8b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/AckEnvelope.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/Clock.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/ConfigHash.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/CronMessage.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/CronService.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/DailyCronSchedule.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/DelayedQueue.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/DelayedQueueInMemory.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/DelayedQueueTimeConfig.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/OfferOutcome.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/ScheduledMessage.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/DelayedQueueInMemoryTest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/jvm/src/test/java/org/funfix/delayedqueue/api/CronServiceTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/jvm/src/test/java/org/funfix/delayedqueue/api/DelayedQueueInMemoryTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/buildSrc/src/main/kotlin/delayedqueue.base.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/buildSrc/src/main/kotlin/delayedqueue.base.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/ConfigHash.kt" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/ConfigHash.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/DelayedQueueInMemory.kt" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/main/kotlin/org/funfix/delayedqueue/jvm/DelayedQueueInMemory.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jvm/src/test/java/org/funfix/delayedqueue/api/JdbcDriverTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/test/java/org/funfix/delayedqueue/api/JdbcDriverTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/DelayedQueueInMemoryTest.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/internals/utils/DatabaseTests.kt" beforeDir="false" afterPath="$PROJECT_DIR$/jvm/src/test/kotlin/org/funfix/delayedqueue/jvm/internals/utils/DatabaseTests.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

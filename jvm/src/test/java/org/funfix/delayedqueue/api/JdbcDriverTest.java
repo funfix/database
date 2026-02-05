@@ -10,7 +10,7 @@ import org.junit.jupiter.api.DisplayName;
  * Tests for JdbcDriver sealed interface.
  */
 @DisplayName("JdbcDriver Tests")
-class GJdbcDriverTest {
+class JdbcDriverTest {
 
     @Test
     @DisplayName("MsSqlServer driver should have correct class name")

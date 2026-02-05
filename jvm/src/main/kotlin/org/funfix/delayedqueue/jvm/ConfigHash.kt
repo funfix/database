@@ -12,8 +12,8 @@ import java.time.Duration
  *
  * @property value the MD5 hash string
  */
-@JvmInline
-public value class ConfigHash(public val value: String) {
+@JvmRecord
+public data class ConfigHash(public val value: String) {
     override fun toString(): String = value
 
     public companion object {
