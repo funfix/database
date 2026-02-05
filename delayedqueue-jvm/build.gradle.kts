@@ -7,7 +7,9 @@ plugins {
 mavenPublishing {
     pom {
         name.set("Funfix DelayedQueue (JVM)")
-        description.set("A delayed, high-performance FIFO queue for the JVM, powered by your favorite RDBMS.")
+        description.set(
+            "A delayed, high-performance FIFO queue for the JVM, powered by your favorite RDBMS."
+        )
     }
 }
 
