@@ -1,6 +1,6 @@
 rootProject.name = "delayedqueue"
 
-include("jvm")
+include("delayedqueue-jvm")
 
 pluginManagement {
     repositories {

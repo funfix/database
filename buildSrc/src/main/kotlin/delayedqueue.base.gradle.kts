@@ -67,6 +67,10 @@ tasks.named<Jar>("javadocJar") {
     from(tasks.named("dokkaGeneratePublicationJavadoc"))
 }
 
+tasks.matching { it.name == "dokkaJavadocJar" }.configureEach {
+    enabled = false
+}
+
 tasks.named("check").configure {
     dependsOn(tasks.matching { it.name == "checkLegacyAbi" })
 }
