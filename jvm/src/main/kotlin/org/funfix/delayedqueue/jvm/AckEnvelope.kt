@@ -8,6 +8,8 @@ import java.time.Instant
  * This wrapper is returned when polling messages from the queue. It contains the message payload
  * plus metadata and an acknowledgment function that should be called after processing completes.
  *
+ * This type is not serializable.
+ *
  * ## Java Usage
  *
  * ```java
@@ -27,13 +29,14 @@ import java.time.Instant
  * @property source identifier for the queue or source system
  * @property deliveryType indicates whether this is the first delivery or a redelivery
  */
+@NonSerializable
 public data class AckEnvelope<out A>(
     val payload: A,
     val messageId: MessageId,
     val timestamp: Instant,
     val source: String,
     val deliveryType: DeliveryType,
-    @field:Transient private val acknowledgeCallback: () -> Unit = {},
+    @field:Transient private val acknowledgeHandler: AckHandler = AckHandler {},
 ) {
     /**
      * Acknowledges successful processing of this message.
@@ -45,7 +48,7 @@ public data class AckEnvelope<out A>(
      * be ignored to preserve the updated message.
      */
     public fun acknowledge() {
-        acknowledgeCallback()
+        acknowledgeHandler.acknowledge()
     }
 
     /** Companion object for creating AckEnvelopes. */
@@ -59,12 +62,12 @@ public data class AckEnvelope<out A>(
             timestamp: Instant,
             source: String = "delayed-queue",
             deliveryType: DeliveryType = DeliveryType.FIRST_DELIVERY,
-            acknowledgeCallback: () -> Unit = {},
+            acknowledgeHandler: AckHandler = AckHandler {},
         ): AckEnvelope<A> =
-            AckEnvelope(payload, messageId, timestamp, source, deliveryType, acknowledgeCallback)
+            AckEnvelope(payload, messageId, timestamp, source, deliveryType, acknowledgeHandler)
     }
 
-    // Custom equals/hashCode to exclude acknowledgeCallback
+    // Custom equals/hashCode to exclude acknowledgeHandler
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is AckEnvelope<*>) return false

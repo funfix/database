@@ -2,6 +2,7 @@ package org.funfix.delayedqueue.jvm
 
 import java.time.Duration
 import java.time.Instant
+import java.util.ArrayList
 import java.util.TreeSet
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
@@ -100,8 +101,11 @@ private constructor(
         }
     }
 
-    override fun <In> offerBatch(messages: List<BatchedMessage<In, A>>): List<BatchedReply<In, A>> {
-        return messages.map { batched ->
+    override fun <In> offerBatch(
+        messages: java.util.List<BatchedMessage<In, A>>
+    ): java.util.List<BatchedReply<In, A>> {
+        val replies = ArrayList<BatchedReply<In, A>>(messages.size)
+        for (batched in messages) {
             val outcome =
                 if (batched.message.canUpdate) {
                     offerOrUpdate(
@@ -116,8 +120,9 @@ private constructor(
                         batched.message.scheduleAt,
                     )
                 }
-            BatchedReply(batched.input, batched.message, outcome)
+            replies.add(BatchedReply(batched.input, batched.message, outcome))
         }
+        return java.util.Collections.unmodifiableList(replies)
     }
 
     override fun tryPoll(): AckEnvelope<A>? {
@@ -152,7 +157,7 @@ private constructor(
                     timestamp = now,
                     source = first.ackEnvSource,
                     deliveryType = first.deliveryType,
-                    acknowledgeCallback = { acknowledgeMessage(first) },
+                    acknowledgeHandler = AckHandler { acknowledgeMessage(first) },
                 )
             } else {
                 null
@@ -160,29 +165,33 @@ private constructor(
         }
     }
 
-    override fun tryPollMany(batchMaxSize: Int): AckEnvelope<List<A>> {
-        val messages = mutableListOf<A>()
-        val acks = mutableListOf<() -> Unit>()
+    override fun tryPollMany(batchMaxSize: Int): AckEnvelope<java.util.List<A>> {
+        val messages = ArrayList<A>()
+        val acks = ArrayList<AckHandler>()
         var source = ackEnvSource
+        var deliveryType = DeliveryType.FIRST_DELIVERY
 
         // Poll up to batchMaxSize messages
         for (i in 0 until batchMaxSize) {
             val envelope = tryPoll() ?: break
             messages.add(envelope.payload)
-            acks.add(envelope::acknowledge)
+            acks.add(AckHandler { envelope.acknowledge() })
             source = envelope.source
+            if (envelope.deliveryType == DeliveryType.REDELIVERY) {
+                deliveryType = DeliveryType.REDELIVERY
+            }
         }
 
         val messageId = MessageId(UUID.randomUUID().toString())
         val now = clock.now()
 
         return AckEnvelope(
-            payload = messages.toList(),
+            payload = java.util.Collections.unmodifiableList(messages),
             messageId = messageId,
             timestamp = now,
             source = source,
-            deliveryType = DeliveryType.FIRST_DELIVERY,
-            acknowledgeCallback = { acks.forEach { it() } },
+            deliveryType = deliveryType,
+            acknowledgeHandler = AckHandler { acks.forEach { it.acknowledge() } },
         )
     }
 
@@ -232,7 +241,7 @@ private constructor(
                 timestamp = now,
                 source = first.ackEnvSource,
                 deliveryType = first.deliveryType,
-                acknowledgeCallback = { acknowledgeMessage(first) },
+                acknowledgeHandler = AckHandler { acknowledgeMessage(first) },
             )
         }
         return null
@@ -249,7 +258,7 @@ private constructor(
                     timestamp = now,
                     source = msg.ackEnvSource,
                     deliveryType = msg.deliveryType,
-                    acknowledgeCallback = { acknowledgeMessage(msg) },
+                    acknowledgeHandler = AckHandler { acknowledgeMessage(msg) },
                 )
             } else {
                 null
@@ -317,7 +326,7 @@ private constructor(
             override fun installTick(
                 configHash: ConfigHash,
                 keyPrefix: String,
-                messages: List<CronMessage<A>>,
+                messages: java.util.List<CronMessage<A>>,
             ) {
                 deleteOldCron(keyPrefix)
                 for (cronMsg in messages) {
@@ -338,7 +347,7 @@ private constructor(
                 configHash: ConfigHash,
                 keyPrefix: String,
                 scheduleInterval: Duration,
-                generateMany: (Instant) -> List<CronMessage<A>>,
+                generateMany: CronMessageBatchGenerator<A>,
             ): AutoCloseable {
                 return installLoop(
                     configHash = configHash,
@@ -351,34 +360,49 @@ private constructor(
             override fun installDailySchedule(
                 keyPrefix: String,
                 schedule: DailyCronSchedule,
-                generator: (Instant) -> CronMessage<A>,
+                generator: CronMessageGenerator<A>,
             ): AutoCloseable {
                 return installLoop(
                     configHash = ConfigHash.fromDailyCron(schedule),
                     keyPrefix = keyPrefix,
                     scheduleInterval = schedule.scheduleInterval,
-                    generateMany = { now -> schedule.getNextTimes(now).map(generator) },
+                    generateMany =
+                        CronMessageBatchGenerator { now ->
+                            val times = schedule.getNextTimes(now)
+                            val batch = ArrayList<CronMessage<A>>(times.size)
+                            for (time in times) {
+                                batch.add(generator.generate(time))
+                            }
+                            java.util.Collections.unmodifiableList(batch)
+                        },
                 )
             }
 
             override fun installPeriodicTick(
                 keyPrefix: String,
                 period: Duration,
-                generator: (Instant) -> A,
+                generator: PayloadGenerator<A>,
             ): AutoCloseable {
                 val scheduleInterval = Duration.ofSeconds(1).coerceAtLeast(period.dividedBy(4))
                 return installLoop(
                     configHash = ConfigHash.fromPeriodicTick(period),
                     keyPrefix = keyPrefix,
                     scheduleInterval = scheduleInterval,
-                    generateMany = { now ->
-                        val periodMillis = period.toMillis()
-                        val timestamp =
-                            Instant.ofEpochMilli(
-                                ((now.toEpochMilli() + periodMillis) / periodMillis) * periodMillis
+                    generateMany =
+                        CronMessageBatchGenerator { now ->
+                            val periodMillis = period.toMillis()
+                            val timestamp =
+                                Instant.ofEpochMilli(
+                                    ((now.toEpochMilli() + periodMillis) / periodMillis) *
+                                        periodMillis
+                                )
+                            java.util.List.of(
+                                CronMessage(
+                                    payload = generator.generate(timestamp),
+                                    scheduleAt = timestamp,
+                                )
                             )
-                        listOf(CronMessage(payload = generator(timestamp), scheduleAt = timestamp))
-                    },
+                        },
                 )
             }
 
@@ -386,7 +410,7 @@ private constructor(
                 configHash: ConfigHash,
                 keyPrefix: String,
                 scheduleInterval: Duration,
-                generateMany: (Instant) -> List<CronMessage<A>>,
+                generateMany: CronMessageBatchGenerator<A>,
             ): AutoCloseable {
                 val task =
                     org.funfix.tasks.jvm.Task.fromBlockingIO {
@@ -394,7 +418,7 @@ private constructor(
                         while (!Thread.interrupted()) {
                             try {
                                 val now = clock.now()
-                                val messages = generateMany(now)
+                                val messages = generateMany.generate(now)
                                 val canUpdate = isFirst
                                 isFirst = false
 

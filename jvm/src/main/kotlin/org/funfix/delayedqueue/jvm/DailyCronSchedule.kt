@@ -4,6 +4,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
+import java.util.List
 
 /**
  * Configuration for daily recurring scheduled messages with timezone support.
@@ -39,7 +40,7 @@ public data class DailyCronSchedule(
     public fun getNextTimes(now: Instant): List<Instant> {
         val until = now.plus(scheduleInAdvance)
         val sortedHours = hoursOfDay.sortedBy { it }
-        val result = mutableListOf<Instant>()
+        val result = java.util.ArrayList<Instant>()
 
         var currentTime = now
         var nextTime = getNextTime(currentTime, sortedHours)
@@ -53,7 +54,7 @@ public data class DailyCronSchedule(
             }
         }
 
-        return result
+        return java.util.Collections.unmodifiableList(result)
     }
 
     private fun getNextTime(now: Instant, sortedHours: List<LocalTime>): Instant {

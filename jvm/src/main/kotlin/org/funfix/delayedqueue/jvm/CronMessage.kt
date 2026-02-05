@@ -62,8 +62,7 @@ constructor(val payload: A, val scheduleAt: Instant, val scheduleAtActual: Insta
          * @return a function that creates CronMessages for any given instant
          */
         @JvmStatic
-        public fun <A> staticPayload(payload: A): (Instant) -> CronMessage<A> = { scheduleAt ->
-            CronMessage(payload, scheduleAt)
-        }
+        public fun <A> staticPayload(payload: A): CronMessageGenerator<A> =
+            CronMessageGenerator { scheduleAt -> CronMessage(payload, scheduleAt) }
     }
 }

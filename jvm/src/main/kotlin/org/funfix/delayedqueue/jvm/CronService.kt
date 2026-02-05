@@ -2,7 +2,7 @@ package org.funfix.delayedqueue.jvm
 
 import java.sql.SQLException
 import java.time.Duration
-import java.time.Instant
+import java.util.List
 
 /**
  * Service for installing cron-like periodic schedules in a delayed queue.
@@ -71,7 +71,7 @@ public interface CronService<A> {
         configHash: ConfigHash,
         keyPrefix: String,
         scheduleInterval: Duration,
-        generateMany: (Instant) -> List<CronMessage<A>>,
+        generateMany: CronMessageBatchGenerator<A>,
     ): AutoCloseable
 
     /**
@@ -91,7 +91,7 @@ public interface CronService<A> {
     public fun installDailySchedule(
         keyPrefix: String,
         schedule: DailyCronSchedule,
-        generator: (Instant) -> CronMessage<A>,
+        generator: CronMessageGenerator<A>,
     ): AutoCloseable
 
     /**
@@ -111,6 +111,6 @@ public interface CronService<A> {
     public fun installPeriodicTick(
         keyPrefix: String,
         period: Duration,
-        generator: (Instant) -> A,
+        generator: PayloadGenerator<A>,
     ): AutoCloseable
 }

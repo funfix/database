@@ -236,6 +236,30 @@ public class DelayedQueueInMemoryTest {
         assertEquals(1, envelope.getPayload().size());
         assertEquals("payload1", envelope.getPayload().getFirst());
     }
+
+    @Test
+    public void tryPollMany_marksBatchAsRedeliveryWhenAnyMessageIsRedelivered() {
+        var clock = Clock.test(Instant.parse("2024-01-01T00:00:00Z"));
+        var timeConfig = DelayedQueueTimeConfig.create(Duration.ofSeconds(5), Duration.ofMillis(100));
+        var queue = DelayedQueueInMemory.<String>create(timeConfig, "test-source", clock);
+        var scheduleAt = clock.now();
+
+        queue.offerOrUpdate("key1", "payload1", scheduleAt);
+        queue.offerOrUpdate("key2", "payload2", scheduleAt);
+
+        var first = queue.tryPoll();
+        assertNotNull(first);
+        assertEquals(DeliveryType.FIRST_DELIVERY, first.getDeliveryType());
+
+        // Don't acknowledge, advance past timeout to trigger redelivery
+        clock.advance(Duration.ofSeconds(6));
+
+        var batch = queue.tryPollMany(10);
+
+        assertNotNull(batch);
+        assertEquals(2, batch.getPayload().size());
+        assertEquals(DeliveryType.REDELIVERY, batch.getDeliveryType());
+    }
     
     // ========== Acknowledgment ==========
     

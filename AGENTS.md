@@ -10,6 +10,7 @@ skill is the rule of law for any public surface changes.
 - Do not change or remove published public members; add overloads instead.
 - Use JVM interop annotations deliberately to shape Java call sites.
 - Verify every public entry point with a Java call-site example.
+- Agents MUST practice TDD: write the failing test first, then implement the change.
 
 ## Public API constraints (Java consumers)
 - Use Java types in signatures: `java.util.List/Map/Set`, `java.time.*`,
