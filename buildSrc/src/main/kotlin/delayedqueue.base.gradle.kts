@@ -7,6 +7,7 @@ plugins {
     id("io.gitlab.arturbosch.detekt")
     id("org.jetbrains.dokka")
     id("com.ncorti.ktfmt.gradle")
+    id("org.jetbrains.kotlinx.kover")
 }
 
 repositories {
@@ -74,4 +75,17 @@ dependencies {
 ktfmt {
     kotlinLangStyle() // Use the default Kotlin style
     // Optionally, configure more options here
+}
+
+kover {
+    reports {
+        total {
+            html {
+                onCheck = false
+            }
+            xml {
+                onCheck = false
+            }
+        }
+    }
 }

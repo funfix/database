@@ -3,6 +3,13 @@
 build:
 	./gradlew build
 
+.PHONY: coverage
+coverage:
+	./gradlew :jvm:koverHtmlReport --no-daemon -x test
+	@echo ""
+	@echo "Coverage report generated at: jvm/build/reports/kover/html/index.html"
+	@echo "To view: open jvm/build/reports/kover/html/index.html"
+
 dependency-updates:
 	./gradlew dependencyUpdates \
 		--no-parallel \
