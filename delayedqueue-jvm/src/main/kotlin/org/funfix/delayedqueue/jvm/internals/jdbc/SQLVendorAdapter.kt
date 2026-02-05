@@ -4,7 +4,16 @@ import java.sql.Connection
 import java.sql.ResultSet
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import org.funfix.delayedqueue.jvm.JdbcDriver
+
+/**
+ * Truncates an Instant to seconds precision.
+ *
+ * This matches the old Scala implementation's DBColumnOffsetDateTime(ChronoUnit.SECONDS) behavior
+ * and is critical for database compatibility.
+ */
+private fun truncateToSeconds(instant: Instant): Instant = instant.truncatedTo(ChronoUnit.SECONDS)
 
 /**
  * Describes actual SQL queries executed — can be overridden to provide driver-specific queries.
@@ -68,6 +77,8 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
     /**
      * Updates an existing row with optimistic locking (compare-and-swap). Only updates if the
      * current row matches what's in the database.
+     *
+     * Uses timestamp truncation to handle precision differences between SELECT and UPDATE.
      */
     fun guardedUpdate(
         connection: Connection,
@@ -83,8 +94,8 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
                 createdAt = ?
             WHERE pKey = ?
               AND pKind = ?
-              AND scheduledAtInitially = ?
-              AND createdAt = ?
+              AND scheduledAtInitially IN (?, ?)
+              AND createdAt IN (?, ?)
             """
 
         return connection.prepareStatement(sql).use { stmt ->
@@ -94,8 +105,15 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
             stmt.setTimestamp(4, java.sql.Timestamp.from(updatedRow.createdAt))
             stmt.setString(5, currentRow.pKey)
             stmt.setString(6, currentRow.pKind)
-            stmt.setTimestamp(7, java.sql.Timestamp.from(currentRow.scheduledAtInitially))
-            stmt.setTimestamp(8, java.sql.Timestamp.from(currentRow.createdAt))
+            // scheduledAtInitially IN (truncated, full)
+            stmt.setTimestamp(
+                7,
+                java.sql.Timestamp.from(truncateToSeconds(currentRow.scheduledAtInitially)),
+            )
+            stmt.setTimestamp(8, java.sql.Timestamp.from(currentRow.scheduledAtInitially))
+            // createdAt IN (truncated, full)
+            stmt.setTimestamp(9, java.sql.Timestamp.from(truncateToSeconds(currentRow.createdAt)))
+            stmt.setTimestamp(10, java.sql.Timestamp.from(currentRow.createdAt))
             stmt.executeUpdate() > 0
         }
     }
@@ -142,17 +160,22 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
         }
     }
 
-    /** Deletes a row by its fingerprint (id and createdAt). */
+    /**
+     * Deletes a row by its fingerprint (id and createdAt). Uses timestamp truncation to handle
+     * precision differences.
+     */
     fun deleteRowByFingerprint(connection: Connection, row: DBTableRowWithId): Boolean {
         val sql =
             """
             DELETE FROM $tableName
-            WHERE id = ? AND createdAt = ?
+            WHERE id = ? AND createdAt IN (?, ?)
             """
 
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, row.id)
-            stmt.setTimestamp(2, java.sql.Timestamp.from(row.data.createdAt))
+            // createdAt IN (truncated, full)
+            stmt.setTimestamp(2, java.sql.Timestamp.from(truncateToSeconds(row.data.createdAt)))
+            stmt.setTimestamp(3, java.sql.Timestamp.from(row.data.createdAt))
             stmt.executeUpdate() > 0
         }
     }
@@ -277,6 +300,10 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
      * Acquires a specific row by updating its scheduledAt and lockUuid. Returns true if the row was
      * successfully acquired.
      */
+    /**
+     * Acquires a row by updating its scheduledAt and lockUuid. Uses timestamp truncation to handle
+     * precision differences.
+     */
     fun acquireRowByUpdate(
         connection: Connection,
         row: DBTableRow,
@@ -292,7 +319,7 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
                 lockUuid = ?
             WHERE pKey = ?
               AND pKind = ?
-              AND scheduledAt = ?
+              AND scheduledAt IN (?, ?)
             """
 
         return connection.prepareStatement(sql).use { stmt ->
@@ -300,7 +327,9 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
             stmt.setString(2, lockUuid)
             stmt.setString(3, row.pKey)
             stmt.setString(4, row.pKind)
+            // scheduledAt IN (exact, truncated)
             stmt.setTimestamp(5, java.sql.Timestamp.from(row.scheduledAt))
+            stmt.setTimestamp(6, java.sql.Timestamp.from(truncateToSeconds(row.scheduledAt)))
             stmt.executeUpdate() > 0
         }
     }

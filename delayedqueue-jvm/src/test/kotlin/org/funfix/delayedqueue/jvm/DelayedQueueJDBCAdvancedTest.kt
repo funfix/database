@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 /**
- * Advanced JDBC-specific tests including concurrency and multi-queue isolation.
- * These tests are designed to be FAST - no artificial delays.
+ * Advanced JDBC-specific tests including concurrency and multi-queue isolation. These tests are
+ * designed to be FAST - no artificial delays.
  */
 class DelayedQueueJDBCAdvancedTest {
     private val queues = mutableListOf<DelayedQueueJDBC<String>>()
@@ -31,7 +31,7 @@ class DelayedQueueJDBCAdvancedTest {
 
     private fun createQueue(
         tableName: String = "delayed_queue_test",
-        clock: TestClock = TestClock()
+        clock: TestClock = TestClock(),
     ): DelayedQueueJDBC<String> {
         val config =
             JdbcConnectionConfig(
@@ -58,7 +58,7 @@ class DelayedQueueJDBCAdvancedTest {
     private fun createQueueOnSameDB(
         url: String,
         tableName: String,
-        clock: TestClock = TestClock()
+        clock: TestClock = TestClock(),
     ): DelayedQueueJDBC<String> {
         val config =
             JdbcConnectionConfig(
@@ -95,15 +95,39 @@ class DelayedQueueJDBCAdvancedTest {
         val exitSecond = now.minusSeconds(5)
 
         // Insert 4 messages in each queue
-        assertEquals(OfferOutcome.Created, queue1.offerIfNotExists("key-1", "value 1 in queue 1", exitFirst))
-        assertEquals(OfferOutcome.Created, queue1.offerIfNotExists("key-2", "value 2 in queue 1", exitSecond))
-        assertEquals(OfferOutcome.Created, queue2.offerIfNotExists("key-1", "value 1 in queue 2", exitFirst))
-        assertEquals(OfferOutcome.Created, queue2.offerIfNotExists("key-2", "value 2 in queue 2", exitSecond))
+        assertEquals(
+            OfferOutcome.Created,
+            queue1.offerIfNotExists("key-1", "value 1 in queue 1", exitFirst),
+        )
+        assertEquals(
+            OfferOutcome.Created,
+            queue1.offerIfNotExists("key-2", "value 2 in queue 1", exitSecond),
+        )
+        assertEquals(
+            OfferOutcome.Created,
+            queue2.offerIfNotExists("key-1", "value 1 in queue 2", exitFirst),
+        )
+        assertEquals(
+            OfferOutcome.Created,
+            queue2.offerIfNotExists("key-2", "value 2 in queue 2", exitSecond),
+        )
 
-        assertEquals(OfferOutcome.Created, queue1.offerIfNotExists("key-3", "value 3 in queue 1", exitLater))
-        assertEquals(OfferOutcome.Created, queue1.offerIfNotExists("key-4", "value 4 in queue 1", exitLater))
-        assertEquals(OfferOutcome.Created, queue2.offerIfNotExists("key-3", "value 3 in queue 2", exitLater))
-        assertEquals(OfferOutcome.Created, queue2.offerIfNotExists("key-4", "value 4 in queue 2", exitLater))
+        assertEquals(
+            OfferOutcome.Created,
+            queue1.offerIfNotExists("key-3", "value 3 in queue 1", exitLater),
+        )
+        assertEquals(
+            OfferOutcome.Created,
+            queue1.offerIfNotExists("key-4", "value 4 in queue 1", exitLater),
+        )
+        assertEquals(
+            OfferOutcome.Created,
+            queue2.offerIfNotExists("key-3", "value 3 in queue 2", exitLater),
+        )
+        assertEquals(
+            OfferOutcome.Created,
+            queue2.offerIfNotExists("key-4", "value 4 in queue 2", exitLater),
+        )
 
         // Verify all messages exist
         assertTrue(queue1.containsMessage("key-1"))
@@ -116,15 +140,39 @@ class DelayedQueueJDBCAdvancedTest {
         assertTrue(queue2.containsMessage("key-4"))
 
         // Update messages 2 and 4
-        assertEquals(OfferOutcome.Ignored, queue1.offerIfNotExists("key-1", "value 1 in queue 1 Updated", exitSecond))
-        assertEquals(OfferOutcome.Updated, queue1.offerOrUpdate("key-2", "value 2 in queue 1 Updated", exitSecond))
-        assertEquals(OfferOutcome.Ignored, queue1.offerIfNotExists("key-3", "value 3 in queue 1 Updated", exitLater))
-        assertEquals(OfferOutcome.Updated, queue1.offerOrUpdate("key-4", "value 4 in queue 1 Updated", exitLater))
+        assertEquals(
+            OfferOutcome.Ignored,
+            queue1.offerIfNotExists("key-1", "value 1 in queue 1 Updated", exitSecond),
+        )
+        assertEquals(
+            OfferOutcome.Updated,
+            queue1.offerOrUpdate("key-2", "value 2 in queue 1 Updated", exitSecond),
+        )
+        assertEquals(
+            OfferOutcome.Ignored,
+            queue1.offerIfNotExists("key-3", "value 3 in queue 1 Updated", exitLater),
+        )
+        assertEquals(
+            OfferOutcome.Updated,
+            queue1.offerOrUpdate("key-4", "value 4 in queue 1 Updated", exitLater),
+        )
 
-        assertEquals(OfferOutcome.Ignored, queue2.offerIfNotExists("key-1", "value 1 in queue 2 Updated", exitSecond))
-        assertEquals(OfferOutcome.Updated, queue2.offerOrUpdate("key-2", "value 2 in queue 2 Updated", exitSecond))
-        assertEquals(OfferOutcome.Ignored, queue2.offerIfNotExists("key-3", "value 3 in queue 2 Updated", exitLater))
-        assertEquals(OfferOutcome.Updated, queue2.offerOrUpdate("key-4", "value 4 in queue 2 Updated", exitLater))
+        assertEquals(
+            OfferOutcome.Ignored,
+            queue2.offerIfNotExists("key-1", "value 1 in queue 2 Updated", exitSecond),
+        )
+        assertEquals(
+            OfferOutcome.Updated,
+            queue2.offerOrUpdate("key-2", "value 2 in queue 2 Updated", exitSecond),
+        )
+        assertEquals(
+            OfferOutcome.Ignored,
+            queue2.offerIfNotExists("key-3", "value 3 in queue 2 Updated", exitLater),
+        )
+        assertEquals(
+            OfferOutcome.Updated,
+            queue2.offerOrUpdate("key-4", "value 4 in queue 2 Updated", exitLater),
+        )
 
         // Extract messages 1 and 2 from both queues
         val msg1InQ1 = queue1.tryPoll()
@@ -186,21 +234,23 @@ class DelayedQueueJDBCAdvancedTest {
         val producerLatch = CountDownLatch(workers)
 
         // Producers
-        val producerThreads = (0 until workers).map { workerId ->
-            Thread {
-                try {
-                    for (i in 0 until messageCount) {
-                        val key = i.toString()  // Same keys across all workers for concurrency test
-                        val result = queue.offerIfNotExists(key, key, now)
-                        if (result == OfferOutcome.Created) {
-                            createdCount.incrementAndGet()
+        val producerThreads =
+            (0 until workers).map { workerId ->
+                Thread {
+                    try {
+                        for (i in 0 until messageCount) {
+                            val key =
+                                i.toString() // Same keys across all workers for concurrency test
+                            val result = queue.offerIfNotExists(key, key, now)
+                            if (result == OfferOutcome.Created) {
+                                createdCount.incrementAndGet()
+                            }
                         }
+                    } finally {
+                        producerLatch.countDown()
                     }
-                } finally {
-                    producerLatch.countDown()
                 }
             }
-        }
 
         // Start all producers
         producerThreads.forEach { it.start() }
@@ -213,23 +263,24 @@ class DelayedQueueJDBCAdvancedTest {
         val consumerLatch = CountDownLatch(workers)
 
         // Consumers
-        val consumerThreads = (0 until workers).map {
-            Thread {
-                try {
-                    while (true) {
-                        val msg = queue.tryPoll()
-                        if (msg == null) {
-                            // No more messages available
-                            break
+        val consumerThreads =
+            (0 until workers).map {
+                Thread {
+                    try {
+                        while (true) {
+                            val msg = queue.tryPoll()
+                            if (msg == null) {
+                                // No more messages available
+                                break
+                            }
+                            consumedMessages.add(msg.payload)
+                            msg.acknowledge()
                         }
-                        consumedMessages.add(msg.payload)
-                        msg.acknowledge()
+                    } finally {
+                        consumerLatch.countDown()
                     }
-                } finally {
-                    consumerLatch.countDown()
                 }
             }
-        }
 
         // Start all consumers
         consumerThreads.forEach { it.start() }
@@ -238,8 +289,16 @@ class DelayedQueueJDBCAdvancedTest {
         assertTrue(consumerLatch.await(10, TimeUnit.SECONDS), "Consumers should finish")
 
         // Verify all messages were consumed
-        assertEquals(messageCount, createdCount.get(), "Should create exactly $messageCount messages")
-        assertEquals(messageCount, consumedMessages.size, "Should consume exactly $messageCount messages")
+        assertEquals(
+            messageCount,
+            createdCount.get(),
+            "Should create exactly $messageCount messages",
+        )
+        assertEquals(
+            messageCount,
+            consumedMessages.size,
+            "Should consume exactly $messageCount messages",
+        )
 
         // Verify queue is empty
         assertEquals(0, queue.dropAllMessages("Yes, please, I know what I'm doing!"))

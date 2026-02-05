@@ -491,31 +491,37 @@ abstract class DelayedQueueContractTest {
         val queue = createQueueWithClock(clock)
         try {
             val now = clock.instant()
-            
+
             // Create a message and poll it
             val offer1 = queue.offerOrUpdate("my-key", "value offered (1)", now.minusSeconds(1))
             assertEquals(OfferOutcome.Created, offer1)
-            
+
             val msg1 = queue.tryPoll()
             assertNotNull(msg1)
             assertEquals("value offered (1)", msg1!!.payload)
-            
+
             // Update the message while holding the first poll
             val offer2 = queue.offerOrUpdate("my-key", "value offered (2)", now.minusSeconds(1))
             assertEquals(OfferOutcome.Updated, offer2)
-            
+
             // Poll again to get the updated version
             val msg2 = queue.tryPoll()
             assertNotNull(msg2)
             assertEquals("value offered (2)", msg2!!.payload)
-            
+
             // Acknowledge the first message - should have no effect because message was updated
             msg1.acknowledge()
-            assertTrue(queue.containsMessage("my-key"), "Message should still exist after ack on stale version")
-            
+            assertTrue(
+                queue.containsMessage("my-key"),
+                "Message should still exist after ack on stale version",
+            )
+
             // Acknowledge the second message - should delete the message
             msg2.acknowledge()
-            assertFalse(queue.containsMessage("my-key"), "Message should be deleted after ack on current version")
+            assertFalse(
+                queue.containsMessage("my-key"),
+                "Message should be deleted after ack on current version",
+            )
         } finally {
             cleanup()
         }
@@ -527,44 +533,44 @@ abstract class DelayedQueueContractTest {
         val queue = createQueueWithClock(clock)
         try {
             val now = clock.instant()
-            
+
             // Create three messages
             queue.offerOrUpdate("my-key-1", "value offered (1.1)", now.minusSeconds(1))
             queue.offerOrUpdate("my-key-2", "value offered (2.1)", now.minusSeconds(1))
             queue.offerOrUpdate("my-key-3", "value offered (3.1)", now.minusSeconds(1))
-            
+
             // Read all three messages
             val msg1 = queue.read("my-key-1")
             val msg2 = queue.read("my-key-2")
             val msg3 = queue.read("my-key-3")
             val msg4 = queue.read("my-key-4")
-            
+
             assertNotNull(msg1)
             assertNotNull(msg2)
             assertNotNull(msg3)
             assertNull(msg4)
-            
+
             assertEquals("value offered (1.1)", msg1!!.payload)
             assertEquals("value offered (2.1)", msg2!!.payload)
             assertEquals("value offered (3.1)", msg3!!.payload)
-            
+
             // Advance clock to ensure updates have different createdAt
             clock.advanceSeconds(1)
-            
-            // Update msg2 (payload) and msg3 (scheduleAt)  
+
+            // Update msg2 (payload) and msg3 (scheduleAt)
             queue.offerOrUpdate("my-key-2", "value offered (2.2)", now.minusSeconds(1))
             queue.offerOrUpdate("my-key-3", "value offered (3.1)", now)
-            
+
             // Acknowledge all three messages
             // Only msg1 should be deleted (msg2 and msg3 were updated)
             msg1.acknowledge()
             msg2.acknowledge()
             msg3.acknowledge()
-            
+
             assertFalse(queue.containsMessage("my-key-1"), "msg1 should be deleted")
             assertTrue(queue.containsMessage("my-key-2"), "msg2 should still exist (was updated)")
             assertTrue(queue.containsMessage("my-key-3"), "msg3 should still exist (was updated)")
-            
+
             // Verify 2 messages remaining
             val remaining = queue.dropAllMessages("Yes, please, I know what I'm doing!")
             assertEquals(2, remaining)
@@ -579,32 +585,34 @@ abstract class DelayedQueueContractTest {
         val queue = createQueueWithClock(clock)
         try {
             val now = clock.instant()
-            
+
             // Offer 50 messages
-            val messages = (0 until 50).map { i ->
-                BatchedMessage(
-                    input = i,
-                    message = ScheduledMessage(
-                        key = "key-$i",
-                        payload = "payload-$i",
-                        scheduleAt = now.minusSeconds(50 - i.toLong()),
-                        canUpdate = false
+            val messages =
+                (0 until 50).map { i ->
+                    BatchedMessage(
+                        input = i,
+                        message =
+                            ScheduledMessage(
+                                key = "key-$i",
+                                payload = "payload-$i",
+                                scheduleAt = now.minusSeconds(50 - i.toLong()),
+                                canUpdate = false,
+                            ),
                     )
-                )
-            }
+                }
             queue.offerBatch(messages)
-            
+
             // Poll all 50 messages
             val batch = queue.tryPollMany(50)
             assertEquals(50, batch.payload.size, "Should get all 50 messages")
-            
+
             // Verify order and content
             batch.payload.forEachIndexed { idx, msg ->
                 assertEquals("payload-$idx", msg, "Messages should be in FIFO order")
             }
-            
+
             batch.acknowledge()
-            
+
             // Verify queue is empty
             val batch2 = queue.tryPollMany(10)
             assertTrue(batch2.payload.isEmpty(), "Queue should be empty")
@@ -619,32 +627,34 @@ abstract class DelayedQueueContractTest {
         val queue = createQueueWithClock(clock)
         try {
             val now = clock.instant()
-            
+
             // Offer 100 messages
-            val messages = (0 until 100).map { i ->
-                BatchedMessage(
-                    input = i,
-                    message = ScheduledMessage(
-                        key = "key-$i",
-                        payload = "payload-$i",
-                        scheduleAt = now.minusSeconds(100 - i.toLong()),
-                        canUpdate = false
+            val messages =
+                (0 until 100).map { i ->
+                    BatchedMessage(
+                        input = i,
+                        message =
+                            ScheduledMessage(
+                                key = "key-$i",
+                                payload = "payload-$i",
+                                scheduleAt = now.minusSeconds(100 - i.toLong()),
+                                canUpdate = false,
+                            ),
                     )
-                )
-            }
+                }
             queue.offerBatch(messages)
-            
+
             // Poll all 100 messages
             val batch = queue.tryPollMany(100)
             assertEquals(100, batch.payload.size, "Should get all 100 messages")
-            
+
             // Verify order and content
             batch.payload.forEachIndexed { idx, msg ->
                 assertEquals("payload-$idx", msg, "Messages should be in FIFO order")
             }
-            
+
             batch.acknowledge()
-            
+
             // Verify queue is empty
             val batch2 = queue.tryPollMany(3)
             assertTrue(batch2.payload.isEmpty(), "Queue should be empty")
@@ -659,32 +669,34 @@ abstract class DelayedQueueContractTest {
         val queue = createQueueWithClock(clock)
         try {
             val now = clock.instant()
-            
+
             // Offer 250 messages
-            val messages = (0 until 250).map { i ->
-                BatchedMessage(
-                    input = i,
-                    message = ScheduledMessage(
-                        key = "key-$i",
-                        payload = "payload-$i",
-                        scheduleAt = now.minusSeconds(250 - i.toLong()),
-                        canUpdate = false
+            val messages =
+                (0 until 250).map { i ->
+                    BatchedMessage(
+                        input = i,
+                        message =
+                            ScheduledMessage(
+                                key = "key-$i",
+                                payload = "payload-$i",
+                                scheduleAt = now.minusSeconds(250 - i.toLong()),
+                                canUpdate = false,
+                            ),
                     )
-                )
-            }
+                }
             queue.offerBatch(messages)
-            
+
             // Poll all 250 messages
             val batch = queue.tryPollMany(250)
             assertEquals(250, batch.payload.size, "Should get all 250 messages")
-            
+
             // Verify order and content
             batch.payload.forEachIndexed { idx, msg ->
                 assertEquals("payload-$idx", msg, "Messages should be in FIFO order")
             }
-            
+
             batch.acknowledge()
-            
+
             // Verify queue is empty
             val batch2 = queue.tryPollMany(10)
             assertTrue(batch2.payload.isEmpty(), "Queue should be empty")
@@ -699,16 +711,16 @@ abstract class DelayedQueueContractTest {
         val queue = createQueueWithClock(clock)
         try {
             val now = clock.instant()
-            
+
             queue.offerOrUpdate("my-key-1", "value offered (1.1)", now.minusSeconds(1))
             queue.offerOrUpdate("my-key-2", "value offered (2.1)", now.minusSeconds(2))
-            
+
             // tryPollMany with <= 0 should just return empty, not throw
             // The implementation should handle this gracefully
             val batch0 = queue.tryPollMany(0)
             assertTrue(batch0.payload.isEmpty(), "maxSize=0 should return empty batch")
             batch0.acknowledge()
-            
+
             // Verify messages are still in queue
             val batch3 = queue.tryPollMany(3)
             assertEquals(2, batch3.payload.size, "Should still have 2 messages")
