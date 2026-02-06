@@ -62,8 +62,11 @@ The original implementation in `old-code/` is the source of truth. Any deviation
 
 - Practice TDD: write tests before the implementation.
 - Projects strives for full test coverage. Tests have to be clean and easy to read.
-- All public tests go into `./src/test/java`, built in Java.
-- All tests for internals go into `./src/test/kotlin`, built in Kotlin
+- **All tests for public API go into `./src/test/java`, built in Java.**
+  - If a test calls public methods on `DelayedQueue`, `CronService`, or other public interfaces → Java test
+  - This ensures the Java API is tested from a Java consumer's perspective
+- **All tests for internal implementation go into `./src/test/kotlin`, built in Kotlin.**
+  - If a test is for internal classes/functions (e.g., `SqlExceptionFilters`, `Raise`, retry logic) → Kotlin test
 
 ## Review checklist
 - Java call sites compile for all public constructors and methods.

@@ -21,9 +21,5 @@ public enum class JdbcDriver(public val className: String) {
         @JvmStatic
         public operator fun invoke(className: String): JdbcDriver? =
             entries.firstOrNull { it.className.equals(className, ignoreCase = true) }
-        //
-        //        @JvmStatic
-        //        public fun fromClassName(className: String): JdbcDriver? =
-        //            invoke(className)
     }
 }

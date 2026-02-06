@@ -19,7 +19,7 @@ class JdbcConnectionConfigTest {
     @DisplayName("Creating config with required parameters only")
     void testBasicConfig() {
         String url = "jdbc:sqlite:memory";
-        JdbcDriver driver = JdbcDriver.Sqlite;
+        JdbcDriver driver = JdbcDriver.HSQLDB;
 
         JdbcConnectionConfig config = new JdbcConnectionConfig(url, driver);
 
@@ -34,7 +34,7 @@ class JdbcConnectionConfigTest {
     @DisplayName("Creating config with all parameters")
     void testFullConfig() {
         String url = "jdbc:sqlite:memory";
-        JdbcDriver driver = JdbcDriver.Sqlite;
+        JdbcDriver driver = JdbcDriver.HSQLDB;
         String username = "testuser";
         String password = "testpass";
         JdbcDatabasePoolConfig poolConfig = new JdbcDatabasePoolConfig();
@@ -73,7 +73,7 @@ class JdbcConnectionConfigTest {
     @DisplayName("Creating config with pool configuration only")
     void testConfigWithPoolOnly() {
         String url = "jdbc:sqlite:memory";
-        JdbcDriver driver = JdbcDriver.Sqlite;
+        JdbcDriver driver = JdbcDriver.HSQLDB;
         JdbcDatabasePoolConfig poolConfig = new JdbcDatabasePoolConfig(
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
@@ -98,7 +98,7 @@ class JdbcConnectionConfigTest {
     @DisplayName("Record should implement equals() correctly")
     void testRecordEquality() {
         String url = "jdbc:sqlite:memory";
-        JdbcDriver driver = JdbcDriver.Sqlite;
+        JdbcDriver driver = JdbcDriver.HSQLDB;
 
         JdbcConnectionConfig config1 = new JdbcConnectionConfig(url, driver);
         JdbcConnectionConfig config2 = new JdbcConnectionConfig(url, driver);
@@ -111,11 +111,11 @@ class JdbcConnectionConfigTest {
     void testRecordInequality() {
         JdbcConnectionConfig config1 = new JdbcConnectionConfig(
             "jdbc:sqlite:memory",
-            JdbcDriver.Sqlite
+            JdbcDriver.HSQLDB
         );
         JdbcConnectionConfig config2 = new JdbcConnectionConfig(
             "jdbc:sqlite:file.db",
-            JdbcDriver.Sqlite
+            JdbcDriver.MsSqlServer
         );
 
         assertNotEquals(config1, config2);
@@ -125,7 +125,7 @@ class JdbcConnectionConfigTest {
     @DisplayName("Record should implement hashCode() consistently")
     void testRecordHashCode() {
         String url = "jdbc:sqlite:memory";
-        JdbcDriver driver = JdbcDriver.Sqlite;
+        JdbcDriver driver = JdbcDriver.HSQLDB;
 
         JdbcConnectionConfig config1 = new JdbcConnectionConfig(url, driver);
         JdbcConnectionConfig config2 = new JdbcConnectionConfig(url, driver);
@@ -138,7 +138,7 @@ class JdbcConnectionConfigTest {
     void testRecordToString() {
         JdbcConnectionConfig config = new JdbcConnectionConfig(
             "jdbc:sqlite:memory",
-            JdbcDriver.Sqlite,
+            JdbcDriver.HSQLDB,
             "user",
             "pass"
         );
@@ -178,11 +178,11 @@ class JdbcConnectionConfigTest {
 
         String urlSqlite = "jdbc:sqlite:test.db";
         JdbcConnectionConfig configSqlite = new JdbcConnectionConfig(
-            urlSqlite, JdbcDriver.Sqlite
+            urlSqlite, JdbcDriver.HSQLDB
         );
 
         assertEquals(JdbcDriver.MsSqlServer, configMsSql.driver());
-        assertEquals(JdbcDriver.Sqlite, configSqlite.driver());
+        assertEquals(JdbcDriver.HSQLDB, configSqlite.driver());
         assertNotEquals(configMsSql.driver(), configSqlite.driver());
     }
 }
