@@ -20,8 +20,12 @@ dependencies {
     testImplementation(libs.logback.classic)
     testImplementation(libs.jdbc.hsqldb)
     testImplementation(libs.jdbc.sqlite)
+    testImplementation(libs.jdbc.mssql)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
+    testImplementation(platform(libs.testcontainers.bom))
+    testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.testcontainers.mssqlserver)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 

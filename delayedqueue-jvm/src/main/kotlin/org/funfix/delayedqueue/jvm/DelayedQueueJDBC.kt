@@ -15,6 +15,7 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRow
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRowWithId
 import org.funfix.delayedqueue.jvm.internals.jdbc.HSQLDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.MigrationRunner
+import org.funfix.delayedqueue.jvm.internals.jdbc.MsSqlServerMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.RdbmsExceptionFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.SqliteMigrations
@@ -611,9 +612,7 @@ private constructor(
                             JdbcDriver.HSQLDB -> HSQLDBMigrations.getMigrations(config.tableName)
                             JdbcDriver.Sqlite -> SqliteMigrations.getMigrations(config.tableName)
                             JdbcDriver.MsSqlServer ->
-                                throw UnsupportedOperationException(
-                                    "Database ${config.db.driver} not yet supported"
-                                )
+                                MsSqlServerMigrations.getMigrations(config.tableName)
                         }
 
                     val executed = MigrationRunner.runMigrations(connection.underlying, migrations)

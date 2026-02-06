@@ -18,24 +18,18 @@ internal object SqliteMigrations {
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         pKey TEXT NOT NULL,
                         pKind TEXT NOT NULL,
-                        payload TEXT NOT NULL,
-                        scheduledAt TEXT NOT NULL,
-                        scheduledAtInitially TEXT NOT NULL,
+                        payload BLOB NOT NULL,
+                        scheduledAt INTEGER NOT NULL,
+                        scheduledAtInitially INTEGER NOT NULL,
                         lockUuid TEXT NULL,
-                        createdAt TEXT NOT NULL
+                        createdAt INTEGER NOT NULL
                     );
 
                     CREATE UNIQUE INDEX ${tableName}__PKindPKeyUniqueIndex
                     ON $tableName (pKind, pKey);
 
-                    CREATE INDEX ${tableName}__ScheduledAtIndex
-                    ON $tableName (scheduledAt);
-
                     CREATE INDEX ${tableName}__KindPlusScheduledAtIndex
                     ON $tableName (pKind, scheduledAt);
-
-                    CREATE INDEX ${tableName}__CreatedAtIndex
-                    ON $tableName (createdAt);
 
                     CREATE INDEX ${tableName}__LockUuidPlusIdIndex
                     ON $tableName (lockUuid, id);

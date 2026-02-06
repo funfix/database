@@ -361,10 +361,10 @@ public final class org/funfix/delayedqueue/jvm/MessageId : java/lang/Record {
 
 public abstract interface class org/funfix/delayedqueue/jvm/MessageSerializer {
 	public static final field Companion Lorg/funfix/delayedqueue/jvm/MessageSerializer$Companion;
-	public abstract fun deserialize (Ljava/lang/String;)Ljava/lang/Object;
+	public abstract fun deserialize ([B)Ljava/lang/Object;
 	public static fun forStrings ()Lorg/funfix/delayedqueue/jvm/MessageSerializer;
 	public abstract fun getTypeName ()Ljava/lang/String;
-	public abstract fun serialize (Ljava/lang/Object;)Ljava/lang/String;
+	public abstract fun serialize (Ljava/lang/Object;)[B
 }
 
 public final class org/funfix/delayedqueue/jvm/MessageSerializer$Companion {
