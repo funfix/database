@@ -86,6 +86,72 @@ internal object HSQLDBFilters : RdbmsExceptionFilters {
         listOf("primary key constraint", "unique constraint", "integrity constraint")
 }
 
+/** SQLite-specific exception filters. */
+internal object SQLiteFilters : RdbmsExceptionFilters {
+    override val transientFailure: SqlExceptionFilter =
+        object : SqlExceptionFilter {
+            override fun matches(e: Throwable): Boolean =
+                when {
+                    CommonSqlFilters.transactionTransient.matches(e) -> true
+                    // SQLite BUSY (error code 5) — database is locked by another connection
+                    e is SQLException && isSQLiteResultCode(e, 5) -> true
+                    // SQLite LOCKED (error code 6) — table-level lock within a connection
+                    e is SQLException && isSQLiteResultCode(e, 6) -> true
+                    else -> false
+                }
+        }
+
+    override val duplicateKey: SqlExceptionFilter =
+        object : SqlExceptionFilter {
+            override fun matches(e: Throwable): Boolean =
+                when {
+                    CommonSqlFilters.integrityConstraint.matches(e) -> true
+                    // SQLite CONSTRAINT_PRIMARYKEY (2067) and CONSTRAINT_UNIQUE (2579)
+                    e is SQLException && isSQLiteResultCode(e, 2067, 2579) -> true
+                    // SQLite generic CONSTRAINT (19)
+                    e is SQLException &&
+                        isSQLiteResultCode(e, 19) &&
+                        matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
+                    e is SQLException && matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
+                    else -> false
+                }
+        }
+
+    override val invalidTable: SqlExceptionFilter =
+        object : SqlExceptionFilter {
+            override fun matches(e: Throwable): Boolean =
+                e is SQLException && matchesMessage(e.message, listOf("no such table"))
+        }
+
+    override val objectAlreadyExists: SqlExceptionFilter =
+        object : SqlExceptionFilter {
+            override fun matches(e: Throwable): Boolean =
+                e is SQLException && matchesMessage(e.message, listOf("already exists"))
+        }
+
+    private val DUPLICATE_KEY_KEYWORDS =
+        listOf("primary key constraint", "unique constraint", "unique")
+}
+
+/**
+ * Checks if a SQLite exception has one of the given result codes. SQLite JDBC driver
+ * (org.sqlite.SQLiteException) exposes a `getResultCode()` method returning an enum with a numeric
+ * `code` field. We use reflection to avoid a compile-time dependency on the driver.
+ */
+private fun isSQLiteResultCode(e: Throwable, vararg codes: Int): Boolean {
+    if (e.javaClass.name != "org.sqlite.SQLiteException") return false
+    return try {
+        val getResultCode = e.javaClass.getMethod("getResultCode")
+        val resultCode = getResultCode.invoke(e) ?: return false
+        // resultCode is an enum org.sqlite.core.Codes.SQLiteResultCode with a `code` field
+        val codeField = resultCode.javaClass.getField("code")
+        val codeValue = codeField.getInt(resultCode)
+        codeValue in codes
+    } catch (_: Exception) {
+        false
+    }
+}
+
 /** Microsoft SQL Server-specific exception filters. */
 internal object MSSQLFilters : RdbmsExceptionFilters {
     override val transientFailure: SqlExceptionFilter =
@@ -182,5 +248,5 @@ internal fun filtersForDriver(driver: JdbcDriver): RdbmsExceptionFilters =
     when (driver) {
         JdbcDriver.HSQLDB -> HSQLDBFilters
         JdbcDriver.MsSqlServer -> MSSQLFilters
-        JdbcDriver.Sqlite -> HSQLDBFilters // Use HSQLDB filters as baseline
+        JdbcDriver.Sqlite -> SQLiteFilters
     }
