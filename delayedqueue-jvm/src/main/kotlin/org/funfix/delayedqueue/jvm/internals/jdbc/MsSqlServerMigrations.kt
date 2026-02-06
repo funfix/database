@@ -47,7 +47,7 @@ internal object MsSqlServerMigrations {
                     ON $tableName (createdAt);
 
                     CREATE INDEX ${tableName}__LockUuidPlusIdIndex
-                    ON $tableName (lockUuid, id)
+                    ON $tableName (lockUuid, id);
                     """
                         .trimIndent(),
             )
