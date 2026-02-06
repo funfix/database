@@ -9,7 +9,10 @@ public enum class JdbcDriver(public val className: String) {
     MsSqlServer("com.microsoft.sqlserver.jdbc.SQLServerDriver"),
 
     /** SQLite driver. */
-    Sqlite("org.sqlite.JDBC");
+    Sqlite("org.sqlite.JDBC"),
+
+    /** MariaDB driver. */
+    MariaDB("org.mariadb.jdbc.Driver");
 
     public companion object {
         /**
