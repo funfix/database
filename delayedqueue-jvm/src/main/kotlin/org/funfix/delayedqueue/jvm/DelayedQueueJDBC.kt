@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import org.funfix.delayedqueue.jvm.internals.CronServiceImpl
+import org.funfix.delayedqueue.jvm.internals.PollResult
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRow
 import org.funfix.delayedqueue.jvm.internals.jdbc.HSQLDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.MigrationRunner
@@ -318,7 +319,7 @@ private constructor(
         // Retry loop to handle failed acquires (concurrent modifications)
         // This matches the original Scala implementation which retries if acquire fails
         while (true) {
-            val envelope =
+            val result =
                 database.withTransaction { connection ->
                     val now = Instant.now(clock)
                     val lockUuid = UUID.randomUUID().toString()
@@ -326,7 +327,7 @@ private constructor(
                     // Select first available message (with locking if supported by DB)
                     val row =
                         adapter.selectFirstAvailableWithLock(connection.underlying, pKind, now)
-                            ?: return@withTransaction null // No messages available
+                            ?: return@withTransaction PollResult.NoMessages
 
                     // Try to acquire the row by updating it with our lock
                     val acquired =
@@ -339,18 +340,7 @@ private constructor(
                         )
 
                     if (!acquired) {
-                        // Concurrent modification - another thread acquired this row
-                        // Signal retry by returning a special marker (empty envelope with null
-                        // payload)
-                        // We'll check for this below and continue the loop
-                        return@withTransaction AckEnvelope<A?>(
-                            payload = null,
-                            messageId = MessageId("__RETRY__"),
-                            timestamp = now,
-                            source = "",
-                            deliveryType = DeliveryType.FIRST_DELIVERY,
-                            acknowledge = {},
-                        )
+                        return@withTransaction PollResult.Retry
                     }
 
                     // Successfully acquired the message
@@ -362,34 +352,36 @@ private constructor(
                             DeliveryType.FIRST_DELIVERY
                         }
 
-                    AckEnvelope(
-                        payload = payload,
-                        messageId = MessageId(row.data.pKey),
-                        timestamp = now,
-                        source = config.ackEnvSource,
-                        deliveryType = deliveryType,
-                        acknowledge = {
-                            try {
-                                unsafeSneakyRaises {
-                                    database.withTransaction { ackConn ->
-                                        adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
+                    val envelope =
+                        AckEnvelope(
+                            payload = payload,
+                            messageId = MessageId(row.data.pKey),
+                            timestamp = now,
+                            source = config.ackEnvSource,
+                            deliveryType = deliveryType,
+                            acknowledge = {
+                                try {
+                                    unsafeSneakyRaises {
+                                        database.withTransaction { ackConn ->
+                                            adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
+                                        }
                                     }
+                                } catch (e: Exception) {
+                                    logger.warn(
+                                        "Failed to acknowledge message with lock $lockUuid",
+                                        e,
+                                    )
                                 }
-                            } catch (e: Exception) {
-                                logger.warn("Failed to acknowledge message with lock $lockUuid", e)
-                            }
-                        },
-                    )
+                            },
+                        )
+
+                    PollResult.Success(envelope)
                 }
 
-            // Check if we should retry (null payload means retry marker)
-            if (envelope == null) {
-                return null // No messages available
-            } else if (envelope.payload == null) {
-                continue // Retry marker, try next message
-            } else {
-                @Suppress("UNCHECKED_CAST")
-                return envelope as AckEnvelope<A>
+            return when (result) {
+                is PollResult.NoMessages -> null
+                is PollResult.Retry -> continue
+                is PollResult.Success -> result.envelope
             }
         }
     }
