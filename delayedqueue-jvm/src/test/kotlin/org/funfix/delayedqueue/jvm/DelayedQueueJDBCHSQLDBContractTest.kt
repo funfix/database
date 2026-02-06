@@ -22,7 +22,7 @@ class DelayedQueueJDBCHSQLDBContractTest : DelayedQueueContractTest() {
         timeConfig: DelayedQueueTimeConfig,
         clock: TestClock,
     ): DelayedQueue<String> {
-        val config =
+        val dbConfig =
             JdbcConnectionConfig(
                 url = "jdbc:hsqldb:mem:testdb_${System.currentTimeMillis()}",
                 driver = JdbcDriver.HSQLDB,
@@ -31,12 +31,14 @@ class DelayedQueueJDBCHSQLDBContractTest : DelayedQueueContractTest() {
                 pool = null,
             )
 
+        val queueConfig =
+            DelayedQueueJDBCConfig(db = dbConfig, time = timeConfig, queueName = "test-queue")
+
         val queue =
             DelayedQueueJDBC.create(
-                connectionConfig = config,
                 tableName = "delayed_queue_test",
                 serializer = MessageSerializer.forStrings(),
-                timeConfig = timeConfig,
+                config = queueConfig,
                 clock = clock,
             )
 

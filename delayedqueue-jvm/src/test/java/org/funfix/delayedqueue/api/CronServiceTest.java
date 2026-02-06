@@ -3,7 +3,7 @@ package org.funfix.delayedqueue.api;
 import org.funfix.delayedqueue.jvm.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.sql.SQLException;
+import org.funfix.delayedqueue.jvm.ResourceUnavailableException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 public class CronServiceTest {
 
     @Test
-    public void installTick_createsMessagesInQueue() throws InterruptedException, SQLException {
+    public void installTick_createsMessagesInQueue() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -49,7 +49,7 @@ public class CronServiceTest {
     }
     
     @Test
-    public void uninstallTick_removesMessagesFromQueue() throws InterruptedException, SQLException {
+    public void uninstallTick_removesMessagesFromQueue() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -73,7 +73,7 @@ public class CronServiceTest {
     }
     
     @Test
-    public void installTick_deletesOldMessagesWithDifferentHash() throws InterruptedException, SQLException {
+    public void installTick_deletesOldMessagesWithDifferentHash() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -103,7 +103,7 @@ public class CronServiceTest {
     }
 
     @Test
-    public void installTick_replacesPreviousConfigurationWithSamePrefix() throws InterruptedException, SQLException {
+    public void installTick_replacesPreviousConfigurationWithSamePrefix() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -293,7 +293,7 @@ public class CronServiceTest {
     // ========== Additional Kotlin Tests Converted to Java ==========
     
     @Test
-    public void installTick_messagesWithMultipleKeys() throws InterruptedException, SQLException {
+    public void installTick_messagesWithMultipleKeys() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -321,7 +321,7 @@ public class CronServiceTest {
     }
 
     @Test
-    public void installTick_allowsMultipleMessagesInSameSecond() throws InterruptedException, SQLException {
+    public void installTick_allowsMultipleMessagesInSameSecond() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -346,7 +346,7 @@ public class CronServiceTest {
     }
     
     @Test
-    public void installTick_messagesBecomeAvailableAtScheduledTime() throws InterruptedException, SQLException {
+    public void installTick_messagesBecomeAvailableAtScheduledTime() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -384,7 +384,7 @@ public class CronServiceTest {
     }
     
     @Test
-    public void uninstallTick_removesAllMessagesWithPrefix() throws InterruptedException, SQLException {
+    public void uninstallTick_removesAllMessagesWithPrefix() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -415,7 +415,7 @@ public class CronServiceTest {
     }
     
     @Test
-    public void uninstallTick_onlyRemovesMatchingPrefix() throws InterruptedException, SQLException {
+    public void uninstallTick_onlyRemovesMatchingPrefix() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -444,7 +444,7 @@ public class CronServiceTest {
     }
 
     @Test
-    public void uninstallTick_onlyRemovesMatchingConfigHash() throws InterruptedException, SQLException {
+    public void uninstallTick_onlyRemovesMatchingConfigHash() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -471,7 +471,7 @@ public class CronServiceTest {
     }
     
     @Test
-    public void installTick_withEmptyList_keepsMessagesWithSameHash() throws InterruptedException, SQLException {
+    public void installTick_withEmptyList_keepsMessagesWithSameHash() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var queue = DelayedQueueInMemory.<String>create(
             DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
@@ -496,7 +496,7 @@ public class CronServiceTest {
     }
 
     @Test
-    public void installTick_doesNotDropRedeliveryMessages() throws InterruptedException, SQLException {
+    public void installTick_doesNotDropRedeliveryMessages() throws InterruptedException, ResourceUnavailableException {
         var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         var timeConfig = DelayedQueueTimeConfig.create(Duration.ofSeconds(5), Duration.ofMillis(100));
         var queue = DelayedQueueInMemory.<String>create(timeConfig, "test-source", clock);

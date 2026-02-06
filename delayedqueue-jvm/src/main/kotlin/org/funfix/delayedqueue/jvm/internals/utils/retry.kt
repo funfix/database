@@ -1,5 +1,6 @@
 package org.funfix.delayedqueue.jvm.internals.utils
 
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ExecutionException
@@ -7,11 +8,11 @@ import java.util.concurrent.TimeoutException
 import org.funfix.delayedqueue.jvm.ResourceUnavailableException
 import org.funfix.delayedqueue.jvm.RetryConfig
 
-internal fun RetryConfig.start(now: Instant): Evolution =
+internal fun RetryConfig.start(clock: Clock): Evolution =
     Evolution(
         config = this,
-        startedAt = now,
-        timeoutAt = totalSoftTimeout?.let { now.plus(it) },
+        startedAt = Instant.now(clock),
+        timeoutAt = totalSoftTimeout?.let { Instant.now(clock).plus(it) },
         retriesRemaining = maxRetries,
         delay = initialDelay,
         evolutions = 0L,
@@ -80,16 +81,14 @@ internal enum class RetryOutcome {
     RAISE,
 }
 
-internal class RequestTimeoutException(message: String, cause: Throwable? = null) :
-    RuntimeException(message, cause)
-
-context(_: Raise<InterruptedException>, _: Raise<TimeoutException>)
+context(_: Raise<InterruptedException>, _: Raise<ResourceUnavailableException>)
 internal fun <T> withRetries(
     config: RetryConfig,
+    clock: Clock,
     shouldRetry: (Throwable) -> RetryOutcome,
     block: () -> T,
 ): T {
-    var state = config.start(Instant.now())
+    var state = config.start(clock)
 
     while (true) {
         try {
@@ -99,7 +98,7 @@ internal fun <T> withRetries(
                 block()
             }
         } catch (e: Throwable) {
-            val now = Instant.now()
+            val now = Instant.now(clock)
 
             if (!state.canRetry(now)) {
                 throw createFinalException(state, e, now)
@@ -123,15 +122,15 @@ internal fun <T> withRetries(
     }
 }
 
+context(_: Raise<ResourceUnavailableException>)
 private fun createFinalException(state: Evolution, e: Throwable, now: Instant): Throwable {
     val elapsed = state.timeElapsed(now)
     return when {
         e is TimeoutExceptionWrapper -> {
             state.prepareException(
-                RequestTimeoutException(
-                    "Giving up after ${state.evolutions} retries and $elapsed",
-                    e.cause,
-                )
+                TimeoutException("Giving up after ${state.evolutions} retries and $elapsed").apply {
+                    initCause(e.cause)
+                }
             )
         }
         else -> {

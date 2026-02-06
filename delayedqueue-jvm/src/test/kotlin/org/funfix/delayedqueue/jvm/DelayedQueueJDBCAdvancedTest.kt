@@ -33,7 +33,7 @@ class DelayedQueueJDBCAdvancedTest {
         tableName: String = "delayed_queue_test",
         clock: TestClock = TestClock(),
     ): DelayedQueueJDBC<String> {
-        val config =
+        val dbConfig =
             JdbcConnectionConfig(
                 url = "jdbc:hsqldb:mem:testdb_advanced_${System.currentTimeMillis()}",
                 driver = JdbcDriver.HSQLDB,
@@ -42,12 +42,18 @@ class DelayedQueueJDBCAdvancedTest {
                 pool = null,
             )
 
+        val queueConfig =
+            DelayedQueueJDBCConfig(
+                db = dbConfig,
+                time = DelayedQueueTimeConfig.DEFAULT,
+                queueName = "advanced-test-queue",
+            )
+
         val queue =
             DelayedQueueJDBC.create(
-                connectionConfig = config,
                 tableName = tableName,
                 serializer = MessageSerializer.forStrings(),
-                timeConfig = DelayedQueueTimeConfig.DEFAULT,
+                config = queueConfig,
                 clock = clock,
             )
 
@@ -60,7 +66,7 @@ class DelayedQueueJDBCAdvancedTest {
         tableName: String,
         clock: TestClock = TestClock(),
     ): DelayedQueueJDBC<String> {
-        val config =
+        val dbConfig =
             JdbcConnectionConfig(
                 url = url,
                 driver = JdbcDriver.HSQLDB,
@@ -69,12 +75,18 @@ class DelayedQueueJDBCAdvancedTest {
                 pool = null,
             )
 
+        val queueConfig =
+            DelayedQueueJDBCConfig(
+                db = dbConfig,
+                time = DelayedQueueTimeConfig.DEFAULT,
+                queueName = "shared-db-test-queue-$tableName",
+            )
+
         val queue =
             DelayedQueueJDBC.create(
-                connectionConfig = config,
                 tableName = tableName,
                 serializer = MessageSerializer.forStrings(),
-                timeConfig = DelayedQueueTimeConfig.DEFAULT,
+                config = queueConfig,
                 clock = clock,
             )
 

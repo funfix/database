@@ -9,6 +9,15 @@ package org.funfix.delayedqueue.jvm
  */
 public interface MessageSerializer<A> {
     /**
+     * Returns the fully-qualified type name of the messages this serializer handles.
+     *
+     * This is used for queue partitioning and message routing.
+     *
+     * @return the fully-qualified type name (e.g., "java.lang.String")
+     */
+    public fun getTypeName(): String
+
+    /**
      * Serializes a payload to a string.
      *
      * @param payload the payload to serialize
@@ -21,15 +30,17 @@ public interface MessageSerializer<A> {
      *
      * @param serialized the serialized string
      * @return the deserialized payload
-     * @throws Exception if deserialization fails
+     * @throws IllegalArgumentException if the serialized string cannot be parsed
      */
-    public fun deserialize(serialized: String): A
+    @Throws(IllegalArgumentException::class) public fun deserialize(serialized: String): A
 
     public companion object {
         /** Creates a serializer for String payloads (identity serialization). */
         @JvmStatic
         public fun forStrings(): MessageSerializer<String> =
             object : MessageSerializer<String> {
+                override fun getTypeName(): String = "java.lang.String"
+
                 override fun serialize(payload: String): String = payload
 
                 override fun deserialize(serialized: String): String = serialized

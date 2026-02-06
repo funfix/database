@@ -7,14 +7,16 @@ import org.junit.jupiter.api.Test
 class RaiseTests {
     @Test
     fun `sneakyRaises provides context receiver`() {
-        val result = sneakyRaises { 123 }
+        val result = unsafeSneakyRaises { 123 }
         assertEquals(123, result)
     }
 
     @Test
     fun `raise throws exception in context`() {
         val thrown =
-            assertThrows(IOException::class.java) { sneakyRaises { raise(IOException("fail")) } }
+            assertThrows(IOException::class.java) {
+                unsafeSneakyRaises { raise(IOException("fail")) }
+            }
         assertEquals("fail", thrown.message)
     }
 
@@ -22,7 +24,7 @@ class RaiseTests {
     fun `sneakyRaises block can catch exception`() {
         val result =
             try {
-                sneakyRaises { raise(IllegalArgumentException("bad")) }
+                unsafeSneakyRaises { raise(IllegalArgumentException("bad")) }
                 @Suppress("KotlinUnreachableCode") "no error"
             } catch (e: IllegalArgumentException) {
                 e.message

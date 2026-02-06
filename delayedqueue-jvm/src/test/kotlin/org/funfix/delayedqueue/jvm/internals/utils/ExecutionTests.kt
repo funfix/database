@@ -7,13 +7,13 @@ import org.junit.jupiter.api.Test
 
 class ExecutionTests {
     @Test
-    fun `runBlockingIO returns result`() = sneakyRaises {
+    fun `runBlockingIO returns result`() = unsafeSneakyRaises {
         val result = runBlockingIO { 42 }
         assertEquals(42, result)
     }
 
     @Test
-    fun `runBlockingIO propagates ExecutionException`() = sneakyRaises {
+    fun `runBlockingIO propagates ExecutionException`() = unsafeSneakyRaises {
         val ex = ExecutionException("fail", null)
         val thrown = assertThrows(ExecutionException::class.java) { runBlockingIO { throw ex } }
         assertEquals(ex, thrown)
@@ -23,24 +23,24 @@ class ExecutionTests {
     fun `runBlockingIO propagates InterruptedException as TaskCancellationException`() {
         val interrupted = InterruptedException("interrupted")
         assertThrows(TaskCancellationException::class.java) {
-            sneakyRaises { runBlockingIO { throw interrupted } }
+            unsafeSneakyRaises { runBlockingIO { throw interrupted } }
         }
     }
 
     @Test
-    fun `runBlockingIO runs on shared executor`() = sneakyRaises {
+    fun `runBlockingIO runs on shared executor`() = unsafeSneakyRaises {
         val threadName = runBlockingIO { Thread.currentThread().name }
         assertTrue(threadName.contains("virtual"))
     }
 
     @Test
-    fun `runBlockingIOUninterruptible returns result`() = sneakyRaises {
+    fun `runBlockingIOUninterruptible returns result`() = unsafeSneakyRaises {
         val result = runBlockingIOUninterruptible { 99 }
         assertEquals(99, result)
     }
 
     @Test
-    fun `runBlockingIOUninterruptible propagates ExecutionException`() = sneakyRaises {
+    fun `runBlockingIOUninterruptible propagates ExecutionException`() = unsafeSneakyRaises {
         val ex = ExecutionException("fail", null)
         val thrown =
             assertThrows(ExecutionException::class.java) {
@@ -51,7 +51,7 @@ class ExecutionTests {
 
     @Test
     fun `runBlockingIOUninterruptible propagates InterruptedException as TaskCancellationException`() =
-        sneakyRaises {
+        unsafeSneakyRaises {
             val interrupted = InterruptedException("interrupted")
             // Should not throw InterruptedException, but wrap it
             assertThrows(TaskCancellationException::class.java) {

@@ -5,7 +5,7 @@ class CronServiceJDBCHSQLDBContractTest : CronServiceContractTest() {
     private var currentQueue: DelayedQueueJDBC<String>? = null
 
     override fun createQueue(clock: TestClock): DelayedQueue<String> {
-        val config =
+        val dbConfig =
             JdbcConnectionConfig(
                 url = "jdbc:hsqldb:mem:crontest_${System.nanoTime()}",
                 driver = JdbcDriver.HSQLDB,
@@ -14,12 +14,18 @@ class CronServiceJDBCHSQLDBContractTest : CronServiceContractTest() {
                 pool = null,
             )
 
+        val queueConfig =
+            DelayedQueueJDBCConfig(
+                db = dbConfig,
+                time = DelayedQueueTimeConfig.DEFAULT,
+                queueName = "cron-test-queue",
+            )
+
         val queue =
             DelayedQueueJDBC.create(
-                connectionConfig = config,
                 tableName = "delayed_queue_cron_test",
                 serializer = MessageSerializer.forStrings(),
-                timeConfig = DelayedQueueTimeConfig.DEFAULT,
+                config = queueConfig,
                 clock = clock,
             )
 

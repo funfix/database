@@ -1,9 +1,11 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc
 
 import java.sql.SQLException
+import org.funfix.delayedqueue.jvm.ResourceUnavailableException
 import org.funfix.delayedqueue.jvm.RetryConfig
 import org.funfix.delayedqueue.jvm.internals.utils.Raise
 import org.funfix.delayedqueue.jvm.internals.utils.RetryOutcome
+import org.funfix.delayedqueue.jvm.internals.utils.raise
 import org.funfix.delayedqueue.jvm.internals.utils.withRetries
 
 /**
@@ -13,37 +15,45 @@ import org.funfix.delayedqueue.jvm.internals.utils.withRetries
  * - Retries on transient failures (deadlocks, connection issues, transaction rollbacks)
  * - Does NOT retry on generic SQLExceptions (likely application errors)
  * - Retries on unexpected non-SQL exceptions (potentially transient infrastructure issues)
+ * - Wraps TimeoutException into ResourceUnavailableException for public API
  *
  * @param config Retry configuration (backoff, timeouts, max retries)
+ * @param clock Clock for time operations (enables testing with mocked time)
  * @param filters RDBMS-specific exception filters (default: HSQLDB)
  * @param block The database operation to execute
  * @return The result of the successful operation
- * @throws SQLException if retry policy decides not to retry
- * @throws ResourceUnavailableException if all retries are exhausted
+ * @throws ResourceUnavailableException if retries are exhausted or timeout occurs
+ * @throws InterruptedException if the operation is interrupted
  */
-context(_: Raise<InterruptedException>, _: Raise<java.util.concurrent.TimeoutException>)
+context(_: Raise<ResourceUnavailableException>, _: Raise<InterruptedException>)
 internal fun <T> withDbRetries(
     config: RetryConfig,
+    clock: java.time.Clock,
     filters: RdbmsExceptionFilters = HSQLDBFilters,
     block: () -> T,
 ): T =
-    withRetries(
-        config,
-        shouldRetry = { exception ->
-            when {
-                filters.transientFailure.matches(exception) -> {
-                    // Transient database failures should be retried
-                    RetryOutcome.RETRY
+    try {
+        withRetries(
+            config,
+            clock,
+            shouldRetry = { exception ->
+                when {
+                    filters.transientFailure.matches(exception) -> {
+                        // Transient database failures should be retried
+                        RetryOutcome.RETRY
+                    }
+                    exception is SQLException -> {
+                        // Generic SQL exceptions are likely application errors, don't retry
+                        RetryOutcome.RAISE
+                    }
+                    else -> {
+                        // Unexpected exceptions might be transient infrastructure issues
+                        RetryOutcome.RETRY
+                    }
                 }
-                exception is SQLException -> {
-                    // Generic SQL exceptions are likely application errors, don't retry
-                    RetryOutcome.RAISE
-                }
-                else -> {
-                    // Unexpected exceptions might be transient infrastructure issues
-                    RetryOutcome.RETRY
-                }
-            }
-        },
-        block,
-    )
+            },
+            block,
+        )
+    } catch (e: java.util.concurrent.TimeoutException) {
+        raise(ResourceUnavailableException("Database operation timed out after retries", e))
+    }

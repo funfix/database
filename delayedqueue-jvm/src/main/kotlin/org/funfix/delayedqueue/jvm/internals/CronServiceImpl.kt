@@ -1,6 +1,5 @@
 package org.funfix.delayedqueue.jvm.internals
 
-import java.sql.SQLException
 import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -15,7 +14,20 @@ import org.funfix.delayedqueue.jvm.CronMessageGenerator
 import org.funfix.delayedqueue.jvm.CronPayloadGenerator
 import org.funfix.delayedqueue.jvm.CronService
 import org.funfix.delayedqueue.jvm.DelayedQueue
+import org.funfix.delayedqueue.jvm.ResourceUnavailableException
+import org.funfix.delayedqueue.jvm.internals.utils.Raise
+import org.funfix.delayedqueue.jvm.internals.utils.unsafeSneakyRaises
 import org.slf4j.LoggerFactory
+
+/**
+ * Type alias for cron deletion operations that can raise SQLException and InterruptedException.
+ *
+ * Used by CronServiceImpl to delegate database operations to the DelayedQueue implementation while
+ * maintaining proper exception flow tracking via Raise context.
+ */
+internal typealias CronDeleteOperation =
+    context(Raise<ResourceUnavailableException>, Raise<InterruptedException>)
+    (CronConfigHash, String) -> Unit
 
 /**
  * Base implementation of CronService that can be used by both in-memory and JDBC implementations.
@@ -23,31 +35,33 @@ import org.slf4j.LoggerFactory
 internal class CronServiceImpl<A>(
     private val queue: DelayedQueue<A>,
     private val clock: Clock,
-    private val deleteCurrentCron: (CronConfigHash, String) -> Unit,
-    private val deleteOldCron: (CronConfigHash, String) -> Unit,
+    private val deleteCurrentCron: CronDeleteOperation,
+    private val deleteOldCron: CronDeleteOperation,
 ) : CronService<A> {
     private val logger = LoggerFactory.getLogger(CronServiceImpl::class.java)
 
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun installTick(
         configHash: CronConfigHash,
         keyPrefix: String,
         messages: List<CronMessage<A>>,
     ) {
-        installTick0(
-            configHash = configHash,
-            keyPrefix = keyPrefix,
-            messages = messages,
-            canUpdate = false,
-        )
+        unsafeSneakyRaises {
+            installTick0(
+                configHash = configHash,
+                keyPrefix = keyPrefix,
+                messages = messages,
+                canUpdate = false,
+            )
+        }
     }
 
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun uninstallTick(configHash: CronConfigHash, keyPrefix: String) {
-        deleteCurrentCron(configHash, keyPrefix)
+        unsafeSneakyRaises { deleteCurrentCron(configHash, keyPrefix) }
     }
 
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun install(
         configHash: CronConfigHash,
         keyPrefix: String,
@@ -61,7 +75,7 @@ internal class CronServiceImpl<A>(
             generateMany = generateMany,
         )
 
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun installDailySchedule(
         keyPrefix: String,
         schedule: CronDailySchedule,
@@ -76,7 +90,7 @@ internal class CronServiceImpl<A>(
             },
         )
 
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun installPeriodicTick(
         keyPrefix: String,
         period: Duration,
@@ -107,6 +121,7 @@ internal class CronServiceImpl<A>(
      * @param canUpdate whether to update existing messages (false for installTick, varies for
      *   install)
      */
+    context(_: Raise<ResourceUnavailableException>, _: Raise<InterruptedException>)
     private fun installTick0(
         configHash: CronConfigHash,
         keyPrefix: String,
@@ -156,12 +171,14 @@ internal class CronServiceImpl<A>(
                 val firstRun = isFirst.getAndSet(false)
                 val messages = generateMany(now)
 
-                installTick0(
-                    configHash = configHash,
-                    keyPrefix = keyPrefix,
-                    messages = messages,
-                    canUpdate = firstRun,
-                )
+                unsafeSneakyRaises {
+                    installTick0(
+                        configHash = configHash,
+                        keyPrefix = keyPrefix,
+                        messages = messages,
+                        canUpdate = firstRun,
+                    )
+                }
             } catch (e: Exception) {
                 logger.error("Error in cron task for $keyPrefix", e)
             }

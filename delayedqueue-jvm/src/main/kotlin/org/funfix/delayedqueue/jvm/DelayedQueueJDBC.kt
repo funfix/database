@@ -12,8 +12,10 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRow
 import org.funfix.delayedqueue.jvm.internals.jdbc.HSQLDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.MigrationRunner
 import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
+import org.funfix.delayedqueue.jvm.internals.jdbc.withDbRetries
 import org.funfix.delayedqueue.jvm.internals.utils.Database
-import org.funfix.delayedqueue.jvm.internals.utils.sneakyRaises
+import org.funfix.delayedqueue.jvm.internals.utils.Raise
+import org.funfix.delayedqueue.jvm.internals.utils.unsafeSneakyRaises
 import org.funfix.delayedqueue.jvm.internals.utils.withConnection
 import org.funfix.delayedqueue.jvm.internals.utils.withTransaction
 import org.slf4j.LoggerFactory
@@ -56,34 +58,56 @@ private constructor(
     private val database: Database,
     private val adapter: SQLVendorAdapter,
     private val serializer: MessageSerializer<A>,
-    private val timeConfig: DelayedQueueTimeConfig,
+    private val config: DelayedQueueJDBCConfig,
     private val clock: Clock,
-    private val tableName: String,
-    private val pKind: String,
-    private val ackEnvSource: String,
 ) : DelayedQueue<A>, AutoCloseable {
     private val logger = LoggerFactory.getLogger(DelayedQueueJDBC::class.java)
     private val lock = ReentrantLock()
     private val condition = lock.newCondition()
 
-    override fun getTimeConfig(): DelayedQueueTimeConfig = timeConfig
+    private val pKind: String =
+        computePartitionKind("${config.queueName}|${serializer.getTypeName()}")
 
-    @Throws(SQLException::class, InterruptedException::class)
+    override fun getTimeConfig(): DelayedQueueTimeConfig = config.time
+
+    /**
+     * Wraps database operations with retry logic based on configuration.
+     *
+     * If retryPolicy is null, executes the block directly. Otherwise, applies retry logic with
+     * database-specific exception filtering.
+     *
+     * This method has Raise context for ResourceUnavailableException and InterruptedException,
+     * which matches what the public API declares via @Throws.
+     */
+    context(_: Raise<ResourceUnavailableException>, _: Raise<InterruptedException>)
+    private fun <T> withRetries(block: () -> T): T {
+        return if (config.retryPolicy == null) {
+            block()
+        } else {
+            withDbRetries(config = config.retryPolicy, clock = clock, block = block)
+        }
+    }
+
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun offerOrUpdate(key: String, payload: A, scheduleAt: Instant): OfferOutcome =
-        offer(key, payload, scheduleAt, canUpdate = true)
+        unsafeSneakyRaises {
+            withRetries { offer(key, payload, scheduleAt, canUpdate = true) }
+        }
 
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun offerIfNotExists(key: String, payload: A, scheduleAt: Instant): OfferOutcome =
-        offer(key, payload, scheduleAt, canUpdate = false)
+        unsafeSneakyRaises {
+            withRetries { offer(key, payload, scheduleAt, canUpdate = false) }
+        }
 
-    @Throws(SQLException::class, InterruptedException::class)
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     private fun offer(
         key: String,
         payload: A,
         scheduleAt: Instant,
         canUpdate: Boolean,
-    ): OfferOutcome = sneakyRaises {
-        database.withTransaction { connection ->
+    ): OfferOutcome {
+        return database.withTransaction { connection ->
             val existing = adapter.selectByKey(connection.underlying, pKind, key)
             val now = Instant.now(clock)
             val serialized = serializer.serialize(payload)
@@ -141,88 +165,98 @@ private constructor(
         }
     }
 
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun <In> offerBatch(messages: List<BatchedMessage<In, A>>): List<BatchedReply<In, A>> =
-        sneakyRaises {
-            val now = Instant.now(clock)
+        unsafeSneakyRaises {
+            withRetries { offerBatchImpl(messages) }
+        }
 
-            // Separate into insert and update batches
-            val (toInsert, toUpdate) =
-                messages.partition { msg ->
-                    !database.withConnection { connection ->
-                        adapter.checkIfKeyExists(connection.underlying, msg.message.key, pKind)
-                    }
-                }
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    private fun <In> offerBatchImpl(
+        messages: List<BatchedMessage<In, A>>
+    ): List<BatchedReply<In, A>> {
+        val now = Instant.now(clock)
 
-            val results = mutableMapOf<String, OfferOutcome>()
-
-            // Try batched inserts first
-            if (toInsert.isNotEmpty()) {
-                database.withTransaction { connection ->
-                    val rows =
-                        toInsert.map { msg ->
-                            DBTableRow(
-                                pKey = msg.message.key,
-                                pKind = pKind,
-                                payload = serializer.serialize(msg.message.payload),
-                                scheduledAt = msg.message.scheduleAt,
-                                scheduledAtInitially = msg.message.scheduleAt,
-                                lockUuid = null,
-                                createdAt = now,
-                            )
-                        }
-
-                    try {
-                        val inserted = adapter.insertBatch(connection.underlying, rows)
-                        inserted.forEach { key -> results[key] = OfferOutcome.Created }
-
-                        // Mark non-inserted as ignored
-                        toInsert.forEach { msg ->
-                            if (msg.message.key !in inserted) {
-                                results[msg.message.key] = OfferOutcome.Ignored
-                            }
-                        }
-
-                        if (inserted.isNotEmpty()) {
-                            lock.withLock { condition.signalAll() }
-                        }
-                    } catch (e: SQLException) {
-                        // Batch insert failed, fall back to individual inserts
-                        logger.warn("Batch insert failed, falling back to individual inserts", e)
-                        toInsert.forEach { msg -> results[msg.message.key] = OfferOutcome.Ignored }
-                    }
+        // Separate into insert and update batches
+        val (toInsert, toUpdate) =
+            messages.partition { msg ->
+                !database.withConnection { connection ->
+                    adapter.checkIfKeyExists(connection.underlying, msg.message.key, pKind)
                 }
             }
 
-            // Handle updates individually
-            toUpdate.forEach { msg ->
-                if (msg.message.canUpdate) {
-                    val outcome =
-                        offer(
-                            msg.message.key,
-                            msg.message.payload,
-                            msg.message.scheduleAt,
-                            canUpdate = true,
+        val results = mutableMapOf<String, OfferOutcome>()
+
+        // Try batched inserts first
+        if (toInsert.isNotEmpty()) {
+            database.withTransaction { connection ->
+                val rows =
+                    toInsert.map { msg ->
+                        DBTableRow(
+                            pKey = msg.message.key,
+                            pKind = pKind,
+                            payload = serializer.serialize(msg.message.payload),
+                            scheduledAt = msg.message.scheduleAt,
+                            scheduledAtInitially = msg.message.scheduleAt,
+                            lockUuid = null,
+                            createdAt = now,
                         )
-                    results[msg.message.key] = outcome
-                } else {
-                    results[msg.message.key] = OfferOutcome.Ignored
-                }
-            }
+                    }
 
-            // Create replies
-            messages.map { msg ->
-                BatchedReply(
-                    input = msg.input,
-                    message = msg.message,
-                    outcome = results[msg.message.key] ?: OfferOutcome.Ignored,
-                )
+                try {
+                    val inserted = adapter.insertBatch(connection.underlying, rows)
+                    inserted.forEach { key -> results[key] = OfferOutcome.Created }
+
+                    // Mark non-inserted as ignored
+                    toInsert.forEach { msg ->
+                        if (msg.message.key !in inserted) {
+                            results[msg.message.key] = OfferOutcome.Ignored
+                        }
+                    }
+
+                    if (inserted.isNotEmpty()) {
+                        lock.withLock { condition.signalAll() }
+                    }
+                } catch (e: SQLException) {
+                    // Batch insert failed, fall back to individual inserts
+                    logger.warn("Batch insert failed, falling back to individual inserts", e)
+                    toInsert.forEach { msg -> results[msg.message.key] = OfferOutcome.Ignored }
+                }
             }
         }
 
-    @Throws(SQLException::class, InterruptedException::class)
-    override fun tryPoll(): AckEnvelope<A>? = sneakyRaises {
-        database.withTransaction { connection ->
+        // Handle updates individually
+        toUpdate.forEach { msg ->
+            if (msg.message.canUpdate) {
+                val outcome =
+                    offer(
+                        msg.message.key,
+                        msg.message.payload,
+                        msg.message.scheduleAt,
+                        canUpdate = true,
+                    )
+                results[msg.message.key] = outcome
+            } else {
+                results[msg.message.key] = OfferOutcome.Ignored
+            }
+        }
+
+        // Create replies
+        return messages.map { msg ->
+            BatchedReply(
+                input = msg.input,
+                message = msg.message,
+                outcome = results[msg.message.key] ?: OfferOutcome.Ignored,
+            )
+        }
+    }
+
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    override fun tryPoll(): AckEnvelope<A>? = unsafeSneakyRaises { withRetries { tryPollImpl() } }
+
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    private fun tryPollImpl(): AckEnvelope<A>? {
+        return database.withTransaction { connection ->
             val now = Instant.now(clock)
             val lockUuid = UUID.randomUUID().toString()
 
@@ -235,7 +269,7 @@ private constructor(
                     connection.underlying,
                     row.data,
                     lockUuid,
-                    timeConfig.acquireTimeout,
+                    config.time.acquireTimeout,
                     now,
                 )
 
@@ -255,40 +289,44 @@ private constructor(
                 payload = payload,
                 messageId = MessageId(row.data.pKey),
                 timestamp = now,
-                source = ackEnvSource,
+                source = config.ackEnvSource,
                 deliveryType = deliveryType,
-                acknowledge =
-                    AcknowledgeFun {
-                        try {
-                            sneakyRaises {
-                                database.withTransaction { ackConn ->
-                                    adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
-                                }
+                acknowledge = {
+                    try {
+                        unsafeSneakyRaises {
+                            database.withTransaction { ackConn ->
+                                adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
                             }
-                        } catch (e: Exception) {
-                            logger.warn("Failed to acknowledge message with lock $lockUuid", e)
                         }
-                    },
+                    } catch (e: Exception) {
+                        logger.warn("Failed to acknowledge message with lock $lockUuid", e)
+                    }
+                },
             )
         }
     }
 
-    @Throws(SQLException::class, InterruptedException::class)
-    override fun tryPollMany(batchMaxSize: Int): AckEnvelope<List<A>> = sneakyRaises {
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    override fun tryPollMany(batchMaxSize: Int): AckEnvelope<List<A>> = unsafeSneakyRaises {
+        withRetries { tryPollManyImpl(batchMaxSize) }
+    }
+
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    private fun tryPollManyImpl(batchMaxSize: Int): AckEnvelope<List<A>> {
         // Handle edge case: non-positive batch size
         if (batchMaxSize <= 0) {
             val now = Instant.now(clock)
-            return@sneakyRaises AckEnvelope(
+            return AckEnvelope(
                 payload = emptyList(),
                 messageId = MessageId(UUID.randomUUID().toString()),
                 timestamp = now,
-                source = ackEnvSource,
+                source = config.ackEnvSource,
                 deliveryType = DeliveryType.FIRST_DELIVERY,
                 acknowledge = AcknowledgeFun {},
             )
         }
 
-        database.withTransaction { connection ->
+        return database.withTransaction { connection ->
             val now = Instant.now(clock)
             val lockUuid = UUID.randomUUID().toString()
 
@@ -298,7 +336,7 @@ private constructor(
                     pKind,
                     batchMaxSize,
                     lockUuid,
-                    timeConfig.acquireTimeout,
+                    config.time.acquireTimeout,
                     now,
                 )
 
@@ -307,7 +345,7 @@ private constructor(
                     payload = emptyList(),
                     messageId = MessageId(lockUuid),
                     timestamp = now,
-                    source = ackEnvSource,
+                    source = config.ackEnvSource,
                     deliveryType = DeliveryType.FIRST_DELIVERY,
                     acknowledge = AcknowledgeFun {},
                 )
@@ -322,25 +360,24 @@ private constructor(
                 payload = payloads,
                 messageId = MessageId(lockUuid),
                 timestamp = now,
-                source = ackEnvSource,
+                source = config.ackEnvSource,
                 deliveryType = DeliveryType.FIRST_DELIVERY,
-                acknowledge =
-                    AcknowledgeFun {
-                        try {
-                            sneakyRaises {
-                                database.withTransaction { ackConn ->
-                                    adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
-                                }
+                acknowledge = {
+                    try {
+                        unsafeSneakyRaises {
+                            database.withTransaction { ackConn ->
+                                adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
                             }
-                        } catch (e: Exception) {
-                            logger.warn("Failed to acknowledge batch with lock $lockUuid", e)
                         }
-                    },
+                    } catch (e: Exception) {
+                        logger.warn("Failed to acknowledge batch with lock $lockUuid", e)
+                    }
+                },
             )
         }
     }
 
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun poll(): AckEnvelope<A> {
         while (true) {
             val result = tryPoll()
@@ -350,14 +387,19 @@ private constructor(
 
             // Wait for new messages
             lock.withLock {
-                condition.await(timeConfig.pollPeriod.toMillis(), TimeUnit.MILLISECONDS)
+                condition.await(config.time.pollPeriod.toMillis(), TimeUnit.MILLISECONDS)
             }
         }
     }
 
-    @Throws(SQLException::class, InterruptedException::class)
-    override fun read(key: String): AckEnvelope<A>? = sneakyRaises {
-        database.withConnection { connection ->
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    override fun read(key: String): AckEnvelope<A>? = unsafeSneakyRaises {
+        withRetries { readImpl(key) }
+    }
+
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    private fun readImpl(key: String): AckEnvelope<A>? {
+        return database.withConnection { connection ->
             val row =
                 adapter.selectByKey(connection.underlying, pKind, key) ?: return@withConnection null
 
@@ -375,47 +417,56 @@ private constructor(
                 payload = payload,
                 messageId = MessageId(row.data.pKey),
                 timestamp = now,
-                source = ackEnvSource,
+                source = config.ackEnvSource,
                 deliveryType = deliveryType,
-                acknowledge =
-                    AcknowledgeFun {
-                        try {
-                            sneakyRaises {
-                                database.withTransaction { ackConn ->
-                                    adapter.deleteRowByFingerprint(ackConn.underlying, row)
-                                }
+                acknowledge = {
+                    try {
+                        unsafeSneakyRaises {
+                            database.withTransaction { ackConn ->
+                                adapter.deleteRowByFingerprint(ackConn.underlying, row)
                             }
-                        } catch (e: Exception) {
-                            logger.warn("Failed to acknowledge message $key", e)
                         }
-                    },
+                    } catch (e: Exception) {
+                        logger.warn("Failed to acknowledge message $key", e)
+                    }
+                },
             )
         }
     }
 
-    @Throws(SQLException::class, InterruptedException::class)
-    override fun dropMessage(key: String): Boolean = sneakyRaises {
-        database.withTransaction { connection ->
-            adapter.deleteOneRow(connection.underlying, key, pKind)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    override fun dropMessage(key: String): Boolean = unsafeSneakyRaises {
+        withRetries {
+            database.withTransaction { connection ->
+                adapter.deleteOneRow(connection.underlying, key, pKind)
+            }
         }
     }
 
-    @Throws(SQLException::class, InterruptedException::class)
-    override fun containsMessage(key: String): Boolean = sneakyRaises {
-        database.withConnection { connection ->
-            adapter.checkIfKeyExists(connection.underlying, key, pKind)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    override fun containsMessage(key: String): Boolean = unsafeSneakyRaises {
+        withRetries {
+            database.withConnection { connection ->
+                adapter.checkIfKeyExists(connection.underlying, key, pKind)
+            }
         }
     }
 
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(
+        IllegalArgumentException::class,
+        ResourceUnavailableException::class,
+        InterruptedException::class,
+    )
     override fun dropAllMessages(confirm: String): Int {
         require(confirm == "Yes, please, I know what I'm doing!") {
             "To drop all messages, you must provide the exact confirmation string"
         }
 
-        return sneakyRaises {
-            database.withTransaction { connection ->
-                adapter.dropAllMessages(connection.underlying, pKind)
+        return unsafeSneakyRaises {
+            withRetries {
+                database.withTransaction { connection ->
+                    adapter.dropAllMessages(connection.underlying, pKind)
+                }
             }
         }
     }
@@ -427,26 +478,30 @@ private constructor(
             queue = this,
             clock = clock,
             deleteCurrentCron = { configHash, keyPrefix ->
-                sneakyRaises {
-                    database.withTransaction { connection ->
-                        adapter.deleteCurrentCron(
-                            connection.underlying,
-                            pKind,
-                            keyPrefix,
-                            configHash.value,
-                        )
+                unsafeSneakyRaises {
+                    withRetries {
+                        database.withTransaction { connection ->
+                            adapter.deleteCurrentCron(
+                                connection.underlying,
+                                pKind,
+                                keyPrefix,
+                                configHash.value,
+                            )
+                        }
                     }
                 }
             },
             deleteOldCron = { configHash, keyPrefix ->
-                sneakyRaises {
-                    database.withTransaction { connection ->
-                        adapter.deleteOldCron(
-                            connection.underlying,
-                            pKind,
-                            keyPrefix,
-                            configHash.value,
-                        )
+                unsafeSneakyRaises {
+                    withRetries {
+                        database.withTransaction { connection ->
+                            adapter.deleteOldCron(
+                                connection.underlying,
+                                pKind,
+                                keyPrefix,
+                                configHash.value,
+                            )
+                        }
                     }
                 }
             },
@@ -461,38 +516,37 @@ private constructor(
         private val logger = LoggerFactory.getLogger(DelayedQueueJDBC::class.java)
 
         /**
-         * Creates a new JDBC-based delayed queue with default configuration.
+         * Creates a new JDBC-based delayed queue with the specified configuration.
          *
          * @param A the type of message payloads
-         * @param connectionConfig JDBC connection configuration
          * @param tableName the name of the database table to use
          * @param serializer strategy for serializing/deserializing message payloads
-         * @param timeConfig optional time configuration (uses defaults if not provided)
+         * @param config configuration for this queue instance (db, time, queue name, retry policy)
          * @param clock optional clock for time operations (uses system UTC if not provided)
          * @return a new DelayedQueueJDBC instance
-         * @throws SQLException if database initialization fails
+         * @throws ResourceUnavailableException if database initialization fails
+         * @throws InterruptedException if interrupted during initialization
          */
         @JvmStatic
         @JvmOverloads
-        @Throws(SQLException::class, InterruptedException::class)
+        @Throws(ResourceUnavailableException::class, InterruptedException::class)
         public fun <A> create(
-            connectionConfig: JdbcConnectionConfig,
             tableName: String,
             serializer: MessageSerializer<A>,
-            timeConfig: DelayedQueueTimeConfig = DelayedQueueTimeConfig.DEFAULT,
+            config: DelayedQueueJDBCConfig,
             clock: Clock = Clock.systemUTC(),
-        ): DelayedQueueJDBC<A> = sneakyRaises {
-            val database = Database(connectionConfig)
+        ): DelayedQueueJDBC<A> = unsafeSneakyRaises {
+            val database = Database(config.db)
 
             // Run migrations
             database.withConnection { connection ->
                 val migrations =
-                    when (connectionConfig.driver) {
+                    when (config.db.driver) {
                         JdbcDriver.HSQLDB -> HSQLDBMigrations.getMigrations(tableName)
                         JdbcDriver.MsSqlServer,
                         JdbcDriver.Sqlite ->
                             throw UnsupportedOperationException(
-                                "Database ${connectionConfig.driver} not yet supported"
+                                "Database ${config.db.driver} not yet supported"
                             )
                     }
 
@@ -502,20 +556,14 @@ private constructor(
                 }
             }
 
-            val adapter = SQLVendorAdapter.create(connectionConfig.driver, tableName)
-
-            // Generate pKind as MD5 hash of type name (for partitioning)
-            val pKind = computePartitionKind(serializer.javaClass.name)
+            val adapter = SQLVendorAdapter.create(config.db.driver, tableName)
 
             DelayedQueueJDBC(
                 database = database,
                 adapter = adapter,
                 serializer = serializer,
-                timeConfig = timeConfig,
+                config = config,
                 clock = clock,
-                tableName = tableName,
-                pKind = pKind,
-                ackEnvSource = "DelayedQueueJDBC:$tableName",
             )
         }
 

@@ -52,7 +52,8 @@ class RetryTests {
                     backoffFactor = 2.0,
                 )
 
-            val state0 = config.start(java.time.Instant.now())
+            val clock = java.time.Clock.systemUTC()
+            val state0 = config.start(clock)
             assertEquals(Duration.ofMillis(10), state0.delay)
 
             val state1 = state0.evolve(RuntimeException())
@@ -80,7 +81,8 @@ class RetryTests {
                     backoffFactor = 2.0,
                 )
 
-            val state0 = config.start(java.time.Instant.now())
+            val clock = java.time.Clock.systemUTC()
+            val state0 = config.start(clock)
             assertEquals(3, state0.retriesRemaining)
 
             val state1 = state0.evolve(RuntimeException())
@@ -109,7 +111,8 @@ class RetryTests {
             val ex2 = RuntimeException("error 2")
             val ex3 = RuntimeException("error 3")
 
-            val state0 = config.start(java.time.Instant.now())
+            val clock = java.time.Clock.systemUTC()
+            val state0 = config.start(clock)
             val state1 = state0.evolve(ex1)
             val state2 = state1.evolve(ex2)
             val state3 = state2.evolve(ex3)
@@ -134,7 +137,8 @@ class RetryTests {
             val ex3 = RuntimeException("error 3")
             val finalEx = RuntimeException("final error")
 
-            val state = config.start(java.time.Instant.now()).evolve(ex1).evolve(ex2).evolve(ex3)
+            val clock = java.time.Clock.systemUTC()
+            val state = config.start(clock).evolve(ex1).evolve(ex2).evolve(ex3)
 
             val prepared = state.prepareException(finalEx)
             assertEquals(finalEx, prepared)
@@ -160,9 +164,9 @@ class RetryTests {
                     backoffFactor = 2.0,
                 )
 
-            sneakyRaises {
+            unsafeSneakyRaises {
                 val result =
-                    withRetries(config, { RetryOutcome.RETRY }) {
+                    withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
                         counter.incrementAndGet()
                         "success"
                     }
@@ -185,9 +189,9 @@ class RetryTests {
                     backoffFactor = 2.0,
                 )
 
-            sneakyRaises {
+            unsafeSneakyRaises {
                 val result =
-                    withRetries(config, { RetryOutcome.RETRY }) {
+                    withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
                         val count = counter.incrementAndGet()
                         if (count < 3) {
                             throw RuntimeException("transient failure")
@@ -213,10 +217,10 @@ class RetryTests {
                     backoffFactor = 2.0,
                 )
 
-            sneakyRaises {
+            unsafeSneakyRaises {
                 val exception =
                     assertThrows(ResourceUnavailableException::class.java) {
-                        withRetries(config, { RetryOutcome.RAISE }) {
+                        withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RAISE }) {
                             counter.incrementAndGet()
                             throw RuntimeException("permanent failure")
                         }
@@ -242,10 +246,10 @@ class RetryTests {
                     backoffFactor = 2.0,
                 )
 
-            sneakyRaises {
+            unsafeSneakyRaises {
                 val exception =
                     assertThrows(ResourceUnavailableException::class.java) {
-                        withRetries(config, { RetryOutcome.RETRY }) {
+                        withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
                             val attempt = counter.incrementAndGet()
                             throw RuntimeException("attempt $attempt failed")
                         }
@@ -272,9 +276,9 @@ class RetryTests {
                     backoffFactor = 2.0,
                 )
 
-            sneakyRaises {
+            unsafeSneakyRaises {
                 assertThrows(ResourceUnavailableException::class.java) {
-                    withRetries(config, { RetryOutcome.RETRY }) {
+                    withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
                         timestamps.add(System.currentTimeMillis())
                         counter.incrementAndGet()
                         throw RuntimeException("always fails")
@@ -310,10 +314,10 @@ class RetryTests {
                     backoffFactor = 2.0,
                 )
 
-            sneakyRaises {
+            unsafeSneakyRaises {
                 val exception =
-                    assertThrows(RequestTimeoutException::class.java) {
-                        withRetries(config, { RetryOutcome.RETRY }) {
+                    assertThrows(java.util.concurrent.TimeoutException::class.java) {
+                        withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
                             counter.incrementAndGet()
                             Thread.sleep(500)
                         }

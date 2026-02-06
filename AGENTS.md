@@ -4,6 +4,18 @@ This repository ships a Delayed Queue for Java developers, implemented in Kotlin
 All public APIs must look and feel like a Java library. The `kotlin-java-library`
 skill is the rule of law for any public surface changes.
 
+## CRITICAL RULE: FOLLOW THE ORIGINAL IMPLEMENTATION EXACTLY
+
+**When porting from the Scala original in `old-code/`, match the structure EXACTLY.**
+
+Do NOT deviate from:
+- Configuration class fields and their order
+- Method signatures and parameters
+- Type names and naming conventions
+- Behavior and semantics
+
+The original implementation in `old-code/` is the source of truth. Any deviation must be explicitly justified and documented.
+
 ## Non-negotiable rules
 - Public API is Java-first: no Kotlin-only surface features or Kotlin stdlib types.
 - Keep nullability explicit and stable; avoid platform types in public signatures.
@@ -11,7 +23,7 @@ skill is the rule of law for any public surface changes.
 - Use JVM interop annotations deliberately to shape Java call sites.
 - Verify every public entry point with a Java call-site example.
 - Agents MUST practice TDD: write the failing test first, then implement the change.
-- Library dependencies should never be added by agents, unless explicitly instructed.
+- Library dependencies should never be added by agents, unless instructed to do so.
 
 ## Public API constraints (Java consumers)
 - Use Java types in signatures: `java.util.List/Map/Set`, `java.time.*`,
@@ -40,6 +52,7 @@ skill is the rule of law for any public surface changes.
 ## Code style / best practices
 
 - NEVER catch `Throwable`, you're only allowed to catch `Exception`
+- Use nice imports instead of fully qualified names
 
 ## Testing
 
