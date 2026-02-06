@@ -1,5 +1,7 @@
 package org.funfix.delayedqueue.api;
 
+import org.junit.jupiter.api.Assumptions;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.MSSQLServerContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -13,9 +15,11 @@ final class MsSqlTestContainer {
     private MsSqlTestContainer() {}
 
     static MSSQLServerContainer<?> container() {
+        assumeDockerAvailable();
         if (container == null) {
             synchronized (MsSqlTestContainer.class) {
                 if (container == null) {
+                    assumeDockerAvailable();
                     container =
                         new MSSQLServerContainer<>(IMAGE)
                             .acceptLicense()
@@ -25,5 +29,10 @@ final class MsSqlTestContainer {
             }
         }
         return container;
+    }
+
+    private static void assumeDockerAvailable() {
+        boolean dockerAvailable = DockerClientFactory.instance().isDockerAvailable();
+        Assumptions.assumeTrue(dockerAvailable, "Docker is not available; skipping MS-SQL tests");
     }
 }
