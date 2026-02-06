@@ -93,6 +93,7 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
             SET payload = ?,
                 scheduledAt = ?,
                 scheduledAtInitially = ?,
+                lockUuid = ?,
                 createdAt = ?
             WHERE pKey = ?
               AND pKind = ?
@@ -104,18 +105,19 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
             stmt.setString(1, updatedRow.payload)
             stmt.setTimestamp(2, java.sql.Timestamp.from(updatedRow.scheduledAt))
             stmt.setTimestamp(3, java.sql.Timestamp.from(updatedRow.scheduledAtInitially))
-            stmt.setTimestamp(4, java.sql.Timestamp.from(updatedRow.createdAt))
-            stmt.setString(5, currentRow.pKey)
-            stmt.setString(6, currentRow.pKind)
+            stmt.setString(4, updatedRow.lockUuid)
+            stmt.setTimestamp(5, java.sql.Timestamp.from(updatedRow.createdAt))
+            stmt.setString(6, currentRow.pKey)
+            stmt.setString(7, currentRow.pKind)
             // scheduledAtInitially IN (truncated, full)
             stmt.setTimestamp(
-                7,
+                8,
                 java.sql.Timestamp.from(truncateToSeconds(currentRow.scheduledAtInitially)),
             )
-            stmt.setTimestamp(8, java.sql.Timestamp.from(currentRow.scheduledAtInitially))
+            stmt.setTimestamp(9, java.sql.Timestamp.from(currentRow.scheduledAtInitially))
             // createdAt IN (truncated, full)
-            stmt.setTimestamp(9, java.sql.Timestamp.from(truncateToSeconds(currentRow.createdAt)))
-            stmt.setTimestamp(10, java.sql.Timestamp.from(currentRow.createdAt))
+            stmt.setTimestamp(10, java.sql.Timestamp.from(truncateToSeconds(currentRow.createdAt)))
+            stmt.setTimestamp(11, java.sql.Timestamp.from(currentRow.createdAt))
             stmt.executeUpdate() > 0
         }
     }

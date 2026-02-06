@@ -48,15 +48,29 @@ public data class AckEnvelope<out A>(
      *
      * Note: If the message was updated between polling and acknowledgment, the acknowledgment will
      * be ignored to preserve the updated message.
+     *
+     * @throws ResourceUnavailableException if the database connection is unavailable
+     * @throws InterruptedException if the thread is interrupted during acknowledgment
      */
     public fun acknowledge() {
         acknowledge.invoke()
     }
 }
 
-/** Handles acknowledgment for a polled message. */
+/**
+ * Handles acknowledgment for a polled message.
+ *
+ * Implementations may throw exceptions if acknowledgment fails, which the caller should handle
+ * appropriately. Failed acknowledgments typically result in message redelivery after the acquire
+ * timeout expires.
+ */
 public fun interface AcknowledgeFun {
-    /** Acknowledge successful processing. */
+    /**
+     * Acknowledge successful processing.
+     *
+     * @throws ResourceUnavailableException if the database connection is unavailable
+     * @throws InterruptedException if the thread is interrupted during acknowledgment
+     */
     public operator fun invoke()
 }
 

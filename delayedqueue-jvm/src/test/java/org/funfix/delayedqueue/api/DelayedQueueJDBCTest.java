@@ -196,6 +196,40 @@ public class DelayedQueueJDBCTest {
     }
     
     @Test
+    public void acknowledge_isIdempotent() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
+        queue = createQueueWithClock(clock);
+        
+        queue.offerOrUpdate("key1", "payload1", clock.now().minusSeconds(10));
+        var envelope = queue.tryPoll();
+        assertNotNull(envelope);
+        
+        envelope.acknowledge();
+        envelope.acknowledge(); // Second call should be safe
+        
+        assertFalse(queue.containsMessage("key1"));
+    }
+    
+    @Test
+    public void acknowledge_doesNotRemoveIfMessageWasUpdated() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
+        queue = createQueueWithClock(clock);
+        
+        queue.offerOrUpdate("key1", "payload1", clock.now().minusSeconds(10));
+        var envelope = queue.tryPoll();
+        assertNotNull(envelope);
+        
+        // Update the message before acknowledging
+        queue.offerOrUpdate("key1", "payload2", clock.now().minusSeconds(10));
+        envelope.acknowledge();
+        
+        // The updated message should still be available
+        var envelope2 = queue.tryPoll();
+        assertNotNull(envelope2);
+        assertEquals("payload2", envelope2.payload());
+    }
+    
+    @Test
     public void tryPollMany_returnsEmptyListWhenNoMessages() throws Exception {
         queue = createQueue();
         

@@ -322,28 +322,20 @@ private constructor(
 
     private fun acknowledgeByLockUuid(lockUuid: String): AcknowledgeFun = {
         unsafeSneakyRaises {
-            try {
-                withRetries {
-                    database.withTransaction { ackConn ->
-                        adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
-                    }
+            withRetries {
+                database.withTransaction { ackConn ->
+                    adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
                 }
-            } catch (e: Exception) {
-                logger.warn("Failed to acknowledge message with lock $lockUuid", e)
             }
         }
     }
 
     private fun acknowledgeByFingerprint(key: String, row: DBTableRowWithId): AcknowledgeFun = {
         unsafeSneakyRaises {
-            try {
-                withRetries {
-                    database.withTransaction { ackConn ->
-                        adapter.deleteRowByFingerprint(ackConn.underlying, row)
-                    }
+            withRetries {
+                database.withTransaction { ackConn ->
+                    adapter.deleteRowByFingerprint(ackConn.underlying, row)
                 }
-            } catch (e: Exception) {
-                logger.warn("Failed to acknowledge message $key", e)
             }
         }
     }
