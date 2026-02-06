@@ -5,6 +5,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
+import kotlin.math.min
 import org.funfix.delayedqueue.jvm.ResourceUnavailableException
 import org.funfix.delayedqueue.jvm.RetryConfig
 
@@ -40,7 +41,12 @@ internal data class Evolution(
         copy(
             evolutions = evolutions + 1,
             retriesRemaining = retriesRemaining?.let { maxOf(it - 1, 0) },
-            delay = min(delay.multipliedBy(config.backoffFactor.toLong()), config.maxDelay),
+            delay = Duration.ofMillis(
+                min(
+                    (delay.toMillis() * config.backoffFactor).toLong(),
+                    config.maxDelay.toMillis()
+                )
+            ),
             thrownExceptions = ex?.let { listOf(it) + thrownExceptions } ?: thrownExceptions,
         )
 
@@ -73,8 +79,6 @@ private data class ExceptionIdentity(
             )
     }
 }
-
-private fun min(a: Duration, b: Duration): Duration = if (a.compareTo(b) <= 0) a else b
 
 internal enum class RetryOutcome {
     RETRY,
