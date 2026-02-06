@@ -3,6 +3,8 @@ package org.funfix.delayedqueue.api;
 import org.funfix.delayedqueue.jvm.MessageSerializer;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -13,7 +15,7 @@ public class MessageSerializerContractTest {
     @Test
     public void testForStringsHasTypeName() {
         MessageSerializer<String> serializer = MessageSerializer.forStrings();
-        
+
         assertNotNull(serializer.getTypeName(), "typeName must not be null");
         assertFalse(serializer.getTypeName().isEmpty(), "typeName must not be empty");
         assertEquals("java.lang.String", serializer.getTypeName(), 
@@ -29,26 +31,27 @@ public class MessageSerializerContractTest {
             }
 
             @Override
-            public String serialize(Integer payload) {
-                return payload.toString();
+            public byte[] serialize(Integer payload) {
+                return payload.toString().getBytes(StandardCharsets.UTF_8);
             }
 
             @Override
-            public Integer deserialize(String serialized) {
-                if ("INVALID".equals(serialized)) {
+            public Integer deserialize(byte[] serialized) {
+                String decoded = new String(serialized, StandardCharsets.UTF_8);
+                if ("INVALID".equals(decoded)) {
                     throw new IllegalArgumentException("Cannot parse INVALID as Integer");
                 }
-                return Integer.parseInt(serialized);
+                return Integer.parseInt(decoded);
             }
         };
 
         // Should succeed for valid input
-        assertEquals(42, serializer.deserialize("42"));
+        assertEquals(42, serializer.deserialize("42".getBytes(StandardCharsets.UTF_8)));
 
         // Should throw IllegalArgumentException for invalid input
         IllegalArgumentException exception = assertThrows(
             IllegalArgumentException.class,
-            () -> serializer.deserialize("INVALID"),
+            () -> serializer.deserialize("INVALID".getBytes(StandardCharsets.UTF_8)),
             "deserialize must throw IllegalArgumentException for invalid input"
         );
         
@@ -65,24 +68,25 @@ public class MessageSerializerContractTest {
             }
 
             @Override
-            public String serialize(String payload) {
-                return "PREFIX:" + payload;
+            public byte[] serialize(String payload) {
+                return ("PREFIX:" + payload).getBytes(StandardCharsets.UTF_8);
             }
 
             @Override
-            public String deserialize(String serialized) {
-                if (!serialized.startsWith("PREFIX:")) {
+            public String deserialize(byte[] serialized) {
+                String decoded = new String(serialized, StandardCharsets.UTF_8);
+                if (!decoded.startsWith("PREFIX:")) {
                     throw new IllegalArgumentException("Missing PREFIX");
                 }
-                return serialized.substring(7);
+                return decoded.substring(7);
             }
         };
 
         assertEquals("custom.Type", custom.getTypeName());
-        assertEquals("PREFIX:test", custom.serialize("test"));
-        assertEquals("test", custom.deserialize("PREFIX:test"));
-        
-        assertThrows(IllegalArgumentException.class, 
-            () -> custom.deserialize("INVALID"));
+        assertArrayEquals("PREFIX:test".getBytes(StandardCharsets.UTF_8), custom.serialize("test"));
+        assertEquals("test", custom.deserialize("PREFIX:test".getBytes(StandardCharsets.UTF_8)));
+
+        assertThrows(IllegalArgumentException.class,
+            () -> custom.deserialize("INVALID".getBytes(StandardCharsets.UTF_8)));
     }
 }

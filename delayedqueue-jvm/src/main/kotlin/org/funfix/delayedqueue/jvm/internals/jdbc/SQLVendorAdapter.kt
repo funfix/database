@@ -1,18 +1,11 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc
 
 import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.time.Duration
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import org.funfix.delayedqueue.jvm.JdbcDriver
-
-/**
- * Truncates an Instant to seconds precision.
- *
- * For doing queries on databases that have second-level precision (e.g., SQL Server).
- */
-private fun truncateToSeconds(instant: Instant): Instant = instant.truncatedTo(ChronoUnit.SECONDS)
 
 /**
  * Describes actual SQL queries executed — can be overridden to provide driver-specific queries.
@@ -58,12 +51,12 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
             for (row in rows) {
                 stmt.setString(1, row.pKey)
                 stmt.setString(2, row.pKind)
-                stmt.setString(3, row.payload)
-                stmt.setTimestamp(4, java.sql.Timestamp.from(row.scheduledAt))
-                stmt.setTimestamp(5, java.sql.Timestamp.from(row.scheduledAtInitially))
+                stmt.setBytes(3, row.payload)
+                stmt.setEpochMillis(4, row.scheduledAt)
+                stmt.setEpochMillis(5, row.scheduledAtInitially)
                 row.lockUuid?.let { stmt.setString(6, it) }
                     ?: stmt.setNull(6, java.sql.Types.VARCHAR)
-                stmt.setTimestamp(7, java.sql.Timestamp.from(row.createdAt))
+                stmt.setEpochMillis(7, row.createdAt)
                 stmt.addBatch()
             }
             val results = stmt.executeBatch()
@@ -79,8 +72,6 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
     /**
      * Updates an existing row with optimistic locking (compare-and-swap). Only updates if the
      * current row matches what's in the database.
-     *
-     * Uses timestamp truncation to handle precision differences between SELECT and UPDATE.
      */
     fun guardedUpdate(
         connection: Connection,
@@ -97,33 +88,26 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
                 createdAt = ?
             WHERE pKey = ?
               AND pKind = ?
-              AND scheduledAtInitially IN (?, ?)
-              AND createdAt IN (?, ?)
+              AND scheduledAtInitially = ?
+              AND createdAt = ?
             """
 
         return connection.prepareStatement(sql).use { stmt ->
-            stmt.setString(1, updatedRow.payload)
-            stmt.setTimestamp(2, java.sql.Timestamp.from(updatedRow.scheduledAt))
-            stmt.setTimestamp(3, java.sql.Timestamp.from(updatedRow.scheduledAtInitially))
+            stmt.setBytes(1, updatedRow.payload)
+            stmt.setEpochMillis(2, updatedRow.scheduledAt)
+            stmt.setEpochMillis(3, updatedRow.scheduledAtInitially)
             stmt.setString(4, updatedRow.lockUuid)
-            stmt.setTimestamp(5, java.sql.Timestamp.from(updatedRow.createdAt))
+            stmt.setEpochMillis(5, updatedRow.createdAt)
             stmt.setString(6, currentRow.pKey)
             stmt.setString(7, currentRow.pKind)
-            // scheduledAtInitially IN (truncated, full)
-            stmt.setTimestamp(
-                8,
-                java.sql.Timestamp.from(truncateToSeconds(currentRow.scheduledAtInitially)),
-            )
-            stmt.setTimestamp(9, java.sql.Timestamp.from(currentRow.scheduledAtInitially))
-            // createdAt IN (truncated, full)
-            stmt.setTimestamp(10, java.sql.Timestamp.from(truncateToSeconds(currentRow.createdAt)))
-            stmt.setTimestamp(11, java.sql.Timestamp.from(currentRow.createdAt))
+            stmt.setEpochMillis(8, currentRow.scheduledAtInitially)
+            stmt.setEpochMillis(9, currentRow.createdAt)
             stmt.executeUpdate() > 0
         }
     }
 
     /** Selects one row by its key. */
-    fun selectByKey(connection: Connection, kind: String, key: String): DBTableRowWithId? {
+    open fun selectByKey(connection: Connection, kind: String, key: String): DBTableRowWithId? {
         val sql =
             """
             SELECT id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
@@ -204,22 +188,17 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
         }
     }
 
-    /**
-     * Deletes a row by its fingerprint (id and createdAt). Uses timestamp truncation to handle
-     * precision differences.
-     */
+    /** Deletes a row by its fingerprint (id and createdAt). */
     fun deleteRowByFingerprint(connection: Connection, row: DBTableRowWithId): Boolean {
         val sql =
             """
             DELETE FROM $tableName
-            WHERE id = ? AND createdAt IN (?, ?)
+            WHERE id = ? AND createdAt = ?
             """
 
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, row.id)
-            // createdAt IN (truncated, full)
-            stmt.setTimestamp(2, java.sql.Timestamp.from(truncateToSeconds(row.data.createdAt)))
-            stmt.setTimestamp(3, java.sql.Timestamp.from(row.data.createdAt))
+            stmt.setEpochMillis(2, row.data.createdAt)
             stmt.executeUpdate() > 0
         }
     }
@@ -311,7 +290,7 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
     ): DBTableRowWithId?
 
     /** Selects all messages with a specific lock UUID. */
-    fun selectAllAvailableWithLock(
+    open fun selectAllAvailableWithLock(
         connection: Connection,
         lockUuid: String,
         count: Int,
@@ -344,10 +323,7 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
      * Acquires a specific row by updating its scheduledAt and lockUuid. Returns true if the row was
      * successfully acquired.
      */
-    /**
-     * Acquires a row by updating its scheduledAt and lockUuid. Uses timestamp truncation to handle
-     * precision differences.
-     */
+    /** Acquires a row by updating its scheduledAt and lockUuid. */
     fun acquireRowByUpdate(
         connection: Connection,
         row: DBTableRow,
@@ -363,19 +339,21 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
                 lockUuid = ?
             WHERE pKey = ?
               AND pKind = ?
-              AND scheduledAt IN (?, ?)
+              AND scheduledAt = ?
             """
 
         return connection.prepareStatement(sql).use { stmt ->
-            stmt.setTimestamp(1, java.sql.Timestamp.from(expireAt))
+            stmt.setEpochMillis(1, expireAt)
             stmt.setString(2, lockUuid)
             stmt.setString(3, row.pKey)
             stmt.setString(4, row.pKind)
-            // scheduledAt IN (exact, truncated)
-            stmt.setTimestamp(5, java.sql.Timestamp.from(row.scheduledAt))
-            stmt.setTimestamp(6, java.sql.Timestamp.from(truncateToSeconds(row.scheduledAt)))
+            stmt.setEpochMillis(5, row.scheduledAt)
             stmt.executeUpdate() > 0
         }
+    }
+
+    protected fun PreparedStatement.setEpochMillis(index: Int, instant: Instant) {
+        setLong(index, instant.toEpochMilli())
     }
 
     companion object {
@@ -383,8 +361,8 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
         fun create(driver: JdbcDriver, tableName: String): SQLVendorAdapter =
             when (driver) {
                 JdbcDriver.HSQLDB -> HSQLDBAdapter(driver, tableName)
-                JdbcDriver.MsSqlServer,
-                JdbcDriver.Sqlite -> TODO("MS-SQL and SQLite support not yet implemented")
+                JdbcDriver.MsSqlServer -> MsSqlServerAdapter(driver, tableName)
+                JdbcDriver.Sqlite -> TODO("SQLite support not yet implemented")
             }
     }
 }
@@ -415,10 +393,10 @@ private class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
             connection.prepareStatement(sql).use { stmt ->
                 stmt.setString(1, row.pKey)
                 stmt.setString(2, row.pKind)
-                stmt.setString(3, row.payload)
-                stmt.setTimestamp(4, java.sql.Timestamp.from(row.scheduledAt))
-                stmt.setTimestamp(5, java.sql.Timestamp.from(row.scheduledAtInitially))
-                stmt.setTimestamp(6, java.sql.Timestamp.from(row.createdAt))
+                stmt.setBytes(3, row.payload)
+                stmt.setEpochMillis(4, row.scheduledAt)
+                stmt.setEpochMillis(5, row.scheduledAtInitially)
+                stmt.setEpochMillis(6, row.createdAt)
                 stmt.executeUpdate() > 0
             }
         } catch (e: Exception) {
@@ -449,7 +427,7 @@ private class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
 
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setString(1, kind)
-            stmt.setTimestamp(2, java.sql.Timestamp.from(now))
+            stmt.setEpochMillis(2, now)
             stmt.executeQuery().use { rs ->
                 if (rs.next()) {
                     rs.toDBTableRowWithId()
@@ -487,10 +465,181 @@ private class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
 
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setString(1, lockUuid)
-            stmt.setTimestamp(2, java.sql.Timestamp.from(expireAt))
+            stmt.setEpochMillis(2, expireAt)
             stmt.setString(3, kind)
-            stmt.setTimestamp(4, java.sql.Timestamp.from(now))
+            stmt.setEpochMillis(4, now)
             stmt.executeUpdate()
+        }
+    }
+}
+
+/** MS-SQL-specific adapter. */
+private class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
+    SQLVendorAdapter(driver, tableName) {
+
+    override fun insertOneRow(connection: Connection, row: DBTableRow): Boolean {
+        val sql =
+            """
+            IF NOT EXISTS (
+                SELECT 1 FROM $tableName WHERE pKey = ? AND pKind = ?
+            )
+            BEGIN
+                INSERT INTO $tableName
+                (pKey, pKind, payload, scheduledAt, scheduledAtInitially, createdAt)
+                VALUES (?, ?, ?, ?, ?, ?)
+            END
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, row.pKey)
+            stmt.setString(2, row.pKind)
+            stmt.setString(3, row.pKey)
+            stmt.setString(4, row.pKind)
+            stmt.setBytes(5, row.payload)
+            stmt.setEpochMillis(6, row.scheduledAt)
+            stmt.setEpochMillis(7, row.scheduledAtInitially)
+            stmt.setEpochMillis(8, row.createdAt)
+            stmt.executeUpdate() > 0
+        }
+    }
+
+    override fun selectForUpdateOneRow(
+        connection: Connection,
+        kind: String,
+        key: String,
+    ): DBTableRowWithId? {
+        val sql =
+            """
+            SELECT TOP 1
+                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
+            FROM $tableName
+            WITH (UPDLOCK)
+            WHERE pKey = ? AND pKind = ?
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, key)
+            stmt.setString(2, kind)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) {
+                    rs.toDBTableRowWithId()
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
+    override fun selectFirstAvailableWithLock(
+        connection: Connection,
+        kind: String,
+        now: Instant,
+    ): DBTableRowWithId? {
+        val sql =
+            """
+            SELECT TOP 1
+                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
+            FROM $tableName
+            WITH (UPDLOCK, READPAST)
+            WHERE pKind = ? AND scheduledAt <= ?
+            ORDER BY scheduledAt
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, kind)
+            stmt.setEpochMillis(2, now)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) {
+                    rs.toDBTableRowWithId()
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
+    override fun acquireManyOptimistically(
+        connection: Connection,
+        kind: String,
+        limit: Int,
+        lockUuid: String,
+        timeout: Duration,
+        now: Instant,
+    ): Int {
+        require(limit > 0) { "Limit must be > 0" }
+        val expireAt = now.plus(timeout)
+
+        val sql =
+            """
+            UPDATE $tableName
+            SET lockUuid = ?,
+                scheduledAt = ?
+            WHERE id IN (
+                SELECT TOP $limit id
+                FROM $tableName
+                WITH (UPDLOCK, READPAST)
+                WHERE pKind = ? AND scheduledAt <= ?
+                ORDER BY scheduledAt
+            )
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, lockUuid)
+            stmt.setEpochMillis(2, expireAt)
+            stmt.setString(3, kind)
+            stmt.setEpochMillis(4, now)
+            stmt.executeUpdate()
+        }
+    }
+
+    override fun selectByKey(connection: Connection, kind: String, key: String): DBTableRowWithId? {
+        val sql =
+            """
+            SELECT TOP 1
+                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
+            FROM $tableName
+            WHERE pKey = ? AND pKind = ?
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, key)
+            stmt.setString(2, kind)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) {
+                    rs.toDBTableRowWithId()
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
+    override fun selectAllAvailableWithLock(
+        connection: Connection,
+        lockUuid: String,
+        count: Int,
+        offsetId: Long?,
+    ): List<DBTableRowWithId> {
+        val offsetClause = offsetId?.let { "AND id > ?" } ?: ""
+        val sql =
+            """
+            SELECT TOP $count
+                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
+            FROM $tableName
+            WHERE lockUuid = ? $offsetClause
+            ORDER BY id
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, lockUuid)
+            offsetId?.let { stmt.setLong(2, it) }
+            stmt.executeQuery().use { rs ->
+                val results = mutableListOf<DBTableRowWithId>()
+                while (rs.next()) {
+                    results.add(rs.toDBTableRowWithId())
+                }
+                results
+            }
         }
     }
 }
@@ -503,10 +652,14 @@ private fun ResultSet.toDBTableRowWithId(): DBTableRowWithId =
             DBTableRow(
                 pKey = getString("pKey"),
                 pKind = getString("pKind"),
-                payload = getString("payload"),
-                scheduledAt = getTimestamp("scheduledAt").toInstant(),
-                scheduledAtInitially = getTimestamp("scheduledAtInitially").toInstant(),
+                payload = getBytes("payload"),
+                scheduledAt = getInstant("scheduledAt"),
+                scheduledAtInitially = getInstant("scheduledAtInitially"),
                 lockUuid = getString("lockUuid"),
-                createdAt = getTimestamp("createdAt").toInstant(),
+                createdAt = getInstant("createdAt"),
             ),
     )
+
+private fun ResultSet.getInstant(columnLabel: String): Instant {
+    return Instant.ofEpochMilli(getLong(columnLabel))
+}

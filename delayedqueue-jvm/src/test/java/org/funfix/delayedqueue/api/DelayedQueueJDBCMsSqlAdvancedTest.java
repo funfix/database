@@ -1,16 +1,15 @@
 package org.funfix.delayedqueue.api;
 
 import org.funfix.delayedqueue.jvm.*;
-
-public class DelayedQueueJDBCAdvancedTest extends DelayedQueueJDBCAdvancedTestBase {
-
+public class DelayedQueueJDBCMsSqlAdvancedTest extends DelayedQueueJDBCAdvancedTestBase {
     @Override
     protected DelayedQueueJDBC<String> createQueue(String tableName, MutableClock clock) throws Exception {
+        var container = MsSqlTestContainer.container();
         var dbConfig = new JdbcConnectionConfig(
-            "jdbc:hsqldb:mem:testdb_advanced_" + System.currentTimeMillis(),
-            JdbcDriver.HSQLDB,
-            "SA",
-            "",
+            container.getJdbcUrl(),
+            JdbcDriver.MsSqlServer,
+            container.getUsername(),
+            container.getPassword(),
             null
         );
 
@@ -18,7 +17,7 @@ public class DelayedQueueJDBCAdvancedTest extends DelayedQueueJDBCAdvancedTestBa
             dbConfig,
             tableName,
             DelayedQueueTimeConfig.DEFAULT,
-            "advanced-test-queue"
+            "advanced-mssql-test-queue"
         );
 
         DelayedQueueJDBC.runMigrations(queueConfig);
@@ -32,11 +31,12 @@ public class DelayedQueueJDBCAdvancedTest extends DelayedQueueJDBCAdvancedTestBa
 
     @Override
     protected DelayedQueueJDBC<String> createQueueOnSameDB(String url, String tableName, MutableClock clock) throws Exception {
+        var container = MsSqlTestContainer.container();
         var dbConfig = new JdbcConnectionConfig(
             url,
-            JdbcDriver.HSQLDB,
-            "SA",
-            "",
+            JdbcDriver.MsSqlServer,
+            container.getUsername(),
+            container.getPassword(),
             null
         );
 
@@ -44,7 +44,7 @@ public class DelayedQueueJDBCAdvancedTest extends DelayedQueueJDBCAdvancedTestBa
             dbConfig,
             tableName,
             DelayedQueueTimeConfig.DEFAULT,
-            "shared-db-test-queue-" + tableName
+            "shared-mssql-test-queue-" + tableName
         );
 
         DelayedQueueJDBC.runMigrations(queueConfig);
@@ -58,6 +58,6 @@ public class DelayedQueueJDBCAdvancedTest extends DelayedQueueJDBCAdvancedTestBa
 
     @Override
     protected String databaseUrl() {
-        return "jdbc:hsqldb:mem:shared_db_" + System.currentTimeMillis();
+        return MsSqlTestContainer.container().getJdbcUrl();
     }
 }
