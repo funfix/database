@@ -2,6 +2,7 @@ package org.funfix.delayedqueue.jvm.internals
 
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -17,7 +18,9 @@ import org.funfix.delayedqueue.jvm.CronService
 import org.funfix.delayedqueue.jvm.DelayedQueue
 import org.funfix.delayedqueue.jvm.ResourceUnavailableException
 import org.funfix.delayedqueue.jvm.internals.utils.Raise
+import org.funfix.delayedqueue.jvm.internals.utils.runAndRecoverRaised
 import org.funfix.delayedqueue.jvm.internals.utils.unsafeSneakyRaises
+import org.funfix.delayedqueue.jvm.internals.utils.withTimeout
 import org.slf4j.LoggerFactory
 
 /**
@@ -97,14 +100,30 @@ internal class CronServiceImpl<A>(
         period: Duration,
         generator: CronPayloadGenerator<A>,
     ): AutoCloseable {
-        val configHash = CronConfigHash.fromString("periodic:$keyPrefix:${period.toMillis()}")
+        require(keyPrefix.isNotBlank()) { "keyPrefix must not be blank" }
+        require(!period.isZero && !period.isNegative) { "period must be positive, got: $period" }
+
+        val configHash = CronConfigHash.fromPeriodicTick(period)
+
+        // Calculate scheduleInterval as period/4 with minimum 1 second
+        val scheduleIntervalMs = period.toMillis() / 4
+        val effectiveInterval =
+            if (scheduleIntervalMs < 1000) {
+                Duration.ofSeconds(1)
+            } else {
+                Duration.ofMillis(scheduleIntervalMs)
+            }
+
         return install0(
             configHash = configHash,
             keyPrefix = keyPrefix,
-            scheduleInterval = period,
+            scheduleInterval = effectiveInterval,
             generateMany = { now ->
-                val next = now.plus(period)
-                listOf(CronMessage(generator(next), next))
+                // Align timestamp to period boundary
+                val periodMs = period.toMillis()
+                val alignedMs = (now.toEpochMilli() + periodMs) / periodMs * periodMs
+                val timestamp = Instant.ofEpochMilli(alignedMs)
+                listOf(CronMessage(generator(timestamp), timestamp))
             },
         )
     }
@@ -159,6 +178,11 @@ internal class CronServiceImpl<A>(
         scheduleInterval: Duration,
         generateMany: CronMessageBatchGenerator<A>,
     ): AutoCloseable {
+        require(keyPrefix.isNotBlank()) { "keyPrefix must not be blank" }
+        require(!scheduleInterval.isZero && !scheduleInterval.isNegative) {
+            "scheduleInterval must be positive, got: $scheduleInterval"
+        }
+
         val executor: ScheduledExecutorService =
             Executors.newSingleThreadScheduledExecutor { runnable ->
                 Thread(runnable, "cron-$keyPrefix").apply { isDaemon = true }
@@ -168,17 +192,21 @@ internal class CronServiceImpl<A>(
 
         val task = Runnable {
             try {
-                val now = clock.instant()
-                val firstRun = isFirst.getAndSet(false)
-                val messages = generateMany(now)
+                runAndRecoverRaised({
+                    withTimeout(scheduleInterval) {
+                        val now = clock.instant()
+                        val firstRun = isFirst.getAndSet(false)
+                        val messages = generateMany(now)
 
-                unsafeSneakyRaises {
-                    installTick0(
-                        configHash = configHash,
-                        keyPrefix = keyPrefix,
-                        messages = messages,
-                        canUpdate = firstRun,
-                    )
+                        installTick0(
+                            configHash = configHash,
+                            keyPrefix = keyPrefix,
+                            messages = messages,
+                            canUpdate = firstRun,
+                        )
+                    }
+                }) { timeout ->
+                    throw timeout
                 }
             } catch (e: Exception) {
                 logger.error("Error in cron task for $keyPrefix", e)
@@ -194,7 +222,7 @@ internal class CronServiceImpl<A>(
                 if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
                     executor.shutdownNow()
                 }
-            } catch (e: InterruptedException) {
+            } catch (_: InterruptedException) {
                 executor.shutdownNow()
                 Thread.currentThread().interrupt()
             }

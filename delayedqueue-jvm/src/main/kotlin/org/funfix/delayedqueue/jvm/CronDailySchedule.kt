@@ -37,10 +37,11 @@ public data class CronDailySchedule(
     /**
      * Calculates the next scheduled times starting from now.
      *
-     * Returns all times that should be scheduled, from now until (now + scheduleInAdvance).
+     * Returns all times that should be scheduled, from now until (now + scheduleInAdvance). Always
+     * returns at least one time (the next scheduled time), even if it's beyond scheduleInAdvance.
      *
      * @param now the current time
-     * @return list of future instants when messages should be scheduled
+     * @return list of future instants when messages should be scheduled (never empty)
      */
     public fun getNextTimes(now: Instant): List<Instant> {
         val until = now.plus(scheduleInAdvance)
@@ -50,16 +51,17 @@ public data class CronDailySchedule(
         var currentTime = now
         var nextTime = getNextTime(currentTime, sortedHours)
 
-        if (!nextTime.isAfter(until)) {
-            result.add(nextTime)
-            while (true) {
-                currentTime = nextTime
-                nextTime = getNextTime(currentTime, sortedHours)
-                if (nextTime.isAfter(until)) {
-                    break
-                }
-                result.add(nextTime)
+        // Always add the first nextTime (matches NonEmptyList behavior from Scala)
+        result.add(nextTime)
+
+        // Then add more if they're within the window
+        while (true) {
+            currentTime = nextTime
+            nextTime = getNextTime(currentTime, sortedHours)
+            if (nextTime.isAfter(until)) {
+                break
             }
+            result.add(nextTime)
         }
 
         return Collections.unmodifiableList(result)

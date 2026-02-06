@@ -105,3 +105,16 @@ internal inline fun <T> unsafeSneakyRaises(
         context(Raise<Exception>)
         () -> T
 ): T = block(Raise._PRIVATE_AND_UNSAFE)
+
+/** How to safely handle exceptions marked via the Raise context. */
+internal inline fun <T, reified E : Exception> runAndRecoverRaised(
+    block:
+        context(Raise<E>)
+        () -> T,
+    catch: (E) -> T,
+): T =
+    try {
+        block(Raise._PRIVATE_AND_UNSAFE)
+    } catch (e: Exception) {
+        catch(e as E)
+    }

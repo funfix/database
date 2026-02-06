@@ -26,7 +26,7 @@ internal data class Evolution(
     val retriesRemaining: Long?,
     val delay: Duration,
     val evolutions: Long,
-    val thrownExceptions: List<Throwable>,
+    val thrownExceptions: List<Exception>,
 ) {
     fun canRetry(now: Instant): Boolean {
         val hasRetries = retriesRemaining?.let { it > 0 } ?: true
@@ -36,7 +36,7 @@ internal data class Evolution(
 
     fun timeElapsed(now: Instant): Duration = Duration.between(startedAt, now)
 
-    fun evolve(ex: Throwable?): Evolution =
+    fun evolve(ex: Exception?): Evolution =
         copy(
             evolutions = evolutions + 1,
             retriesRemaining = retriesRemaining?.let { maxOf(it - 1, 0) },
@@ -44,7 +44,7 @@ internal data class Evolution(
             thrownExceptions = ex?.let { listOf(it) + thrownExceptions } ?: thrownExceptions,
         )
 
-    fun prepareException(lastException: Throwable): Throwable {
+    fun prepareException(lastException: Exception): Exception {
         val seen = mutableSetOf<ExceptionIdentity>()
         seen.add(ExceptionIdentity(lastException))
 
@@ -65,11 +65,11 @@ private data class ExceptionIdentity(
     val causeIdentity: ExceptionIdentity?,
 ) {
     companion object {
-        operator fun invoke(e: Throwable): ExceptionIdentity =
+        operator fun invoke(e: Exception): ExceptionIdentity =
             ExceptionIdentity(
                 type = e.javaClass,
                 message = e.message,
-                causeIdentity = e.cause?.let { invoke(it) },
+                causeIdentity = e.cause?.let { if (it is Exception) invoke(it) else throw it },
             )
     }
 }
@@ -85,7 +85,7 @@ context(_: Raise<InterruptedException>, _: Raise<ResourceUnavailableException>)
 internal fun <T> withRetries(
     config: RetryConfig,
     clock: Clock,
-    shouldRetry: (Throwable) -> RetryOutcome,
+    shouldRetry: (Exception) -> RetryOutcome,
     block: () -> T,
 ): T {
     var state = config.start(clock)
@@ -93,13 +93,14 @@ internal fun <T> withRetries(
     while (true) {
         try {
             return if (config.perTryHardTimeout != null) {
-                withTimeout(config.perTryHardTimeout) { block() }
+                // Acceptable use of unsafeSneakyRaises, as it's being
+                // caught below and wrapped into ResourceUnavailableException
+                unsafeSneakyRaises { withTimeout(config.perTryHardTimeout) { block() } }
             } else {
                 block()
             }
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             val now = Instant.now(clock)
-
             if (!state.canRetry(now)) {
                 throw createFinalException(state, e, now)
             }
@@ -107,7 +108,8 @@ internal fun <T> withRetries(
             val outcome =
                 try {
                     shouldRetry(e)
-                } catch (predicateError: Throwable) {
+                } catch (predicateError: Exception) {
+                    e.addSuppressed(predicateError)
                     RetryOutcome.RAISE
                 }
 
@@ -122,11 +124,10 @@ internal fun <T> withRetries(
     }
 }
 
-context(_: Raise<ResourceUnavailableException>)
-private fun createFinalException(state: Evolution, e: Throwable, now: Instant): Throwable {
+private fun createFinalException(state: Evolution, e: Exception, now: Instant): Exception {
     val elapsed = state.timeElapsed(now)
     return when {
-        e is TimeoutExceptionWrapper -> {
+        e is TimeoutException -> {
             state.prepareException(
                 TimeoutException("Giving up after ${state.evolutions} retries and $elapsed").apply {
                     initCause(e.cause)
@@ -142,10 +143,8 @@ private fun createFinalException(state: Evolution, e: Throwable, now: Instant): 
     }
 }
 
-private class TimeoutExceptionWrapper(cause: Throwable) : RuntimeException(cause)
-
-context(_: Raise<InterruptedException>)
-private fun <T> withTimeout(timeout: Duration, block: () -> T): T {
+context(_: Raise<InterruptedException>, _: Raise<TimeoutException>)
+internal fun <T> withTimeout(timeout: Duration, block: () -> T): T {
     val task = org.funfix.tasks.jvm.Task.fromBlockingIO { block() }
     val fiber = task.ensureRunningOnExecutor(DB_EXECUTOR).runFiber()
 
@@ -154,8 +153,7 @@ private fun <T> withTimeout(timeout: Duration, block: () -> T): T {
     } catch (e: TimeoutException) {
         fiber.cancel()
         fiber.joinBlockingUninterruptible()
-        // Wrap in our internal wrapper to distinguish from user TimeoutExceptions
-        throw TimeoutExceptionWrapper(e)
+        raise(e)
     } catch (e: ExecutionException) {
         val cause = e.cause
         when {
