@@ -27,3 +27,7 @@ jdbc-mssql = { module = "com.microsoft.sqlserver:mssql-jdbc", version = "12.4.2.
 junit-bom = { module = "org.junit:junit-bom", version = "6.0.2" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version = "2.0.3" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version = "1.21.4" }
+testcontainers-mssqlserver = { module = "org.testcontainers:testcontainers-mssqlserver" }
