@@ -134,22 +134,52 @@ internal object SQLiteFilters : RdbmsExceptionFilters {
 }
 
 /**
- * Checks if a SQLite exception has one of the given result codes. SQLite JDBC driver
- * (org.sqlite.SQLiteException) exposes a `getResultCode()` method returning an enum with a numeric
- * `code` field. We use reflection to avoid a compile-time dependency on the driver.
+ * Attempts to detect SQLite-specific result codes in exceptions in a defensive way.
+ *
+ * Strategy:
+ * 1. Walk the cause chain searching for a throwable whose class name contains "SQLiteException";
+ * 2. Try JDBC-standard accessors first: if the throwable is a SQLException, use getErrorCode()/getSQLState();
+ * 3. As a last resort, attempt reflection on well-known driver methods (getResultCode -> code) but be
+ *    defensive and return false on any reflection failure.
  */
 private fun isSQLiteResultCode(e: Throwable, vararg codes: Int): Boolean {
-    if (e.javaClass.name != "org.sqlite.SQLiteException") return false
-    return try {
-        val getResultCode = e.javaClass.getMethod("getResultCode")
-        val resultCode = getResultCode.invoke(e) ?: return false
-        // resultCode is an enum org.sqlite.core.Codes.SQLiteResultCode with a `code` field
-        val codeField = resultCode.javaClass.getField("code")
-        val codeValue = codeField.getInt(resultCode)
-        codeValue in codes
-    } catch (_: Exception) {
-        false
+    // Walk the cause chain to find a candidate exception
+    var t: Throwable? = e
+    while (t != null) {
+        val className = t.javaClass.name
+        if (className.contains("SQLiteException") || className.contains("sqlite")) {
+            // Prefer SQL-standard errorCode if available
+            if (t is SQLException) {
+                val ec = try { t.errorCode } catch (_: Exception) { null }
+                if (ec != null && ec in codes) return true
+            }
+
+            // Try reflective access as a best-effort fallback
+            try {
+                val getResultCode = t.javaClass.methods.firstOrNull { it.name == "getResultCode" && it.parameterCount == 0 }
+                if (getResultCode != null) {
+                    val resultCode = getResultCode.invoke(t) ?: return false
+                    val codeField = resultCode.javaClass.declaredFields.firstOrNull { it.name.equals("code", ignoreCase = true) }
+                    if (codeField != null) {
+                        codeField.isAccessible = true
+                        val codeValue = when (val v = codeField.get(resultCode)) {
+                            is Int -> v
+                            is Number -> v.toInt()
+                            else -> null
+                        }
+                        if (codeValue != null && codeValue in codes) return true
+                    }
+                }
+            } catch (_: Throwable) {
+                // Reflection failed — treat as non-match. Do not throw; fall back to message-based checks elsewhere.
+            }
+        }
+
+        t = t.cause
+        if (t === e) break
     }
+
+    return false
 }
 
 /** Microsoft SQL Server-specific exception filters. */
