@@ -41,10 +41,11 @@ public class DelayedQueueJDBCTest {
             null
         );
         
-        var queueConfig = DelayedQueueJDBCConfig.create(dbConfig, "jdbc-test-queue");
+        var queueConfig = DelayedQueueJDBCConfig.create(dbConfig, "delayed_queue_test", "jdbc-test-queue");
+        
+        DelayedQueueJDBC.runMigrations(queueConfig);
         
         return DelayedQueueJDBC.create(
-            "delayed_queue_test",
             MessageSerializer.forStrings(),
             queueConfig
         );
@@ -59,10 +60,11 @@ public class DelayedQueueJDBCTest {
             null
         );
         
-        var queueConfig = DelayedQueueJDBCConfig.create(dbConfig, "jdbc-test-queue");
+        var queueConfig = DelayedQueueJDBCConfig.create(dbConfig, "delayed_queue_test", "jdbc-test-queue");
+        
+        DelayedQueueJDBC.runMigrations(queueConfig);
         
         return DelayedQueueJDBC.create(
-            "delayed_queue_test",
             MessageSerializer.forStrings(),
             queueConfig,
             clock
@@ -78,10 +80,11 @@ public class DelayedQueueJDBCTest {
             null
         );
         
-        var queueConfig = new DelayedQueueJDBCConfig(dbConfig, timeConfig, "jdbc-test-queue");
+        var queueConfig = new DelayedQueueJDBCConfig(dbConfig, "delayed_queue_test", timeConfig, "jdbc-test-queue");
+        
+        DelayedQueueJDBC.runMigrations(queueConfig);
         
         return DelayedQueueJDBC.create(
-            "delayed_queue_test",
             MessageSerializer.forStrings(),
             queueConfig,
             clock

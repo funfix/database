@@ -191,8 +191,8 @@ public final class org/funfix/delayedqueue/jvm/DelayedQueueJDBC : java/lang/Auto
 	public synthetic fun <init> (Lorg/funfix/delayedqueue/jvm/internals/utils/Database;Lorg/funfix/delayedqueue/jvm/internals/jdbc/SQLVendorAdapter;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Ljava/time/Clock;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun close ()V
 	public fun containsMessage (Ljava/lang/String;)Z
-	public static final fun create (Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
-	public static final fun create (Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Ljava/time/Clock;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public static final fun create (Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public static final fun create (Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Ljava/time/Clock;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
 	public fun dropAllMessages (Ljava/lang/String;)I
 	public fun dropMessage (Ljava/lang/String;)Z
 	public fun getCron ()Lorg/funfix/delayedqueue/jvm/CronService;
@@ -202,42 +202,46 @@ public final class org/funfix/delayedqueue/jvm/DelayedQueueJDBC : java/lang/Auto
 	public fun offerOrUpdate (Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)Lorg/funfix/delayedqueue/jvm/OfferOutcome;
 	public fun poll ()Lorg/funfix/delayedqueue/jvm/AckEnvelope;
 	public fun read (Ljava/lang/String;)Lorg/funfix/delayedqueue/jvm/AckEnvelope;
+	public static final fun runMigrations (Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;)V
 	public fun tryPoll ()Lorg/funfix/delayedqueue/jvm/AckEnvelope;
 	public fun tryPollMany (I)Lorg/funfix/delayedqueue/jvm/AckEnvelope;
 }
 
 public final class org/funfix/delayedqueue/jvm/DelayedQueueJDBC$Companion {
-	public final fun create (Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
-	public final fun create (Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Ljava/time/Clock;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
-	public static synthetic fun create$default (Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC$Companion;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Ljava/time/Clock;ILjava/lang/Object;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public final fun create (Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public final fun create (Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Ljava/time/Clock;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public static synthetic fun create$default (Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC$Companion;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Ljava/time/Clock;ILjava/lang/Object;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
+	public final fun runMigrations (Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;)V
 }
 
 public final class org/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig : java/lang/Record {
 	public static final field Companion Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig$Companion;
-	public fun <init> (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;)V
-	public fun <init> (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/lang/String;)V
-	public fun <init> (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/RetryConfig;)V
-	public synthetic fun <init> (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/RetryConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;)V
+	public fun <init> (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/lang/String;)V
+	public fun <init> (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/RetryConfig;)V
+	public synthetic fun <init> (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/RetryConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun ackEnvSource ()Ljava/lang/String;
 	public final fun component1 ()Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;
-	public final fun component2 ()Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;
-	public final fun component3 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;
 	public final fun component4 ()Ljava/lang/String;
-	public final fun component5 ()Lorg/funfix/delayedqueue/jvm/RetryConfig;
-	public final fun copy (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/RetryConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;
-	public static synthetic fun copy$default (Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/RetryConfig;ILjava/lang/Object;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;
-	public static final fun create (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Lorg/funfix/delayedqueue/jvm/RetryConfig;
+	public final fun copy (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/RetryConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;
+	public static synthetic fun copy$default (Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/lang/String;Lorg/funfix/delayedqueue/jvm/RetryConfig;ILjava/lang/Object;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;
+	public static final fun create (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Ljava/lang/String;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;
 	public final fun db ()Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public final fun queueName ()Ljava/lang/String;
 	public final fun retryPolicy ()Lorg/funfix/delayedqueue/jvm/RetryConfig;
+	public final fun tableName ()Ljava/lang/String;
 	public final fun time ()Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class org/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig$Companion {
-	public final fun create (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;
+	public final fun create (Lorg/funfix/delayedqueue/jvm/JdbcConnectionConfig;Ljava/lang/String;Ljava/lang/String;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;
 }
 
 public final class org/funfix/delayedqueue/jvm/DelayedQueueTimeConfig : java/lang/Record {

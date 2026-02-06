@@ -50,10 +50,11 @@ public class DelayedQueueBatchOperationsTest {
             null
         );
         
-        var queueConfig = DelayedQueueJDBCConfig.create(dbConfig, "batch-test-queue");
+        var queueConfig = DelayedQueueJDBCConfig.create(dbConfig, "delayed_queue_batch_test", "batch-test-queue");
+        
+        DelayedQueueJDBC.runMigrations(queueConfig);
         
         return DelayedQueueJDBC.create(
-            "delayed_queue_batch_test",
             MessageSerializer.forStrings(),
             queueConfig,
             clock

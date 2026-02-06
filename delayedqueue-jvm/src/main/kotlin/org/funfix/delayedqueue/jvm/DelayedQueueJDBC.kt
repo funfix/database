@@ -33,13 +33,12 @@ import org.slf4j.LoggerFactory
  * - Persistent storage in relational databases
  * - Optimistic locking for concurrent message acquisition
  * - Batch operations for improved performance
- * - Automatic schema migrations
  * - Vendor-specific query optimizations
  *
  * ## Java Usage
  *
  * ```java
- * JdbcConnectionConfig config = new JdbcConnectionConfig(
+ * JdbcConnectionConfig dbConfig = new JdbcConnectionConfig(
  *     "jdbc:hsqldb:mem:testdb",
  *     JdbcDriver.HSQLDB,
  *     null, // username
@@ -47,10 +46,18 @@ import org.slf4j.LoggerFactory
  *     null  // pool config
  * );
  *
+ * DelayedQueueJDBCConfig config = DelayedQueueJDBCConfig.create(
+ *     dbConfig,
+ *     "delayed_queue_table",
+ *     "my-queue"
+ * );
+ *
+ * // Run migrations explicitly (do this once, not on every queue creation)
+ * DelayedQueueJDBC.runMigrations(config);
+ *
  * DelayedQueue<String> queue = DelayedQueueJDBC.create(
- *     config,
- *     "my_delayed_queue_table",
- *     MessageSerializer.forStrings()
+ *     MessageSerializer.forStrings(),
+ *     config
  * );
  * ```
  *
@@ -550,12 +557,49 @@ private constructor(
         private val logger = LoggerFactory.getLogger(DelayedQueueJDBC::class.java)
 
         /**
+         * Runs database migrations for the specified configuration.
+         *
+         * This should be called explicitly before creating a DelayedQueueJDBC instance. Running
+         * migrations automatically on every queue creation is discouraged.
+         *
+         * @param config queue configuration containing database connection and table settings
+         * @throws ResourceUnavailableException if database connection fails
+         * @throws InterruptedException if interrupted during migration
+         */
+        @JvmStatic
+        @Throws(ResourceUnavailableException::class, InterruptedException::class)
+        public fun runMigrations(config: DelayedQueueJDBCConfig): Unit = unsafeSneakyRaises {
+            val database = Database(config.db)
+            database.use {
+                database.withConnection { connection ->
+                    val migrations =
+                        when (config.db.driver) {
+                            JdbcDriver.HSQLDB -> HSQLDBMigrations.getMigrations(config.tableName)
+                            JdbcDriver.MsSqlServer,
+                            JdbcDriver.Sqlite ->
+                                throw UnsupportedOperationException(
+                                    "Database ${config.db.driver} not yet supported"
+                                )
+                        }
+
+                    val executed = MigrationRunner.runMigrations(connection.underlying, migrations)
+                    if (executed > 0) {
+                        logger.info("Executed $executed migrations for table ${config.tableName}")
+                    }
+                }
+            }
+        }
+
+        /**
          * Creates a new JDBC-based delayed queue with the specified configuration.
          *
+         * NOTE: This method does NOT run database migrations automatically. You must call
+         * [runMigrations] explicitly before creating the queue.
+         *
          * @param A the type of message payloads
-         * @param tableName the name of the database table to use
          * @param serializer strategy for serializing/deserializing message payloads
-         * @param config configuration for this queue instance (db, time, queue name, retry policy)
+         * @param config configuration for this queue instance (db, table, time, queue name, retry
+         *   policy)
          * @param clock optional clock for time operations (uses system UTC if not provided)
          * @return a new DelayedQueueJDBC instance
          * @throws ResourceUnavailableException if database initialization fails
@@ -565,33 +609,12 @@ private constructor(
         @JvmOverloads
         @Throws(ResourceUnavailableException::class, InterruptedException::class)
         public fun <A> create(
-            tableName: String,
             serializer: MessageSerializer<A>,
             config: DelayedQueueJDBCConfig,
             clock: Clock = Clock.systemUTC(),
         ): DelayedQueueJDBC<A> = unsafeSneakyRaises {
             val database = Database(config.db)
-
-            // Run migrations
-            database.withConnection { connection ->
-                val migrations =
-                    when (config.db.driver) {
-                        JdbcDriver.HSQLDB -> HSQLDBMigrations.getMigrations(tableName)
-                        JdbcDriver.MsSqlServer,
-                        JdbcDriver.Sqlite ->
-                            throw UnsupportedOperationException(
-                                "Database ${config.db.driver} not yet supported"
-                            )
-                    }
-
-                val executed = MigrationRunner.runMigrations(connection.underlying, migrations)
-                if (executed > 0) {
-                    logger.info("Executed $executed migrations for table $tableName")
-                }
-            }
-
-            val adapter = SQLVendorAdapter.create(config.db.driver, tableName)
-
+            val adapter = SQLVendorAdapter.create(config.db.driver, config.tableName)
             DelayedQueueJDBC(
                 database = database,
                 adapter = adapter,

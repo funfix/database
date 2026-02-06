@@ -44,12 +44,14 @@ public class DelayedQueueJDBCAdvancedTest {
         
         var queueConfig = new DelayedQueueJDBCConfig(
             dbConfig,
+            tableName,
             DelayedQueueTimeConfig.DEFAULT,
             "advanced-test-queue"
         );
         
+        DelayedQueueJDBC.runMigrations(queueConfig);
+        
         var queue = DelayedQueueJDBC.create(
-            tableName,
             MessageSerializer.forStrings(),
             queueConfig,
             clock
@@ -70,12 +72,14 @@ public class DelayedQueueJDBCAdvancedTest {
         
         var queueConfig = new DelayedQueueJDBCConfig(
             dbConfig,
+            tableName,
             DelayedQueueTimeConfig.DEFAULT,
             "shared-db-test-queue-" + tableName
         );
         
+        DelayedQueueJDBC.runMigrations(queueConfig);
+        
         var queue = DelayedQueueJDBC.create(
-            tableName,
             MessageSerializer.forStrings(),
             queueConfig,
             clock
