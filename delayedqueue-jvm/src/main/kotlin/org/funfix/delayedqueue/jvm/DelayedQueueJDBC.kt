@@ -16,6 +16,7 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRowWithId
 import org.funfix.delayedqueue.jvm.internals.jdbc.HSQLDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.MigrationRunner
 import org.funfix.delayedqueue.jvm.internals.jdbc.MsSqlServerMigrations
+import org.funfix.delayedqueue.jvm.internals.jdbc.PostgreSQLMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.RdbmsExceptionFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.filtersForDriver
@@ -611,6 +612,8 @@ private constructor(
                             JdbcDriver.HSQLDB -> HSQLDBMigrations.getMigrations(config.tableName)
                             JdbcDriver.MsSqlServer ->
                                 MsSqlServerMigrations.getMigrations(config.tableName)
+                            JdbcDriver.PostgreSQL ->
+                                PostgreSQLMigrations.getMigrations(config.tableName)
                             JdbcDriver.Sqlite ->
                                 throw UnsupportedOperationException(
                                     "Database ${config.db.driver} not yet supported"
