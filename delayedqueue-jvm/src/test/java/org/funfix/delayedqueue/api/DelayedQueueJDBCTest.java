@@ -140,7 +140,7 @@ public class DelayedQueueJDBCTest {
     @Test
     public void offerOrUpdate_ignoresIdenticalMessage() throws Exception {
         queue = createQueue();
-        var now = Instant.now();
+        var now = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
         
         queue.offerOrUpdate("key1", "payload1", now.plusSeconds(10));
         var result = queue.offerOrUpdate("key1", "payload1", now.plusSeconds(10));

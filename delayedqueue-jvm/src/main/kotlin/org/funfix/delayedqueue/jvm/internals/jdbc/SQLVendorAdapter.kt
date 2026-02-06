@@ -10,8 +10,7 @@ import org.funfix.delayedqueue.jvm.JdbcDriver
 /**
  * Truncates an Instant to seconds precision.
  *
- * For doing queries on databases that have second-level precision
- * (e.g., SQL Server).
+ * For doing queries on databases that have second-level precision (e.g., SQL Server).
  */
 private fun truncateToSeconds(instant: Instant): Instant = instant.truncatedTo(ChronoUnit.SECONDS)
 
