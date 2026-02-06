@@ -123,7 +123,7 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
     }
 
     /** Selects one row by its key. */
-    fun selectByKey(connection: Connection, kind: String, key: String): DBTableRowWithId? {
+    open fun selectByKey(connection: Connection, kind: String, key: String): DBTableRowWithId? {
         val sql =
             """
             SELECT id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
@@ -311,7 +311,7 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
     ): DBTableRowWithId?
 
     /** Selects all messages with a specific lock UUID. */
-    fun selectAllAvailableWithLock(
+    open fun selectAllAvailableWithLock(
         connection: Connection,
         lockUuid: String,
         count: Int,
@@ -383,8 +383,8 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
         fun create(driver: JdbcDriver, tableName: String): SQLVendorAdapter =
             when (driver) {
                 JdbcDriver.HSQLDB -> HSQLDBAdapter(driver, tableName)
-                JdbcDriver.MsSqlServer,
-                JdbcDriver.Sqlite -> TODO("MS-SQL and SQLite support not yet implemented")
+                JdbcDriver.MsSqlServer -> MsSqlServerAdapter(driver, tableName)
+                JdbcDriver.Sqlite -> TODO("SQLite support not yet implemented")
             }
     }
 }
@@ -482,6 +482,169 @@ private class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
                 WHERE pKind = ? AND scheduledAt <= ?
                 ORDER BY scheduledAt
                 LIMIT $limit
+            )
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, lockUuid)
+            stmt.setTimestamp(2, java.sql.Timestamp.from(expireAt))
+            stmt.setString(3, kind)
+            stmt.setTimestamp(4, java.sql.Timestamp.from(now))
+            stmt.executeUpdate()
+        }
+    }
+}
+
+/**
+ * MS-SQL Server-specific adapter.
+ *
+ * Key differences from HSQLDB:
+ * - Uses `TOP N` instead of `LIMIT N` for row limiting
+ * - Uses `WITH (UPDLOCK)` for row-level locking during SELECT FOR UPDATE
+ * - Uses `WITH (UPDLOCK, READPAST)` for concurrent polling (skips locked rows)
+ * - Uses `IF NOT EXISTS ... INSERT` pattern for conditional insert
+ */
+private class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
+    SQLVendorAdapter(driver, tableName) {
+
+    override fun insertOneRow(connection: Connection, row: DBTableRow): Boolean {
+        val sql =
+            """
+            IF NOT EXISTS (
+                SELECT 1 FROM $tableName WHERE pKey = ? AND pKind = ?
+            )
+            BEGIN
+                INSERT INTO $tableName
+                (pKey, pKind, payload, scheduledAt, scheduledAtInitially, createdAt)
+                VALUES (?, ?, ?, ?, ?, ?)
+            END
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            // Parameters for EXISTS check
+            stmt.setString(1, row.pKey)
+            stmt.setString(2, row.pKind)
+            // Parameters for INSERT
+            stmt.setString(3, row.pKey)
+            stmt.setString(4, row.pKind)
+            stmt.setString(5, row.payload)
+            stmt.setTimestamp(6, java.sql.Timestamp.from(row.scheduledAt))
+            stmt.setTimestamp(7, java.sql.Timestamp.from(row.scheduledAtInitially))
+            stmt.setTimestamp(8, java.sql.Timestamp.from(row.createdAt))
+            stmt.executeUpdate() > 0
+        }
+    }
+
+    override fun selectForUpdateOneRow(
+        connection: Connection,
+        kind: String,
+        key: String,
+    ): DBTableRowWithId? {
+        val sql =
+            """
+            SELECT TOP 1
+                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
+            FROM $tableName
+            WITH (UPDLOCK)
+            WHERE pKey = ? AND pKind = ?
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, key)
+            stmt.setString(2, kind)
+            stmt.executeQuery().use { rs -> if (rs.next()) rs.toDBTableRowWithId() else null }
+        }
+    }
+
+    override fun selectByKey(connection: Connection, kind: String, key: String): DBTableRowWithId? {
+        val sql =
+            """
+            SELECT TOP 1
+                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
+            FROM $tableName
+            WHERE pKey = ? AND pKind = ?
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, key)
+            stmt.setString(2, kind)
+            stmt.executeQuery().use { rs -> if (rs.next()) rs.toDBTableRowWithId() else null }
+        }
+    }
+
+    override fun selectFirstAvailableWithLock(
+        connection: Connection,
+        kind: String,
+        now: Instant,
+    ): DBTableRowWithId? {
+        val sql =
+            """
+            SELECT TOP 1
+                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
+            FROM $tableName
+            WITH (UPDLOCK, READPAST)
+            WHERE pKind = ? AND scheduledAt <= ?
+            ORDER BY scheduledAt
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, kind)
+            stmt.setTimestamp(2, java.sql.Timestamp.from(now))
+            stmt.executeQuery().use { rs -> if (rs.next()) rs.toDBTableRowWithId() else null }
+        }
+    }
+
+    override fun selectAllAvailableWithLock(
+        connection: Connection,
+        lockUuid: String,
+        count: Int,
+        offsetId: Long?,
+    ): List<DBTableRowWithId> {
+        val offsetClause = offsetId?.let { "AND id > ?" } ?: ""
+        val sql =
+            """
+            SELECT TOP $count
+                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
+            FROM $tableName
+            WHERE lockUuid = ? $offsetClause
+            ORDER BY id
+            """
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, lockUuid)
+            offsetId?.let { stmt.setLong(2, it) }
+            stmt.executeQuery().use { rs ->
+                val results = mutableListOf<DBTableRowWithId>()
+                while (rs.next()) {
+                    results.add(rs.toDBTableRowWithId())
+                }
+                results
+            }
+        }
+    }
+
+    override fun acquireManyOptimistically(
+        connection: Connection,
+        kind: String,
+        limit: Int,
+        lockUuid: String,
+        timeout: Duration,
+        now: Instant,
+    ): Int {
+        require(limit > 0) { "Limit must be > 0" }
+        val expireAt = now.plus(timeout)
+
+        val sql =
+            """
+            UPDATE $tableName
+            SET lockUuid = ?,
+                scheduledAt = ?
+            WHERE id IN (
+                SELECT TOP $limit id
+                FROM $tableName
+                WITH (UPDLOCK, READPAST)
+                WHERE pKind = ? AND scheduledAt <= ?
+                ORDER BY scheduledAt
             )
             """
 
