@@ -28,7 +28,7 @@ internal object PostgreSQLMigrations {
 
                     CREATE UNIQUE INDEX ${tableName}__IdUniqueIndex ON $tableName(id);
                     CREATE INDEX ${tableName}__KindPlusScheduledAtIndex ON $tableName(pKind, scheduledAt);
-                    CREATE INDEX ${tableName}__LockUuidPlusIdIndex ON $tableName(lockUuid, id)
+                    CREATE INDEX ${tableName}__LockUuidPlusIdIndex ON $tableName(lockUuid, id);
                     """
                         .trimIndent(),
             )
