@@ -20,9 +20,12 @@ dependencies {
     testImplementation(libs.logback.classic)
     testImplementation(libs.jdbc.hsqldb)
     testImplementation(libs.jdbc.sqlite)
+    testImplementation(libs.jdbc.mssql)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-tasks.test { useJUnitPlatform() }
+tasks.test {
+    useJUnitPlatform()
+}

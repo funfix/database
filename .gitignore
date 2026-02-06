@@ -45,3 +45,6 @@ bin/
 ### Porting effort ###
 old-code
 plans/
+
+### Other stuff ###
+.envrc

@@ -23,6 +23,7 @@ hikaricp = { module = "com.zaxxer:HikariCP", version = "7.0.2" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version = "1.5.27" }
 jdbc-hsqldb = { module = "org.hsqldb:hsqldb", version = "2.7.4" }
 jdbc-sqlite = { module = "org.xerial:sqlite-jdbc", version = "3.51.1.0" }
+jdbc-mssql = { module = "com.microsoft.sqlserver:mssql-jdbc", version = "12.4.2.jre11" }
 junit-bom = { module = "org.junit:junit-bom", version = "6.0.2" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
