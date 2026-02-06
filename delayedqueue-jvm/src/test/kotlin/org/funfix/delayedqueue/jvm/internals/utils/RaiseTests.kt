@@ -34,6 +34,6 @@ class RaiseTests {
     fun `Raise value class is internal and cannot be constructed externally`() {
         // This test is just to ensure the API is not public
         // Compilation will fail if you try: val r = Raise<Exception>()
-        assertNotNull(Raise._PRIVATE)
+        assertNotNull(Raise._PRIVATE_AND_UNSAFE)
     }
 }

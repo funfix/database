@@ -362,25 +362,6 @@ private constructor(
         }
     }
 
-    /**
-     * Deletes ALL messages with a given prefix (ignoring config hash). Only used by the periodic
-     * install methods that need to clear everything.
-     */
-    private fun deleteAllForPrefix(keyPrefix: String) {
-        val keyPrefixWithSlash = "$keyPrefix/"
-        lock.withLock {
-            val toRemove =
-                map.entries.filter { (key, msg) ->
-                    key.startsWith(keyPrefixWithSlash) &&
-                        msg.deliveryType == DeliveryType.FIRST_DELIVERY
-                }
-            for ((key, msg) in toRemove) {
-                map.remove(key)
-                order.remove(msg)
-            }
-        }
-    }
-
     private val cronService: CronService<A> =
         org.funfix.delayedqueue.jvm.internals.CronServiceImpl(
             queue = this,

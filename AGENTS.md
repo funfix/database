@@ -11,6 +11,7 @@ skill is the rule of law for any public surface changes.
 - Use JVM interop annotations deliberately to shape Java call sites.
 - Verify every public entry point with a Java call-site example.
 - Agents MUST practice TDD: write the failing test first, then implement the change.
+- Library dependencies should never be added by agents, unless explicitly instructed.
 
 ## Public API constraints (Java consumers)
 - Use Java types in signatures: `java.util.List/Map/Set`, `java.time.*`,
@@ -35,6 +36,17 @@ skill is the rule of law for any public surface changes.
 - Do not change types, nullability, or parameter order of public members.
 - Add new overloads instead of changing existing ones.
 - Use a deprecation cycle before removal.
+
+## Code style / best practices
+
+- NEVER catch `Throwable`, you're only allowed to catch `Exception`
+
+## Testing
+
+- Practice TDD: write tests before the implementation.
+- Projects strives for full test coverage. Tests have to be clean and easy to read.
+- All public tests go into `./src/test/java`, built in Java.
+- All tests for internals go into `./src/test/kotlin`, built in Kotlin
 
 ## Review checklist
 - Java call sites compile for all public constructors and methods.

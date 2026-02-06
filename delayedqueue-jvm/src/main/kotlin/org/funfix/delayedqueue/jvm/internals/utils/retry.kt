@@ -4,6 +4,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
+import org.funfix.delayedqueue.jvm.ResourceUnavailableException
 import org.funfix.delayedqueue.jvm.RetryConfig
 
 internal fun RetryConfig.start(now: Instant): Evolution =
@@ -78,9 +79,6 @@ internal enum class RetryOutcome {
     RETRY,
     RAISE,
 }
-
-internal class ResourceUnavailableException(message: String, cause: Throwable? = null) :
-    RuntimeException(message, cause)
 
 internal class RequestTimeoutException(message: String, cause: Throwable? = null) :
     RuntimeException(message, cause)

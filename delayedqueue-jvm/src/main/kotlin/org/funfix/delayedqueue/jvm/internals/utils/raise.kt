@@ -3,7 +3,7 @@ package org.funfix.delayedqueue.jvm.internals.utils
 @JvmInline
 internal value class Raise<in E : Exception> private constructor(val fake: Nothing? = null) {
     companion object {
-        val _PRIVATE: Raise<Exception> = Raise()
+        val _PRIVATE_AND_UNSAFE: Raise<Exception> = Raise()
     }
 }
 
@@ -14,4 +14,4 @@ internal inline fun <T> sneakyRaises(
     block:
         context(Raise<Exception>)
         () -> T
-): T = block(Raise._PRIVATE)
+): T = block(Raise._PRIVATE_AND_UNSAFE)

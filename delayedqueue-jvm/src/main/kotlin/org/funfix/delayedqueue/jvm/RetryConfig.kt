@@ -42,13 +42,15 @@ import java.time.Duration
  * @param backoffFactor Multiplier for exponential backoff (e.g., 2.0 for doubling delays)
  */
 @JvmRecord
-public data class RetryConfig(
-    val maxRetries: Long?,
-    val totalSoftTimeout: Duration?,
-    val perTryHardTimeout: Duration?,
+public data class RetryConfig
+@JvmOverloads
+constructor(
     val initialDelay: Duration,
     val maxDelay: Duration,
-    val backoffFactor: Double,
+    val backoffFactor: Double = 2.0,
+    val maxRetries: Long? = null,
+    val totalSoftTimeout: Duration? = null,
+    val perTryHardTimeout: Duration? = null,
 ) {
     init {
         require(backoffFactor >= 1.0) { "backoffFactor must be >= 1.0, got $backoffFactor" }
