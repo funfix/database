@@ -27,14 +27,14 @@ class DatabaseTests {
     }
 
     @Test
-    fun `buildHikariConfig sets correct values`() = sneakyRaises {
+    fun `buildHikariConfig sets correct values`() = unsafeSneakyRaises {
         val hikariConfig = ConnectionPool.buildHikariConfig(config)
         assertEquals(config.url, hikariConfig.jdbcUrl)
         assertEquals(config.driver.className, hikariConfig.driverClassName)
     }
 
     @Test
-    fun `createDataSource returns working DataSource`() = sneakyRaises {
+    fun `createDataSource returns working DataSource`() = unsafeSneakyRaises {
         dataSource.connection.use { conn ->
             assertFalse(conn.isClosed)
             assertTrue(conn.metaData.driverName.contains("SQLite", ignoreCase = true))
@@ -42,7 +42,7 @@ class DatabaseTests {
     }
 
     @Test
-    fun `Database withConnection executes block and closes connection`() = sneakyRaises {
+    fun `Database withConnection executes block and closes connection`() = unsafeSneakyRaises {
         var connectionClosedAfter: Boolean
         var connectionRef: SafeConnection? = null
         val result =
@@ -58,7 +58,7 @@ class DatabaseTests {
     }
 
     @Test
-    fun `Database withTransaction commits on success`() = sneakyRaises {
+    fun `Database withTransaction commits on success`() = unsafeSneakyRaises {
         database.withConnection { safeConn ->
             safeConn.execute<Boolean>("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
         }
@@ -76,12 +76,12 @@ class DatabaseTests {
     }
 
     @Test
-    fun `Database withTransaction rolls back on exception`() = sneakyRaises {
+    fun `Database withTransaction rolls back on exception`() = unsafeSneakyRaises {
         database.withConnection { safeConn ->
             safeConn.execute<Boolean>("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
         }
         assertThrows(SQLException::class.java) {
-            sneakyRaises {
+            unsafeSneakyRaises {
                 database.withTransaction { safeConn ->
                     safeConn.execute<Boolean>("INSERT INTO test (name) VALUES ('foo')")
                     // This will fail (duplicate primary key)
@@ -101,7 +101,7 @@ class DatabaseTests {
     }
 
     @Test
-    fun `Statement query executes block and returns result`() = sneakyRaises {
+    fun `Statement query executes block and returns result`() = unsafeSneakyRaises {
         database.withConnection { safeConn ->
             safeConn.execute<Boolean>("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
             safeConn.execute<Boolean>("INSERT INTO test (name) VALUES ('foo')")

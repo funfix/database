@@ -1,6 +1,5 @@
 package org.funfix.delayedqueue.jvm
 
-import java.sql.SQLException
 import java.time.Duration
 import java.time.Instant
 
@@ -26,10 +25,10 @@ public interface CronService<A> {
      * @param configHash hash identifying this configuration (for detecting changes)
      * @param keyPrefix prefix for all message keys in this configuration
      * @param messages list of messages to schedule
-     * @throws SQLException if using JDBC backend and database operation fails
+     * @throws ResourceUnavailableException if database operation fails after retries
      * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     public fun installTick(
         configHash: CronConfigHash,
         keyPrefix: String,
@@ -43,10 +42,10 @@ public interface CronService<A> {
      *
      * @param configHash hash identifying the configuration to remove
      * @param keyPrefix prefix for message keys to remove
-     * @throws SQLException if using JDBC backend and database operation fails
+     * @throws ResourceUnavailableException if database operation fails after retries
      * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     public fun uninstallTick(configHash: CronConfigHash, keyPrefix: String)
 
     /**
@@ -63,10 +62,10 @@ public interface CronService<A> {
      * @param scheduleInterval how often to regenerate/update the schedule
      * @param generateMany function that generates messages based on current time
      * @return an AutoCloseable resource that should be closed to stop scheduling
-     * @throws SQLException if using JDBC backend and database operation fails
+     * @throws ResourceUnavailableException if database operation fails after retries
      * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     public fun install(
         configHash: CronConfigHash,
         keyPrefix: String,
@@ -84,10 +83,10 @@ public interface CronService<A> {
      * @param schedule daily schedule configuration (hours, timezone, advance scheduling)
      * @param generator function that creates a message for a given future instant
      * @return an AutoCloseable resource that should be closed to stop scheduling
-     * @throws SQLException if using JDBC backend and database operation fails
+     * @throws ResourceUnavailableException if database operation fails after retries
      * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     public fun installDailySchedule(
         keyPrefix: String,
         schedule: CronDailySchedule,
@@ -104,10 +103,10 @@ public interface CronService<A> {
      * @param period interval between generated messages
      * @param generator function that creates a payload for a given instant
      * @return an AutoCloseable resource that should be closed to stop scheduling
-     * @throws SQLException if using JDBC backend and database operation fails
+     * @throws ResourceUnavailableException if database operation fails after retries
      * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(SQLException::class, InterruptedException::class)
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     public fun installPeriodicTick(
         keyPrefix: String,
         period: Duration,

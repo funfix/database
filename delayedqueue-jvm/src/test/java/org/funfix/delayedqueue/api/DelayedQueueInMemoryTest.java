@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -535,5 +536,330 @@ public class DelayedQueueInMemoryTest {
         clock.setTime(base.plusSeconds(35));
         assertEquals("payload3", Objects.requireNonNull(queue.tryPoll()).payload());
         assertNull(queue.tryPoll());
+    }
+    
+    // ========== Additional Contract Tests ==========
+    
+    @Test
+    public void offerOrUpdate_ignoresIdenticalMessage() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        var scheduleAt = clock.now().plusSeconds(10);
+        
+        queue.offerOrUpdate("key1", "payload1", scheduleAt);
+        var result = queue.offerOrUpdate("key1", "payload1", scheduleAt);
+        
+        assertInstanceOf(OfferOutcome.Ignored.class, result);
+    }
+    
+    @Test
+    public void dropMessage_removesMessage() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        
+        queue.offerOrUpdate("key1", "payload1", clock.now().plusSeconds(10));
+        
+        assertTrue(queue.dropMessage("key1"));
+        assertFalse(queue.containsMessage("key1"));
+    }
+    
+    @Test
+    public void dropMessage_returnsFalseForNonExistentKey() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        
+        assertFalse(queue.dropMessage("non-existent"));
+    }
+    
+    @Test
+    public void offerBatch_createsMultipleMessages() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        
+        var messages = List.of(
+            new BatchedMessage<>(1, new ScheduledMessage<>("key1", "payload1", clock.now().plusSeconds(10))),
+            new BatchedMessage<>(2, new ScheduledMessage<>("key2", "payload2", clock.now().plusSeconds(20)))
+        );
+        
+        var results = queue.offerBatch(messages);
+        
+        assertEquals(2, results.size());
+        assertInstanceOf(OfferOutcome.Created.class, results.get(0).outcome());
+        assertInstanceOf(OfferOutcome.Created.class, results.get(1).outcome());
+        assertTrue(queue.containsMessage("key1"));
+        assertTrue(queue.containsMessage("key2"));
+    }
+    
+    @Test
+    public void offerBatch_handlesUpdatesCorrectly() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        
+        queue.offerOrUpdate("key1", "original", clock.now().plusSeconds(10));
+        
+        var messages = List.of(
+            new BatchedMessage<>(1, new ScheduledMessage<>("key1", "updated", clock.now().plusSeconds(20), true)),
+            new BatchedMessage<>(2, new ScheduledMessage<>("key2", "new", clock.now().plusSeconds(30)))
+        );
+        
+        var results = queue.offerBatch(messages);
+        
+        assertEquals(2, results.size());
+        assertInstanceOf(OfferOutcome.Updated.class, results.get(0).outcome());
+        assertInstanceOf(OfferOutcome.Created.class, results.get(1).outcome());
+    }
+    
+    @Test
+    public void dropAllMessages_removesAllMessages() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        
+        queue.offerOrUpdate("key1", "payload1", clock.now().plusSeconds(10));
+        queue.offerOrUpdate("key2", "payload2", clock.now().plusSeconds(20));
+        
+        var count = queue.dropAllMessages("Yes, please, I know what I'm doing!");
+        
+        assertEquals(2, count);
+        assertFalse(queue.containsMessage("key1"));
+        assertFalse(queue.containsMessage("key2"));
+    }
+    
+    @Test
+    public void dropAllMessages_requiresConfirmation() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        
+        assertThrows(IllegalArgumentException.class, () ->
+            queue.dropAllMessages("wrong confirmation")
+        );
+    }
+    
+    @Test
+    public void pollAck_onlyDeletesIfNoUpdateHappenedInBetween() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        var now = clock.now();
+        
+        var offer1 = queue.offerOrUpdate("my-key", "value offered (1)", now.minusSeconds(1));
+        assertInstanceOf(OfferOutcome.Created.class, offer1);
+        
+        var msg1 = queue.tryPoll();
+        assertNotNull(msg1);
+        assertEquals("value offered (1)", msg1.payload());
+        
+        var offer2 = queue.offerOrUpdate("my-key", "value offered (2)", now.minusSeconds(1));
+        assertInstanceOf(OfferOutcome.Updated.class, offer2);
+        
+        var msg2 = queue.tryPoll();
+        assertNotNull(msg2);
+        assertEquals("value offered (2)", msg2.payload());
+        
+        msg1.acknowledge();
+        assertTrue(queue.containsMessage("my-key"));
+        
+        msg2.acknowledge();
+        assertFalse(queue.containsMessage("my-key"));
+    }
+    
+    @Test
+    public void readAck_onlyDeletesIfNoUpdateHappenedInBetween() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        var now = clock.now();
+        
+        queue.offerOrUpdate("my-key-1", "value offered (1.1)", now.minusSeconds(1));
+        queue.offerOrUpdate("my-key-2", "value offered (2.1)", now.minusSeconds(1));
+        queue.offerOrUpdate("my-key-3", "value offered (3.1)", now.minusSeconds(1));
+        
+        var msg1 = queue.read("my-key-1");
+        var msg2 = queue.read("my-key-2");
+        var msg3 = queue.read("my-key-3");
+        var msg4 = queue.read("my-key-4");
+        
+        assertNotNull(msg1);
+        assertNotNull(msg2);
+        assertNotNull(msg3);
+        assertNull(msg4);
+        
+        assertEquals("value offered (1.1)", msg1.payload());
+        assertEquals("value offered (2.1)", msg2.payload());
+        assertEquals("value offered (3.1)", msg3.payload());
+        
+        clock.advance(Duration.ofSeconds(1));
+        
+        queue.offerOrUpdate("my-key-2", "value offered (2.2)", now.minusSeconds(1));
+        queue.offerOrUpdate("my-key-3", "value offered (3.1)", now);
+        
+        msg1.acknowledge();
+        msg2.acknowledge();
+        msg3.acknowledge();
+        
+        assertFalse(queue.containsMessage("my-key-1"));
+        assertTrue(queue.containsMessage("my-key-2"));
+        assertTrue(queue.containsMessage("my-key-3"));
+        
+        var remaining = queue.dropAllMessages("Yes, please, I know what I'm doing!");
+        assertEquals(2, remaining);
+    }
+    
+    @Test
+    public void tryPollMany_withBatchSizeSmallerThanPagination() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        var now = clock.now();
+        
+        var messages = new ArrayList<BatchedMessage<Integer, String>>();
+        for (int i = 0; i < 50; i++) {
+            messages.add(new BatchedMessage<>(i, new ScheduledMessage<>(
+                "key-" + i,
+                "payload-" + i,
+                now.minusSeconds(50 - i),
+                false
+            )));
+        }
+        queue.offerBatch(messages);
+        
+        var batch = queue.tryPollMany(50);
+        assertEquals(50, batch.payload().size());
+        
+        for (int i = 0; i < 50; i++) {
+            assertEquals("payload-" + i, batch.payload().get(i));
+        }
+        
+        batch.acknowledge();
+        
+        var batch2 = queue.tryPollMany(10);
+        assertTrue(batch2.payload().isEmpty());
+    }
+    
+    @Test
+    public void tryPollMany_withBatchSizeEqualToPagination() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        var now = clock.now();
+        
+        var messages = new ArrayList<BatchedMessage<Integer, String>>();
+        for (int i = 0; i < 100; i++) {
+            messages.add(new BatchedMessage<>(i, new ScheduledMessage<>(
+                "key-" + i,
+                "payload-" + i,
+                now.minusSeconds(100 - i),
+                false
+            )));
+        }
+        queue.offerBatch(messages);
+        
+        var batch = queue.tryPollMany(100);
+        assertEquals(100, batch.payload().size());
+        
+        for (int i = 0; i < 100; i++) {
+            assertEquals("payload-" + i, batch.payload().get(i));
+        }
+        
+        batch.acknowledge();
+        
+        var batch2 = queue.tryPollMany(3);
+        assertTrue(batch2.payload().isEmpty());
+    }
+    
+    @Test
+    public void tryPollMany_withBatchSizeLargerThanPagination() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        var now = clock.now();
+        
+        var messages = new ArrayList<BatchedMessage<Integer, String>>();
+        for (int i = 0; i < 250; i++) {
+            messages.add(new BatchedMessage<>(i, new ScheduledMessage<>(
+                "key-" + i,
+                "payload-" + i,
+                now.minusSeconds(250 - i),
+                false
+            )));
+        }
+        queue.offerBatch(messages);
+        
+        var batch = queue.tryPollMany(250);
+        assertEquals(250, batch.payload().size());
+        
+        for (int i = 0; i < 250; i++) {
+            assertEquals("payload-" + i, batch.payload().get(i));
+        }
+        
+        batch.acknowledge();
+        
+        var batch2 = queue.tryPollMany(10);
+        assertTrue(batch2.payload().isEmpty());
+    }
+    
+    @Test
+    public void tryPollMany_withMaxSizeLessThanOrEqualToZero_returnsEmptyBatch() {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var queue = DelayedQueueInMemory.<String>create(
+            DelayedQueueTimeConfig.create(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            "test-source",
+            clock
+        );
+        var now = clock.now();
+        
+        queue.offerOrUpdate("my-key-1", "value offered (1.1)", now.minusSeconds(1));
+        queue.offerOrUpdate("my-key-2", "value offered (2.1)", now.minusSeconds(2));
+        
+        var batch0 = queue.tryPollMany(0);
+        assertTrue(batch0.payload().isEmpty());
+        batch0.acknowledge();
+        
+        var batch3 = queue.tryPollMany(3);
+        assertEquals(2, batch3.payload().size());
+        assertTrue(batch3.payload().contains("value offered (1.1)"));
+        assertTrue(batch3.payload().contains("value offered (2.1)"));
     }
 }

@@ -21,9 +21,10 @@ public data class CronConfigHash(public val value: String) {
         @JvmStatic
         public fun fromDailyCron(config: CronDailySchedule): CronConfigHash {
             val text = buildString {
+                appendLine() // Leading newline to match Scala stripMargin
                 appendLine("daily-cron:")
                 appendLine("  zone: ${config.zoneId}")
-                append("  hours: ${config.hoursOfDay.joinToString(", ")}")
+                appendLine("  hours: ${config.hoursOfDay.joinToString(", ")}")
             }
             return CronConfigHash(md5(text))
         }
@@ -32,11 +33,15 @@ public data class CronConfigHash(public val value: String) {
         @JvmStatic
         public fun fromPeriodicTick(period: Duration): CronConfigHash {
             val text = buildString {
+                appendLine() // Leading newline to match Scala stripMargin
                 appendLine("periodic-tick:")
-                append("  period-ms: ${period.toMillis()}")
+                appendLine("  period-ms: ${period.toMillis()}")
             }
             return CronConfigHash(md5(text))
         }
+
+        /** Creates a ConfigHash from an arbitrary string. */
+        @JvmStatic public fun fromString(text: String): CronConfigHash = CronConfigHash(md5(text))
 
         private fun md5(input: String): String {
             val md = MessageDigest.getInstance("MD5")

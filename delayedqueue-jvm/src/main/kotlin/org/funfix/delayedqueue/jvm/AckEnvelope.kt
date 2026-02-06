@@ -28,8 +28,8 @@ import java.time.Instant
  * @property timestamp when this envelope was created (poll time)
  * @property source identifier for the queue or source system
  * @property deliveryType indicates whether this is the first delivery or a redelivery
- * @property acknowledge function to call to acknowledge successful processing, and delete the
- *   message from the queue
+ * @param acknowledge function to call to acknowledge successful processing, and delete the message
+ *   from the queue. Accessible via the `acknowledge()` method.
  */
 @JvmRecord
 public data class AckEnvelope<out A>(
@@ -48,15 +48,29 @@ public data class AckEnvelope<out A>(
      *
      * Note: If the message was updated between polling and acknowledgment, the acknowledgment will
      * be ignored to preserve the updated message.
+     *
+     * @throws ResourceUnavailableException if the database connection is unavailable
+     * @throws InterruptedException if the thread is interrupted during acknowledgment
      */
     public fun acknowledge() {
         acknowledge.invoke()
     }
 }
 
-/** Handles acknowledgment for a polled message. */
+/**
+ * Handles acknowledgment for a polled message.
+ *
+ * Implementations may throw exceptions if acknowledgment fails, which the caller should handle
+ * appropriately. Failed acknowledgments typically result in message redelivery after the acquire
+ * timeout expires.
+ */
 public fun interface AcknowledgeFun {
-    /** Acknowledge successful processing. */
+    /**
+     * Acknowledge successful processing.
+     *
+     * @throws ResourceUnavailableException if the database connection is unavailable
+     * @throws InterruptedException if the thread is interrupted during acknowledgment
+     */
     public operator fun invoke()
 }
 

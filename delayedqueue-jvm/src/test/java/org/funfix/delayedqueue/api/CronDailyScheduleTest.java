@@ -50,18 +50,22 @@ public class CronDailyScheduleTest {
     }
 
     @Test
-    public void getNextTimes_respectsScheduleInAdvance() {
+    public void getNextTimes_alwaysReturnsAtLeastOne() {
+        // This matches the original Scala behavior (NonEmptyList)
+        // Even if the next time is beyond scheduleInAdvance, it should be included
         var schedule = CronDailySchedule.create(
             ZoneId.of("UTC"),
             List.of(LocalTime.parse("12:00:00")),
-            Duration.ofMinutes(30),
+            Duration.ofMinutes(30),  // scheduleInAdvance too short
             Duration.ofSeconds(1)
         );
 
         var now = Instant.parse("2024-01-01T10:00:00Z");
         var nextTimes = schedule.getNextTimes(now);
 
-        assertTrue(nextTimes.isEmpty());
+        // Should still return the next scheduled time even though it's beyond scheduleInAdvance
+        assertFalse(nextTimes.isEmpty());
+        assertEquals(Instant.parse("2024-01-01T12:00:00Z"), nextTimes.getFirst());
     }
 
     @Test

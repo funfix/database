@@ -20,10 +20,10 @@ class JdbcDriverTest {
     }
 
     @Test
-    @DisplayName("Sqlite driver should have correct class name")
-    void testSqliteClassName() {
-        JdbcDriver driver = JdbcDriver.Sqlite;
-        assertEquals("org.sqlite.JDBC", driver.getClassName());
+    @DisplayName("HSQLDB driver should have correct class name")
+    void testHsqlDbClassName() {
+        JdbcDriver driver = JdbcDriver.HSQLDB;
+        assertEquals("org.hsqldb.jdbc.JDBCDriver", driver.getClassName());
     }
 
     @Test
@@ -43,19 +43,19 @@ class JdbcDriverTest {
     }
 
     @Test
-    @DisplayName("of() should find Sqlite driver by exact match")
+    @DisplayName("of() should find HSQLDB driver by exact match")
     void testOfSqliteExactMatch() {
-        JdbcDriver driver = JdbcDriver.invoke("org.sqlite.JDBC");
+        JdbcDriver driver = JdbcDriver.invoke("org.hsqldb.jdbc.JDBCDriver");
         assertNotNull(driver);
-        assertSame(JdbcDriver.Sqlite, driver);
+        assertSame(JdbcDriver.HSQLDB, driver);
     }
 
     @Test
-    @DisplayName("of() should find Sqlite driver by case-insensitive match")
+    @DisplayName("of() should find HSQLDB driver by case-insensitive match")
     void testOfSqliteCaseInsensitive() {
-        JdbcDriver driver = JdbcDriver.invoke("ORG.SQLITE.JDBC");
+        JdbcDriver driver = JdbcDriver.invoke("ORG.HSQLDB.JDBC.JDBCDRIVER");
         assertNotNull(driver);
-        assertSame(JdbcDriver.Sqlite, driver);
+        assertSame(JdbcDriver.HSQLDB, driver);
     }
 
     @Test
@@ -80,8 +80,8 @@ class JdbcDriverTest {
         var result = switchOnDriver(JdbcDriver.MsSqlServer);
         assertEquals("mssqlserver", result);
 
-        result = switchOnDriver(JdbcDriver.Sqlite);
-        assertEquals("sqlite", result);
+        result = switchOnDriver(JdbcDriver.HSQLDB);
+        assertEquals("hsqldb", result);
     }
 
     /**
@@ -90,6 +90,7 @@ class JdbcDriverTest {
      */
     private String switchOnDriver(JdbcDriver driver) {
         return switch (driver) {
+            case HSQLDB -> "hsqldb";
             case MsSqlServer -> "mssqlserver";
             case Sqlite -> "sqlite";
         };
@@ -101,13 +102,13 @@ class JdbcDriverTest {
         //noinspection EqualsWithItself
         assertSame(JdbcDriver.MsSqlServer, JdbcDriver.MsSqlServer);
         //noinspection EqualsWithItself
-        assertSame(JdbcDriver.Sqlite, JdbcDriver.Sqlite);
+        assertSame(JdbcDriver.HSQLDB, JdbcDriver.HSQLDB);
     }
 
     @Test
     @DisplayName("Different drivers should not be equal")
     void testDriverInequality() {
-        assertNotEquals(JdbcDriver.MsSqlServer, JdbcDriver.Sqlite);
+        assertNotEquals(JdbcDriver.MsSqlServer, JdbcDriver.HSQLDB);
     }
 
     @Test
@@ -117,25 +118,27 @@ class JdbcDriverTest {
         assertTrue(msSqlString.contains("MsSqlServer"),
             "MsSqlServer toString should contain 'MsSqlServer': " + msSqlString);
 
-        String sqliteString = JdbcDriver.Sqlite.toString();
-        assertTrue(sqliteString.contains("Sqlite"),
-            "Sqlite toString should contain 'Sqlite': " + sqliteString);
+        String sqliteString = JdbcDriver.HSQLDB.toString();
+        assertTrue(sqliteString.contains("HSQLDB"),
+            "Sqlite toString should contain 'HSQLDB': " + sqliteString);
     }
 
     @Test
     @DisplayName("Switch expression on JdbcDriver without default branch")
     void testSwitchExpressionCoverage() {
-        JdbcDriver driver = JdbcDriver.Sqlite;
+        JdbcDriver driver = JdbcDriver.HSQLDB;
         String result = switch (driver) {
             //noinspection DataFlowIssue
-            case Sqlite -> "sqlite";
+            case HSQLDB -> "hsqldb";
             case MsSqlServer -> "mssql";
+            case Sqlite -> "sqlite";
         };
-        assertEquals("sqlite", result);
+        assertEquals("hsqldb", result);
 
         driver = JdbcDriver.MsSqlServer;
         result = switch (driver) {
             case Sqlite -> "sqlite";
+            case HSQLDB -> "hsqldb";
             //noinspection DataFlowIssue
             case MsSqlServer -> "mssql";
         };
