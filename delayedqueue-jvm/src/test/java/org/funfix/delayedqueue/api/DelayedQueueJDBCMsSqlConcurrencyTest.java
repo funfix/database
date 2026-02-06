@@ -1,20 +1,19 @@
 package org.funfix.delayedqueue.api;
 
 import org.funfix.delayedqueue.jvm.*;
-
-public class DelayedQueueJDBCConcurrencyTest extends DelayedQueueJDBCConcurrencyTestBase {
-
+public class DelayedQueueJDBCMsSqlConcurrencyTest extends DelayedQueueJDBCConcurrencyTestBase {
     @Override
     protected DelayedQueueJDBC<String> createQueue() throws Exception {
+        var container = MsSqlTestContainer.container();
         var dbConfig = new JdbcConnectionConfig(
-            "jdbc:hsqldb:mem:concurrency_test_" + System.nanoTime(),
-            JdbcDriver.HSQLDB,
-            "SA",
-            "",
+            container.getJdbcUrl(),
+            JdbcDriver.MsSqlServer,
+            container.getUsername(),
+            container.getPassword(),
             null
         );
 
-        var queueConfig = DelayedQueueJDBCConfig.create(dbConfig, "delayed_queue_test", "concurrency-test-queue");
+        var queueConfig = DelayedQueueJDBCConfig.create(dbConfig, "delayed_queue_test", "concurrency-mssql-queue");
 
         DelayedQueueJDBC.runMigrations(queueConfig);
 

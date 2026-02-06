@@ -1,25 +1,15 @@
 package org.funfix.delayedqueue.api;
 
-import java.io.File;
 import org.funfix.delayedqueue.jvm.*;
-
-public class DelayedQueueSqliteAdvancedTest extends DelayedQueueJDBCAdvancedTestBase {
-
-    private String sharedDbUrl;
-
-    private String createTempDbUrl() throws Exception {
-        File tempDb = File.createTempFile("delayedqueue_advanced_", ".db");
-        tempDb.deleteOnExit();
-        return "jdbc:sqlite:" + tempDb.getAbsolutePath();
-    }
-
+public class DelayedQueueJDBCMsSqlAdvancedTest extends DelayedQueueJDBCAdvancedTestBase {
     @Override
     protected DelayedQueueJDBC<String> createQueue(String tableName, MutableClock clock) throws Exception {
+        var container = MsSqlTestContainer.container();
         var dbConfig = new JdbcConnectionConfig(
-            createTempDbUrl(),
-            JdbcDriver.Sqlite,
-            null,
-            null,
+            container.getJdbcUrl(),
+            JdbcDriver.MsSqlServer,
+            container.getUsername(),
+            container.getPassword(),
             null
         );
 
@@ -27,7 +17,7 @@ public class DelayedQueueSqliteAdvancedTest extends DelayedQueueJDBCAdvancedTest
             dbConfig,
             tableName,
             DelayedQueueTimeConfig.DEFAULT,
-            "sqlite-advanced-test-queue"
+            "advanced-mssql-test-queue"
         );
 
         DelayedQueueJDBC.runMigrations(queueConfig);
@@ -41,11 +31,12 @@ public class DelayedQueueSqliteAdvancedTest extends DelayedQueueJDBCAdvancedTest
 
     @Override
     protected DelayedQueueJDBC<String> createQueueOnSameDB(String url, String tableName, MutableClock clock) throws Exception {
+        var container = MsSqlTestContainer.container();
         var dbConfig = new JdbcConnectionConfig(
             url,
-            JdbcDriver.Sqlite,
-            null,
-            null,
+            JdbcDriver.MsSqlServer,
+            container.getUsername(),
+            container.getPassword(),
             null
         );
 
@@ -53,7 +44,7 @@ public class DelayedQueueSqliteAdvancedTest extends DelayedQueueJDBCAdvancedTest
             dbConfig,
             tableName,
             DelayedQueueTimeConfig.DEFAULT,
-            "sqlite-shared-db-test-queue-" + tableName
+            "shared-mssql-test-queue-" + tableName
         );
 
         DelayedQueueJDBC.runMigrations(queueConfig);
@@ -67,13 +58,6 @@ public class DelayedQueueSqliteAdvancedTest extends DelayedQueueJDBCAdvancedTest
 
     @Override
     protected String databaseUrl() {
-        try {
-            if (sharedDbUrl == null) {
-                sharedDbUrl = createTempDbUrl();
-            }
-            return sharedDbUrl;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return MsSqlTestContainer.container().getJdbcUrl();
     }
 }
