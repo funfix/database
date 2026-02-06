@@ -8,9 +8,11 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import org.funfix.delayedqueue.jvm.internals.CronDeleteOperation
 import org.funfix.delayedqueue.jvm.internals.CronServiceImpl
 import org.funfix.delayedqueue.jvm.internals.PollResult
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRow
+import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRowWithId
 import org.funfix.delayedqueue.jvm.internals.jdbc.HSQLDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.MigrationRunner
 import org.funfix.delayedqueue.jvm.internals.jdbc.RdbmsExceptionFilters
@@ -94,9 +96,13 @@ private constructor(
      * which matches what the public API declares via @Throws.
      */
     context(_: Raise<ResourceUnavailableException>, _: Raise<InterruptedException>)
-    private fun <T> withRetries(block: () -> T): T {
+    private fun <T> withRetries(
+        block:
+            context(Raise<SQLException>, Raise<InterruptedException>)
+            () -> T
+    ): T {
         return if (config.retryPolicy == null) {
-            block()
+            block(Raise._PRIVATE_AND_UNSAFE, Raise._PRIVATE_AND_UNSAFE)
         } else {
             withDbRetries(
                 config = config.retryPolicy,
@@ -280,7 +286,7 @@ private constructor(
         // This matches the Scala implementation's fallback logic
         val needsRetry =
             messages.filter { msg ->
-                when (val outcome = insertOutcomes[msg.message.key]) {
+                when (insertOutcomes[msg.message.key]) {
                     null -> true // Error/not in map, retry
                     is OfferOutcome.Ignored -> msg.message.canUpdate // Needs update
                     else -> false // Created successfully
@@ -314,6 +320,34 @@ private constructor(
     @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun tryPoll(): AckEnvelope<A>? = unsafeSneakyRaises { withRetries { tryPollImpl() } }
 
+    private fun acknowledgeByLockUuid(lockUuid: String): AcknowledgeFun = {
+        unsafeSneakyRaises {
+            try {
+                withRetries {
+                    database.withTransaction { ackConn ->
+                        adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
+                    }
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to acknowledge message with lock $lockUuid", e)
+            }
+        }
+    }
+
+    private fun acknowledgeByFingerprint(key: String, row: DBTableRowWithId): AcknowledgeFun = {
+        unsafeSneakyRaises {
+            try {
+                withRetries {
+                    database.withTransaction { ackConn ->
+                        adapter.deleteRowByFingerprint(ackConn.underlying, row)
+                    }
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to acknowledge message $key", e)
+            }
+        }
+    }
+
     context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     private fun tryPollImpl(): AckEnvelope<A>? {
         // Retry loop to handle failed acquires (concurrent modifications)
@@ -332,11 +366,11 @@ private constructor(
                     // Try to acquire the row by updating it with our lock
                     val acquired =
                         adapter.acquireRowByUpdate(
-                            connection.underlying,
-                            row.data,
-                            lockUuid,
-                            config.time.acquireTimeout,
-                            now,
+                            connection = connection.underlying,
+                            row = row.data,
+                            lockUuid = lockUuid,
+                            timeout = config.time.acquireTimeout,
+                            now = now,
                         )
 
                     if (!acquired) {
@@ -359,20 +393,7 @@ private constructor(
                             timestamp = now,
                             source = config.ackEnvSource,
                             deliveryType = deliveryType,
-                            acknowledge = {
-                                try {
-                                    unsafeSneakyRaises {
-                                        database.withTransaction { ackConn ->
-                                            adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    logger.warn(
-                                        "Failed to acknowledge message with lock $lockUuid",
-                                        e,
-                                    )
-                                }
-                            },
+                            acknowledge = acknowledgeByLockUuid(lockUuid),
                         )
 
                     PollResult.Success(envelope)
@@ -453,17 +474,7 @@ private constructor(
                 timestamp = now,
                 source = config.ackEnvSource,
                 deliveryType = deliveryType,
-                acknowledge = {
-                    try {
-                        unsafeSneakyRaises {
-                            database.withTransaction { ackConn ->
-                                adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
-                            }
-                        }
-                    } catch (e: Exception) {
-                        logger.warn("Failed to acknowledge batch with lock $lockUuid", e)
-                    }
-                },
+                acknowledge = acknowledgeByLockUuid(lockUuid),
             )
         }
     }
@@ -510,17 +521,7 @@ private constructor(
                 timestamp = now,
                 source = config.ackEnvSource,
                 deliveryType = deliveryType,
-                acknowledge = {
-                    try {
-                        unsafeSneakyRaises {
-                            database.withTransaction { ackConn ->
-                                adapter.deleteRowByFingerprint(ackConn.underlying, row)
-                            }
-                        }
-                    } catch (e: Exception) {
-                        logger.warn("Failed to acknowledge message $key", e)
-                    }
-                },
+                acknowledge = acknowledgeByFingerprint(key, row),
             )
         }
     }
@@ -564,38 +565,28 @@ private constructor(
 
     override fun getCron(): CronService<A> = cronService
 
+    private val deleteCurrentCron: CronDeleteOperation = { configHash, keyPrefix ->
+        withRetries {
+            database.withTransaction { connection ->
+                adapter.deleteOldCron(connection.underlying, pKind, keyPrefix, configHash.value)
+            }
+        }
+    }
+
+    private val deleteOldCron: CronDeleteOperation = { configHash, keyPrefix ->
+        withRetries {
+            database.withTransaction { connection ->
+                adapter.deleteOldCron(connection.underlying, pKind, keyPrefix, configHash.value)
+            }
+        }
+    }
+
     private val cronService: CronService<A> by lazy {
         CronServiceImpl(
             queue = this,
             clock = clock,
-            deleteCurrentCron = { configHash, keyPrefix ->
-                unsafeSneakyRaises {
-                    withRetries {
-                        database.withTransaction { connection ->
-                            adapter.deleteCurrentCron(
-                                connection.underlying,
-                                pKind,
-                                keyPrefix,
-                                configHash.value,
-                            )
-                        }
-                    }
-                }
-            },
-            deleteOldCron = { configHash, keyPrefix ->
-                unsafeSneakyRaises {
-                    withRetries {
-                        database.withTransaction { connection ->
-                            adapter.deleteOldCron(
-                                connection.underlying,
-                                pKind,
-                                keyPrefix,
-                                configHash.value,
-                            )
-                        }
-                    }
-                }
-            },
+            deleteCurrentCron = deleteCurrentCron,
+            deleteOldCron = deleteOldCron,
         )
     }
 

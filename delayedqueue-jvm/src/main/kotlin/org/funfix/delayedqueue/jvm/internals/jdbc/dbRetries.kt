@@ -30,7 +30,9 @@ internal fun <T> withDbRetries(
     config: RetryConfig,
     clock: java.time.Clock,
     filters: RdbmsExceptionFilters,
-    block: () -> T,
+    block:
+        context(Raise<SQLException>, Raise<InterruptedException>)
+        () -> T,
 ): T =
     try {
         withRetries(
@@ -52,7 +54,7 @@ internal fun <T> withDbRetries(
                     }
                 }
             },
-            block,
+            block = { block(Raise._PRIVATE_AND_UNSAFE, Raise._PRIVATE_AND_UNSAFE) },
         )
     } catch (e: java.util.concurrent.TimeoutException) {
         raise(ResourceUnavailableException("Database operation timed out after retries", e))
