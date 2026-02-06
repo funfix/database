@@ -41,12 +41,13 @@ internal data class Evolution(
         copy(
             evolutions = evolutions + 1,
             retriesRemaining = retriesRemaining?.let { maxOf(it - 1, 0) },
-            delay = Duration.ofMillis(
-                min(
-                    (delay.toMillis() * config.backoffFactor).toLong(),
-                    config.maxDelay.toMillis()
-                )
-            ),
+            delay =
+                Duration.ofMillis(
+                    min(
+                        (delay.toMillis() * config.backoffFactor).toLong(),
+                        config.maxDelay.toMillis(),
+                    )
+                ),
             thrownExceptions = ex?.let { listOf(it) + thrownExceptions } ?: thrownExceptions,
         )
 

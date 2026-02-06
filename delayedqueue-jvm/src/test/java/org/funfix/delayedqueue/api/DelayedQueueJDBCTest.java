@@ -234,6 +234,30 @@ public class DelayedQueueJDBCTest {
     }
     
     @Test
+    public void tryPollMany_marksBatchAsRedeliveryWhenAnyMessageIsRedelivered() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+        var timeConfig = DelayedQueueTimeConfig.create(Duration.ofSeconds(5), Duration.ofMillis(100));
+        queue = createQueueWithClock(clock, timeConfig);
+        var scheduleAt = clock.now();
+
+        queue.offerOrUpdate("key1", "payload1", scheduleAt);
+        queue.offerOrUpdate("key2", "payload2", scheduleAt);
+
+        var first = queue.tryPoll();
+        assertNotNull(first);
+        assertEquals(DeliveryType.FIRST_DELIVERY, first.deliveryType());
+
+        // Don't acknowledge, advance past timeout to trigger redelivery
+        clock.advance(Duration.ofSeconds(6));
+
+        var batch = queue.tryPollMany(10);
+
+        assertNotNull(batch);
+        assertEquals(2, batch.payload().size());
+        assertEquals(DeliveryType.REDELIVERY, batch.deliveryType());
+    }
+    
+    @Test
     public void read_retrievesMessageWithoutLocking() throws Exception {
         var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
         queue = createQueueWithClock(clock);

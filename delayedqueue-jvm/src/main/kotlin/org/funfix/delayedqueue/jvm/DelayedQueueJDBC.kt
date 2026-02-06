@@ -444,12 +444,23 @@ private constructor(
 
             val payloads = rows.map { row -> serializer.deserialize(row.data.payload) }
 
+            // Determine delivery type: if ALL rows have scheduledAtInitially < scheduledAt, it's a
+            // redelivery
+            val deliveryType =
+                if (
+                    rows.all { row -> row.data.scheduledAtInitially.isBefore(row.data.scheduledAt) }
+                ) {
+                    DeliveryType.REDELIVERY
+                } else {
+                    DeliveryType.FIRST_DELIVERY
+                }
+
             AckEnvelope(
                 payload = payloads,
                 messageId = MessageId(lockUuid),
                 timestamp = now,
                 source = config.ackEnvSource,
-                deliveryType = DeliveryType.FIRST_DELIVERY,
+                deliveryType = deliveryType,
                 acknowledge = {
                     try {
                         unsafeSneakyRaises {

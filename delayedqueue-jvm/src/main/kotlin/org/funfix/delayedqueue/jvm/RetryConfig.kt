@@ -25,12 +25,12 @@ import java.time.Duration
  *
  * ```java
  * RetryConfig config = new RetryConfig(
- *     3L,                          // maxRetries
- *     Duration.ofSeconds(30),      // totalSoftTimeout
- *     Duration.ofSeconds(10),      // perTryHardTimeout
  *     Duration.ofMillis(100),      // initialDelay
  *     Duration.ofSeconds(5),       // maxDelay
- *     2.0                          // backoffFactor
+ *     2.0,                         // backoffFactor
+ *     3L,                          // maxRetries
+ *     Duration.ofSeconds(30),      // totalSoftTimeout
+ *     Duration.ofSeconds(10)       // perTryHardTimeout
  * );
  * ```
  *
