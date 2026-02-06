@@ -34,12 +34,12 @@ import java.time.Duration
  * );
  * ```
  *
- * @param maxRetries Maximum number of retries (null means unlimited retries)
- * @param totalSoftTimeout Total time after which retries stop (null means no timeout)
- * @param perTryHardTimeout Hard timeout for each individual attempt (null means no per-try timeout)
  * @param initialDelay Initial delay before first retry
  * @param maxDelay Maximum delay between retries (backoff is capped at this value)
  * @param backoffFactor Multiplier for exponential backoff (e.g., 2.0 for doubling delays)
+ * @param maxRetries Maximum number of retries (null means unlimited retries)
+ * @param totalSoftTimeout Total time after which retries stop (null means no timeout)
+ * @param perTryHardTimeout Hard timeout for each individual attempt (null means no per-try timeout)
  */
 @JvmRecord
 public data class RetryConfig

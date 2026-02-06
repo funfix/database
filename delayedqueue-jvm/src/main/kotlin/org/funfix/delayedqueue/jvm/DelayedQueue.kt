@@ -94,6 +94,8 @@ public interface DelayedQueue<A> {
      * message will be processed only once.
      *
      * WARNING: this operation invalidates the model of the queue. DO NOT USE!
+     * This is because multiple consumers can process the same message, leading
+     * to potential issues.
      *
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted

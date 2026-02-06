@@ -28,8 +28,8 @@ import java.time.Instant
  * @property timestamp when this envelope was created (poll time)
  * @property source identifier for the queue or source system
  * @property deliveryType indicates whether this is the first delivery or a redelivery
- * @property acknowledge function to call to acknowledge successful processing, and delete the
- *   message from the queue
+ * @param acknowledge function to call to acknowledge successful processing, and delete the
+ *   message from the queue. Accessible via the `acknowledge()` method.
  */
 @JvmRecord
 public data class AckEnvelope<out A>(

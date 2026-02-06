@@ -10,8 +10,8 @@ import org.funfix.delayedqueue.jvm.JdbcDriver
 /**
  * Truncates an Instant to seconds precision.
  *
- * This matches the old Scala implementation's DBColumnOffsetDateTime(ChronoUnit.SECONDS) behavior
- * and is critical for database compatibility.
+ * For doing queries on databases that have second-level precision
+ * (e.g., SQL Server).
  */
 private fun truncateToSeconds(instant: Instant): Instant = instant.truncatedTo(ChronoUnit.SECONDS)
 

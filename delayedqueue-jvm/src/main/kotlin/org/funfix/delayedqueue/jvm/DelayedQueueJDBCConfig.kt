@@ -33,7 +33,7 @@ package org.funfix.delayedqueue.jvm
  *   tables. Multiple queue instances can share the same database table if they have different queue
  *   names.
  * @param ackEnvSource Source identifier for acknowledgement envelopes, used for tracing and
- *   debugging. Typically follows the pattern "DelayedQueueJDBC:{queueName}".
+ *   debugging. Typically, follows the pattern "DelayedQueueJDBC:{queueName}".
  * @param retryPolicy Optional retry configuration for database operations. If null, uses
  *   [RetryConfig.DEFAULT].
  */
