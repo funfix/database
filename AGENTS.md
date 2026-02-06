@@ -53,6 +53,10 @@ The original implementation in `old-code/` is the source of truth. Any deviation
 
 - NEVER catch `Throwable`, you're only allowed to catch `Exception`
 - Use nice imports instead of fully qualified names
+- NEVER use default parameters for database-specific behavior (filters, adapters, etc.) - these MUST match the actual driver/config
+- Exception handling must be PRECISE - only catch what you intend to handle. Generic catches like `catch (e: SQLException)` are almost always wrong.
+  - Use exception filters/matchers for specific error types (DuplicateKey, TransientFailure, etc.)
+  - Let unexpected exceptions propagate to retry logic
 
 ## Testing
 

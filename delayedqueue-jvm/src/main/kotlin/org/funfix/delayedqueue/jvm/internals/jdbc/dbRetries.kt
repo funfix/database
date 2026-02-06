@@ -19,7 +19,7 @@ import org.funfix.delayedqueue.jvm.internals.utils.withRetries
  *
  * @param config Retry configuration (backoff, timeouts, max retries)
  * @param clock Clock for time operations (enables testing with mocked time)
- * @param filters RDBMS-specific exception filters (default: HSQLDB)
+ * @param filters RDBMS-specific exception filters (must match the actual JDBC driver)
  * @param block The database operation to execute
  * @return The result of the successful operation
  * @throws ResourceUnavailableException if retries are exhausted or timeout occurs
@@ -29,7 +29,7 @@ context(_: Raise<ResourceUnavailableException>, _: Raise<InterruptedException>)
 internal fun <T> withDbRetries(
     config: RetryConfig,
     clock: java.time.Clock,
-    filters: RdbmsExceptionFilters = HSQLDBFilters,
+    filters: RdbmsExceptionFilters,
     block: () -> T,
 ): T =
     try {

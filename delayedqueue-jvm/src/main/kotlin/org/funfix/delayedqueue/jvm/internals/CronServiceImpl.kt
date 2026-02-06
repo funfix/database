@@ -6,6 +6,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import org.funfix.delayedqueue.jvm.BatchedMessage
 import org.funfix.delayedqueue.jvm.CronConfigHash
 import org.funfix.delayedqueue.jvm.CronDailySchedule
 import org.funfix.delayedqueue.jvm.CronMessage
@@ -136,7 +137,7 @@ internal class CronServiceImpl<A>(
         // Batch offer all messages
         val batchedMessages =
             messages.map { cronMessage ->
-                org.funfix.delayedqueue.jvm.BatchedMessage(
+                BatchedMessage(
                     input = Unit,
                     message =
                         cronMessage.toScheduled(

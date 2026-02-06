@@ -8,10 +8,13 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import org.funfix.delayedqueue.jvm.internals.CronServiceImpl
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRow
 import org.funfix.delayedqueue.jvm.internals.jdbc.HSQLDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.MigrationRunner
+import org.funfix.delayedqueue.jvm.internals.jdbc.RdbmsExceptionFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
+import org.funfix.delayedqueue.jvm.internals.jdbc.filtersForDriver
 import org.funfix.delayedqueue.jvm.internals.jdbc.withDbRetries
 import org.funfix.delayedqueue.jvm.internals.utils.Database
 import org.funfix.delayedqueue.jvm.internals.utils.Raise
@@ -68,6 +71,9 @@ private constructor(
     private val pKind: String =
         computePartitionKind("${config.queueName}|${serializer.getTypeName()}")
 
+    /** Exception filters based on the JDBC driver being used. */
+    private val filters: RdbmsExceptionFilters = filtersForDriver(adapter.driver)
+
     override fun getTimeConfig(): DelayedQueueTimeConfig = config.time
 
     /**
@@ -84,7 +90,12 @@ private constructor(
         return if (config.retryPolicy == null) {
             block()
         } else {
-            withDbRetries(config = config.retryPolicy, clock = clock, block = block)
+            withDbRetries(
+                config = config.retryPolicy,
+                clock = clock,
+                filters = filters,
+                block = block,
+            )
         }
     }
 
@@ -217,10 +228,33 @@ private constructor(
                     if (inserted.isNotEmpty()) {
                         lock.withLock { condition.signalAll() }
                     }
-                } catch (e: SQLException) {
-                    // Batch insert failed, fall back to individual inserts
-                    logger.warn("Batch insert failed, falling back to individual inserts", e)
-                    toInsert.forEach { msg -> results[msg.message.key] = OfferOutcome.Ignored }
+                } catch (e: Exception) {
+                    // CRITICAL: Only catch duplicate key exceptions and fallback to individual
+                    // inserts.
+                    // All other exceptions should propagate up to the retry logic.
+                    // This matches the original Scala implementation which uses
+                    // `recover { case SQLExceptionExtractors.DuplicateKey(_) => ... }`
+                    when {
+                        filters.duplicateKey.matches(e) -> {
+                            // A concurrent insert happened, and we don't know which keys are
+                            // duplicated.
+                            // Due to concurrency, it's safer to try inserting them one by one.
+                            logger.warn(
+                                "Batch insert failed due to duplicate key violation, " +
+                                    "falling back to individual inserts",
+                                e,
+                            )
+                            // Mark all as ignored; they'll be retried individually below
+                            toInsert.forEach { msg ->
+                                results[msg.message.key] = OfferOutcome.Ignored
+                            }
+                        }
+                        else -> {
+                            // Not a duplicate key exception - this is an unexpected error
+                            // that should be handled by retry logic or fail fast
+                            throw e
+                        }
+                    }
                 }
             }
         }
@@ -474,7 +508,7 @@ private constructor(
     override fun getCron(): CronService<A> = cronService
 
     private val cronService: CronService<A> by lazy {
-        org.funfix.delayedqueue.jvm.internals.CronServiceImpl(
+        CronServiceImpl(
             queue = this,
             clock = clock,
             deleteCurrentCron = { configHash, keyPrefix ->

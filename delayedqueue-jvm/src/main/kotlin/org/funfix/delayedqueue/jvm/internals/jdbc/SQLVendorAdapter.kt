@@ -20,8 +20,11 @@ private fun truncateToSeconds(instant: Instant): Instant = instant.truncatedTo(C
  *
  * This allows for database-specific optimizations like MS-SQL's `WITH (UPDLOCK, READPAST)` or
  * different `LIMIT` syntax across databases.
+ *
+ * @property driver the JDBC driver this adapter is for
+ * @property tableName the name of the delayed queue table
  */
-internal sealed class SQLVendorAdapter(protected val tableName: String) {
+internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tableName: String) {
     /** Checks if a key exists in the database. */
     fun checkIfKeyExists(connection: Connection, key: String, kind: String): Boolean {
         val sql = "SELECT 1 FROM $tableName WHERE pKey = ? AND pKind = ?"
@@ -338,7 +341,7 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
         /** Creates the appropriate vendor adapter for the given JDBC driver. */
         fun create(driver: JdbcDriver, tableName: String): SQLVendorAdapter =
             when (driver) {
-                JdbcDriver.HSQLDB -> HSQLDBAdapter(tableName)
+                JdbcDriver.HSQLDB -> HSQLDBAdapter(driver, tableName)
                 JdbcDriver.MsSqlServer,
                 JdbcDriver.Sqlite -> TODO("MS-SQL and SQLite support not yet implemented")
             }
@@ -346,7 +349,8 @@ internal sealed class SQLVendorAdapter(protected val tableName: String) {
 }
 
 /** HSQLDB-specific adapter. */
-private class HSQLDBAdapter(tableName: String) : SQLVendorAdapter(tableName) {
+private class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
+    SQLVendorAdapter(driver, tableName) {
     override fun insertOneRow(connection: Connection, row: DBTableRow): Boolean {
         // HSQLDB doesn't have INSERT IGNORE, so we check first
         if (checkIfKeyExists(connection, row.pKey, row.pKind)) {

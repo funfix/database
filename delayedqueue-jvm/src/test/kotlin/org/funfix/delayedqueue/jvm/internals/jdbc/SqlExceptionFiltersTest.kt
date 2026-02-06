@@ -4,6 +4,7 @@ import java.sql.SQLException
 import java.sql.SQLIntegrityConstraintViolationException
 import java.sql.SQLTransactionRollbackException
 import java.sql.SQLTransientConnectionException
+import org.funfix.delayedqueue.jvm.JdbcDriver
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
@@ -192,6 +193,27 @@ class SqlExceptionFiltersTest {
         fun `failedToResumeTransaction should match SQL Server message`() {
             val ex = SQLException("The server failed to resume the transaction")
             assertFalse(MSSQLFilters.failedToResumeTransaction.matches(ex))
+        }
+    }
+
+    @Nested
+    inner class FiltersForDriverTest {
+        @Test
+        fun `should return HSQLDBFilters for HSQLDB driver`() {
+            val filters = filtersForDriver(JdbcDriver.HSQLDB)
+            assertTrue(filters === HSQLDBFilters)
+        }
+
+        @Test
+        fun `should return MSSQLFilters for MsSqlServer driver`() {
+            val filters = filtersForDriver(JdbcDriver.MsSqlServer)
+            assertTrue(filters === MSSQLFilters)
+        }
+
+        @Test
+        fun `should return HSQLDBFilters for Sqlite driver`() {
+            val filters = filtersForDriver(JdbcDriver.Sqlite)
+            assertTrue(filters === HSQLDBFilters)
         }
     }
 }

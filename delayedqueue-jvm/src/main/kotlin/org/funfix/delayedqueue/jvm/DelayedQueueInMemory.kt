@@ -10,6 +10,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import org.funfix.delayedqueue.jvm.internals.CronServiceImpl
 
 /**
  * In-memory implementation of [DelayedQueue] using concurrent data structures.
@@ -363,7 +364,7 @@ private constructor(
     }
 
     private val cronService: CronService<A> =
-        org.funfix.delayedqueue.jvm.internals.CronServiceImpl(
+        CronServiceImpl(
             queue = this,
             clock = clock,
             deleteCurrentCron = { configHash, keyPrefix ->

@@ -4,6 +4,7 @@ import java.sql.SQLException
 import java.sql.SQLIntegrityConstraintViolationException
 import java.sql.SQLTransactionRollbackException
 import java.sql.SQLTransientConnectionException
+import org.funfix.delayedqueue.jvm.JdbcDriver
 
 /**
  * Filter for matching SQL exceptions based on specific criteria. Designed for extensibility across
@@ -167,3 +168,19 @@ private fun hasSQLServerError(e: Throwable, vararg errorNumbers: Int): Boolean {
 
 private fun isSQLServerException(e: Throwable): Boolean =
     e.javaClass.name == "com.microsoft.sqlserver.jdbc.SQLServerException"
+
+/**
+ * Maps a JDBC driver to its corresponding exception filters.
+ *
+ * This ensures that exception matching behavior is consistent with the database vendor. For
+ * example, HSQLDB and MS SQL Server have different error codes for duplicate keys.
+ *
+ * @param driver the JDBC driver
+ * @return the appropriate exception filters for that driver
+ */
+internal fun filtersForDriver(driver: JdbcDriver): RdbmsExceptionFilters =
+    when (driver) {
+        JdbcDriver.HSQLDB -> HSQLDBFilters
+        JdbcDriver.MsSqlServer -> MSSQLFilters
+        JdbcDriver.Sqlite -> HSQLDBFilters // Use HSQLDB filters as baseline
+    }

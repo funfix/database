@@ -315,4 +315,97 @@ class DelayedQueueJDBCAdvancedTest {
         // Verify queue is empty
         assertEquals(0, queue.dropAllMessages("Yes, please, I know what I'm doing!"))
     }
+
+    @Test
+    fun `batch insert with concurrent duplicate keys should fallback correctly`() {
+        val clock = TestClock(Instant.parse("2024-01-01T10:00:00Z"))
+        val queue = createQueue(clock = clock)
+        val now = clock.instant()
+
+        // First, insert some messages individually
+        assertEquals(OfferOutcome.Created, queue.offerIfNotExists("key-1", "initial-1", now))
+        assertEquals(OfferOutcome.Created, queue.offerIfNotExists("key-3", "initial-3", now))
+
+        // Now try batch insert with some duplicate keys
+        val messages =
+            listOf(
+                BatchedMessage(
+                    input = 1,
+                    message = ScheduledMessage("key-1", "batch-1", now, canUpdate = false),
+                ),
+                BatchedMessage(
+                    input = 2,
+                    message = ScheduledMessage("key-2", "batch-2", now, canUpdate = false),
+                ),
+                BatchedMessage(
+                    input = 3,
+                    message = ScheduledMessage("key-3", "batch-3", now, canUpdate = false),
+                ),
+                BatchedMessage(
+                    input = 4,
+                    message = ScheduledMessage("key-4", "batch-4", now, canUpdate = false),
+                ),
+            )
+
+        val results = queue.offerBatch(messages)
+
+        // Verify results
+        assertEquals(4, results.size)
+
+        // key-1 and key-3 already exist, should be ignored
+        assertEquals(OfferOutcome.Ignored, results.find { it.input == 1 }?.outcome)
+        assertEquals(OfferOutcome.Ignored, results.find { it.input == 3 }?.outcome)
+
+        // key-2 and key-4 should be created
+        assertEquals(OfferOutcome.Created, results.find { it.input == 2 }?.outcome)
+        assertEquals(OfferOutcome.Created, results.find { it.input == 4 }?.outcome)
+
+        // Verify actual queue state
+        assertTrue(queue.containsMessage("key-1"))
+        assertTrue(queue.containsMessage("key-2"))
+        assertTrue(queue.containsMessage("key-3"))
+        assertTrue(queue.containsMessage("key-4"))
+
+        // Verify the values weren't updated (canUpdate = false)
+        val msg1 = queue.tryPoll()
+        assertNotNull(msg1)
+        assertEquals("initial-1", msg1!!.payload) // Should still be initial value
+        msg1.acknowledge()
+    }
+
+    @Test
+    fun `batch insert with updates allowed should handle duplicates correctly`() {
+        val clock = TestClock(Instant.parse("2024-01-01T10:00:00Z"))
+        val queue = createQueue(clock = clock)
+        val now = clock.instant()
+
+        // Insert initial messages
+        assertEquals(OfferOutcome.Created, queue.offerIfNotExists("key-1", "initial-1", now))
+        assertEquals(OfferOutcome.Created, queue.offerIfNotExists("key-2", "initial-2", now))
+
+        // Batch with updates allowed
+        val messages =
+            listOf(
+                BatchedMessage(
+                    input = 1,
+                    message = ScheduledMessage("key-1", "updated-1", now, canUpdate = true),
+                ),
+                BatchedMessage(
+                    input = 2,
+                    message = ScheduledMessage("key-2", "updated-2", now, canUpdate = true),
+                ),
+                BatchedMessage(
+                    input = 3,
+                    message = ScheduledMessage("key-3", "new-3", now, canUpdate = true),
+                ),
+            )
+
+        val results = queue.offerBatch(messages)
+
+        // Verify results - existing should be updated, new should be created
+        assertEquals(3, results.size)
+        assertEquals(OfferOutcome.Updated, results.find { it.input == 1 }?.outcome)
+        assertEquals(OfferOutcome.Updated, results.find { it.input == 2 }?.outcome)
+        assertEquals(OfferOutcome.Created, results.find { it.input == 3 }?.outcome)
+    }
 }
