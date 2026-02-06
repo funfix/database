@@ -144,6 +144,46 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
         }
     }
 
+    /**
+     * Selects one row by its key with a lock (FOR UPDATE).
+     *
+     * This method is used during offer updates to prevent concurrent modifications.
+     * Database-specific implementations may use different locking mechanisms:
+     * - MS-SQL: WITH (UPDLOCK)
+     * - HSQLDB: Falls back to plain SELECT (limited row-level locking support)
+     */
+    abstract fun selectForUpdateOneRow(
+        connection: Connection,
+        kind: String,
+        key: String,
+    ): DBTableRowWithId?
+
+    /**
+     * Searches for existing keys from a provided list.
+     *
+     * Returns the subset of keys that already exist in the database. This is used by batch
+     * operations to avoid N+1 queries.
+     */
+    fun searchAvailableKeys(connection: Connection, kind: String, keys: List<String>): Set<String> {
+        if (keys.isEmpty()) return emptySet()
+
+        // Build IN clause with placeholders
+        val placeholders = keys.joinToString(",") { "?" }
+        val sql = "SELECT pKey FROM $tableName WHERE pKind = ? AND pKey IN ($placeholders)"
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, kind)
+            keys.forEachIndexed { index, key -> stmt.setString(index + 2, key) }
+            stmt.executeQuery().use { rs ->
+                val existingKeys = mutableSetOf<String>()
+                while (rs.next()) {
+                    existingKeys.add(rs.getString("pKey"))
+                }
+                existingKeys
+            }
+        }
+    }
+
     /** Deletes one row by key and kind. */
     fun deleteOneRow(connection: Connection, key: String, kind: String): Boolean {
         val sql = "DELETE FROM $tableName WHERE pKey = ? AND pKind = ?"
@@ -351,12 +391,18 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
 /** HSQLDB-specific adapter. */
 private class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
     SQLVendorAdapter(driver, tableName) {
-    override fun insertOneRow(connection: Connection, row: DBTableRow): Boolean {
-        // HSQLDB doesn't have INSERT IGNORE, so we check first
-        if (checkIfKeyExists(connection, row.pKey, row.pKind)) {
-            return false
-        }
 
+    override fun selectForUpdateOneRow(
+        connection: Connection,
+        kind: String,
+        key: String,
+    ): DBTableRowWithId? {
+        // HSQLDB has limited row-level locking support, so we fall back to plain SELECT.
+        // This matches the original Scala implementation's behavior for HSQLDB.
+        return selectByKey(connection, kind, key)
+    }
+
+    override fun insertOneRow(connection: Connection, row: DBTableRow): Boolean {
         val sql =
             """
             INSERT INTO $tableName
@@ -364,14 +410,25 @@ private class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
             VALUES (?, ?, ?, ?, ?, ?)
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
-            stmt.setString(1, row.pKey)
-            stmt.setString(2, row.pKind)
-            stmt.setString(3, row.payload)
-            stmt.setTimestamp(4, java.sql.Timestamp.from(row.scheduledAt))
-            stmt.setTimestamp(5, java.sql.Timestamp.from(row.scheduledAtInitially))
-            stmt.setTimestamp(6, java.sql.Timestamp.from(row.createdAt))
-            stmt.executeUpdate() > 0
+        return try {
+            connection.prepareStatement(sql).use { stmt ->
+                stmt.setString(1, row.pKey)
+                stmt.setString(2, row.pKind)
+                stmt.setString(3, row.payload)
+                stmt.setTimestamp(4, java.sql.Timestamp.from(row.scheduledAt))
+                stmt.setTimestamp(5, java.sql.Timestamp.from(row.scheduledAtInitially))
+                stmt.setTimestamp(6, java.sql.Timestamp.from(row.createdAt))
+                stmt.executeUpdate() > 0
+            }
+        } catch (e: Exception) {
+            // If it's a duplicate key violation, return false (key already exists)
+            // This matches the original Scala implementation's behavior:
+            // insertIntoTable(...).recover { case SQLExceptionExtractors.DuplicateKey(_) => false }
+            if (HSQLDBFilters.duplicateKey.matches(e)) {
+                false
+            } else {
+                throw e
+            }
         }
     }
 
