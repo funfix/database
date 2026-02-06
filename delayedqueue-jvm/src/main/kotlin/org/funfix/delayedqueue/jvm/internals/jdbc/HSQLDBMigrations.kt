@@ -19,23 +19,17 @@ internal object HSQLDBMigrations {
                         pKey VARCHAR(200) NOT NULL,
                         pKind VARCHAR(100) NOT NULL,
                         payload VARCHAR(16777216) NOT NULL,
-                        scheduledAt TIMESTAMP WITH TIME ZONE NOT NULL,
-                        scheduledAtInitially TIMESTAMP WITH TIME ZONE NOT NULL,
+                        scheduledAt BIGINT NOT NULL,
+                        scheduledAtInitially BIGINT NOT NULL,
                         lockUuid VARCHAR(36) NULL,
-                        createdAt TIMESTAMP WITH TIME ZONE NOT NULL
+                        createdAt BIGINT NOT NULL
                     );
 
                     CREATE UNIQUE INDEX ${tableName}__PKindPKeyUniqueIndex
                     ON $tableName (pKind, pKey);
 
-                    CREATE INDEX ${tableName}__ScheduledAtIndex
-                    ON $tableName (scheduledAt);
-
                     CREATE INDEX ${tableName}__KindPlusScheduledAtIndex
                     ON $tableName (pKind, scheduledAt);
-
-                    CREATE INDEX ${tableName}__CreatedAtIndex
-                    ON $tableName (createdAt);
 
                     CREATE INDEX ${tableName}__LockUuidPlusIdIndex
                     ON $tableName (lockUuid, id);

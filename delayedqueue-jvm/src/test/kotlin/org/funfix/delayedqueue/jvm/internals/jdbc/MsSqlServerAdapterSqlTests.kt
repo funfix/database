@@ -116,6 +116,91 @@ class MsSqlServerAdapterSqlTests {
         assertFalse(sql.contains("LIMIT"))
     }
 
+    @Test
+    fun `guardedUpdate uses exact timestamp matches`() {
+        val capture = SqlCapture()
+        val connection = capture.connection(executeUpdateResult = 1)
+        val adapter = SQLVendorAdapter.create(JdbcDriver.HSQLDB, tableName)
+        val currentRow =
+            DBTableRow(
+                pKey = "key-1",
+                pKind = "kind-1",
+                payload = "payload-1",
+                scheduledAt = Instant.parse("2024-01-01T00:00:00Z"),
+                scheduledAtInitially = Instant.parse("2024-01-01T00:00:00Z"),
+                lockUuid = "lock-1",
+                createdAt = Instant.parse("2024-01-01T00:00:00Z"),
+            )
+        val updatedRow =
+            DBTableRow(
+                pKey = "key-1",
+                pKind = "kind-1",
+                payload = "payload-2",
+                scheduledAt = Instant.parse("2024-01-02T00:00:00Z"),
+                scheduledAtInitially = Instant.parse("2024-01-01T00:00:00Z"),
+                lockUuid = "lock-2",
+                createdAt = Instant.parse("2024-01-01T00:00:00Z"),
+            )
+
+        adapter.guardedUpdate(connection, currentRow, updatedRow)
+
+        val sql = capture.normalizedLast()
+        assertTrue(sql.contains("scheduledAtInitially = ?"))
+        assertTrue(sql.contains("createdAt = ?"))
+        assertFalse(sql.contains("scheduledAtInitially IN"))
+        assertFalse(sql.contains("createdAt IN"))
+    }
+
+    @Test
+    fun `deleteRowByFingerprint uses exact createdAt match`() {
+        val capture = SqlCapture()
+        val connection = capture.connection(executeUpdateResult = 1)
+        val adapter = SQLVendorAdapter.create(JdbcDriver.HSQLDB, tableName)
+        val row =
+            DBTableRowWithId(
+                id = 10L,
+                data =
+                    DBTableRow(
+                        pKey = "key-1",
+                        pKind = "kind-1",
+                        payload = "payload-1",
+                        scheduledAt = Instant.parse("2024-01-01T00:00:00Z"),
+                        scheduledAtInitially = Instant.parse("2024-01-01T00:00:00Z"),
+                        lockUuid = "lock-1",
+                        createdAt = Instant.parse("2024-01-01T00:00:00Z"),
+                    ),
+            )
+
+        adapter.deleteRowByFingerprint(connection, row)
+
+        val sql = capture.normalizedLast()
+        assertTrue(sql.contains("createdAt = ?"))
+        assertFalse(sql.contains("createdAt IN"))
+    }
+
+    @Test
+    fun `acquireRowByUpdate uses exact scheduledAt match`() {
+        val capture = SqlCapture()
+        val connection = capture.connection(executeUpdateResult = 1)
+        val adapter = SQLVendorAdapter.create(JdbcDriver.HSQLDB, tableName)
+        val row =
+            DBTableRow(
+                pKey = "key-1",
+                pKind = "kind-1",
+                payload = "payload-1",
+                scheduledAt = Instant.parse("2024-01-01T00:00:00Z"),
+                scheduledAtInitially = Instant.parse("2024-01-01T00:00:00Z"),
+                lockUuid = null,
+                createdAt = Instant.parse("2024-01-01T00:00:00Z"),
+            )
+
+        adapter.acquireRowByUpdate(connection, row, "lock-1", Duration.ofSeconds(5), Instant.EPOCH)
+
+        val sql = capture.normalizedLast()
+        assertTrue(sql.contains("scheduledAt = ?"))
+        assertFalse(sql.contains("scheduledAt IN"))
+    }
+
     private class SqlCapture {
         private val statements = mutableListOf<String>()
 

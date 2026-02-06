@@ -19,18 +19,16 @@ internal object MsSqlServerMigrations {
                         pKey NVARCHAR(200) NOT NULL,
                         pKind NVARCHAR(100) NOT NULL,
                         payload NVARCHAR(MAX) NOT NULL,
-                        scheduledAt DATETIMEOFFSET NOT NULL,
-                        scheduledAtInitially DATETIMEOFFSET NOT NULL,
+                        scheduledAt BIGINT NOT NULL,
+                        scheduledAtInitially BIGINT NOT NULL,
                         lockUuid VARCHAR(36) NULL,
-                        createdAt DATETIMEOFFSET NOT NULL
+                        createdAt BIGINT NOT NULL
                     );
 
                     ALTER TABLE $tableName ADD PRIMARY KEY (pKey, pKind);
 
                     CREATE UNIQUE INDEX ${tableName}__IdUniqueIndex ON $tableName(id);
-                    CREATE INDEX ${tableName}__ScheduledAtIndex ON $tableName(scheduledAt);
                     CREATE INDEX ${tableName}__KindPlusScheduledAtIndex ON $tableName(pKind, scheduledAt);
-                    CREATE INDEX ${tableName}__CreatedAtIndex ON $tableName(createdAt);
                     CREATE INDEX ${tableName}__LockUuidPlusIdIndex ON $tableName(lockUuid, id);
                     """
                         .trimIndent(),

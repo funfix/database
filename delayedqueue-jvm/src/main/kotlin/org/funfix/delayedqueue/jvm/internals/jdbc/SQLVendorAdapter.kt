@@ -3,20 +3,9 @@ package org.funfix.delayedqueue.jvm.internals.jdbc
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.sql.Timestamp
 import java.time.Duration
 import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
-import java.time.temporal.ChronoUnit
 import org.funfix.delayedqueue.jvm.JdbcDriver
-
-/**
- * Truncates an Instant to seconds precision.
- *
- * For doing queries on databases that have second-level precision (e.g., SQL Server).
- */
-private fun truncateToSeconds(instant: Instant): Instant = instant.truncatedTo(ChronoUnit.SECONDS)
 
 /**
  * Describes actual SQL queries executed — can be overridden to provide driver-specific queries.
@@ -63,11 +52,11 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
                 stmt.setString(1, row.pKey)
                 stmt.setString(2, row.pKind)
                 stmt.setString(3, row.payload)
-                stmt.setInstant(4, row.scheduledAt)
-                stmt.setInstant(5, row.scheduledAtInitially)
+                stmt.setEpochMillis(4, row.scheduledAt)
+                stmt.setEpochMillis(5, row.scheduledAtInitially)
                 row.lockUuid?.let { stmt.setString(6, it) }
                     ?: stmt.setNull(6, java.sql.Types.VARCHAR)
-                stmt.setInstant(7, row.createdAt)
+                stmt.setEpochMillis(7, row.createdAt)
                 stmt.addBatch()
             }
             val results = stmt.executeBatch()
@@ -83,8 +72,6 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
     /**
      * Updates an existing row with optimistic locking (compare-and-swap). Only updates if the
      * current row matches what's in the database.
-     *
-     * Uses timestamp truncation to handle precision differences between SELECT and UPDATE.
      */
     fun guardedUpdate(
         connection: Connection,
@@ -101,24 +88,20 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
                 createdAt = ?
             WHERE pKey = ?
               AND pKind = ?
-              AND scheduledAtInitially IN (?, ?)
-              AND createdAt IN (?, ?)
+              AND scheduledAtInitially = ?
+              AND createdAt = ?
             """
 
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setString(1, updatedRow.payload)
-            stmt.setInstant(2, updatedRow.scheduledAt)
-            stmt.setInstant(3, updatedRow.scheduledAtInitially)
+            stmt.setEpochMillis(2, updatedRow.scheduledAt)
+            stmt.setEpochMillis(3, updatedRow.scheduledAtInitially)
             stmt.setString(4, updatedRow.lockUuid)
-            stmt.setInstant(5, updatedRow.createdAt)
+            stmt.setEpochMillis(5, updatedRow.createdAt)
             stmt.setString(6, currentRow.pKey)
             stmt.setString(7, currentRow.pKind)
-            // scheduledAtInitially IN (truncated, full)
-            stmt.setInstant(8, truncateToSeconds(currentRow.scheduledAtInitially))
-            stmt.setInstant(9, currentRow.scheduledAtInitially)
-            // createdAt IN (truncated, full)
-            stmt.setInstant(10, truncateToSeconds(currentRow.createdAt))
-            stmt.setInstant(11, currentRow.createdAt)
+            stmt.setEpochMillis(8, currentRow.scheduledAtInitially)
+            stmt.setEpochMillis(9, currentRow.createdAt)
             stmt.executeUpdate() > 0
         }
     }
@@ -205,22 +188,17 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
         }
     }
 
-    /**
-     * Deletes a row by its fingerprint (id and createdAt). Uses timestamp truncation to handle
-     * precision differences.
-     */
+    /** Deletes a row by its fingerprint (id and createdAt). */
     fun deleteRowByFingerprint(connection: Connection, row: DBTableRowWithId): Boolean {
         val sql =
             """
             DELETE FROM $tableName
-            WHERE id = ? AND createdAt IN (?, ?)
+            WHERE id = ? AND createdAt = ?
             """
 
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, row.id)
-            // createdAt IN (truncated, full)
-            stmt.setInstant(2, truncateToSeconds(row.data.createdAt))
-            stmt.setInstant(3, row.data.createdAt)
+            stmt.setEpochMillis(2, row.data.createdAt)
             stmt.executeUpdate() > 0
         }
     }
@@ -345,10 +323,7 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
      * Acquires a specific row by updating its scheduledAt and lockUuid. Returns true if the row was
      * successfully acquired.
      */
-    /**
-     * Acquires a row by updating its scheduledAt and lockUuid. Uses timestamp truncation to handle
-     * precision differences.
-     */
+    /** Acquires a row by updating its scheduledAt and lockUuid. */
     fun acquireRowByUpdate(
         connection: Connection,
         row: DBTableRow,
@@ -364,27 +339,21 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
                 lockUuid = ?
             WHERE pKey = ?
               AND pKind = ?
-              AND scheduledAt IN (?, ?)
+              AND scheduledAt = ?
             """
 
         return connection.prepareStatement(sql).use { stmt ->
-            stmt.setInstant(1, expireAt)
+            stmt.setEpochMillis(1, expireAt)
             stmt.setString(2, lockUuid)
             stmt.setString(3, row.pKey)
             stmt.setString(4, row.pKind)
-            // scheduledAt IN (exact, truncated)
-            stmt.setInstant(5, row.scheduledAt)
-            stmt.setInstant(6, truncateToSeconds(row.scheduledAt))
+            stmt.setEpochMillis(5, row.scheduledAt)
             stmt.executeUpdate() > 0
         }
     }
 
-    protected fun PreparedStatement.setInstant(index: Int, instant: Instant) {
-        if (driver == JdbcDriver.MsSqlServer) {
-            setObject(index, OffsetDateTime.ofInstant(instant, ZoneOffset.UTC))
-        } else {
-            setTimestamp(index, Timestamp.from(instant))
-        }
+    protected fun PreparedStatement.setEpochMillis(index: Int, instant: Instant) {
+        setLong(index, instant.toEpochMilli())
     }
 
     companion object {
@@ -425,9 +394,9 @@ private class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
                 stmt.setString(1, row.pKey)
                 stmt.setString(2, row.pKind)
                 stmt.setString(3, row.payload)
-                stmt.setInstant(4, row.scheduledAt)
-                stmt.setInstant(5, row.scheduledAtInitially)
-                stmt.setInstant(6, row.createdAt)
+                stmt.setEpochMillis(4, row.scheduledAt)
+                stmt.setEpochMillis(5, row.scheduledAtInitially)
+                stmt.setEpochMillis(6, row.createdAt)
                 stmt.executeUpdate() > 0
             }
         } catch (e: Exception) {
@@ -458,7 +427,7 @@ private class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
 
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setString(1, kind)
-            stmt.setInstant(2, now)
+            stmt.setEpochMillis(2, now)
             stmt.executeQuery().use { rs ->
                 if (rs.next()) {
                     rs.toDBTableRowWithId()
@@ -496,9 +465,9 @@ private class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
 
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setString(1, lockUuid)
-            stmt.setInstant(2, expireAt)
+            stmt.setEpochMillis(2, expireAt)
             stmt.setString(3, kind)
-            stmt.setInstant(4, now)
+            stmt.setEpochMillis(4, now)
             stmt.executeUpdate()
         }
     }
@@ -527,9 +496,9 @@ private class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
             stmt.setString(3, row.pKey)
             stmt.setString(4, row.pKind)
             stmt.setString(5, row.payload)
-            stmt.setInstant(6, row.scheduledAt)
-            stmt.setInstant(7, row.scheduledAtInitially)
-            stmt.setInstant(8, row.createdAt)
+            stmt.setEpochMillis(6, row.scheduledAt)
+            stmt.setEpochMillis(7, row.scheduledAtInitially)
+            stmt.setEpochMillis(8, row.createdAt)
             stmt.executeUpdate() > 0
         }
     }
@@ -578,7 +547,7 @@ private class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
 
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setString(1, kind)
-            stmt.setInstant(2, now)
+            stmt.setEpochMillis(2, now)
             stmt.executeQuery().use { rs ->
                 if (rs.next()) {
                     rs.toDBTableRowWithId()
@@ -616,9 +585,9 @@ private class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
 
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setString(1, lockUuid)
-            stmt.setInstant(2, expireAt)
+            stmt.setEpochMillis(2, expireAt)
             stmt.setString(3, kind)
-            stmt.setInstant(4, now)
+            stmt.setEpochMillis(4, now)
             stmt.executeUpdate()
         }
     }
@@ -692,10 +661,5 @@ private fun ResultSet.toDBTableRowWithId(): DBTableRowWithId =
     )
 
 private fun ResultSet.getInstant(columnLabel: String): Instant {
-    return try {
-        val offsetDateTime = getObject(columnLabel, OffsetDateTime::class.java)
-        offsetDateTime?.toInstant() ?: getTimestamp(columnLabel).toInstant()
-    } catch (_: Exception) {
-        getTimestamp(columnLabel).toInstant()
-    }
+    return Instant.ofEpochMilli(getLong(columnLabel))
 }
