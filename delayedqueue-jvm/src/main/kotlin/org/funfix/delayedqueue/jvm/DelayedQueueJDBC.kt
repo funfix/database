@@ -612,7 +612,7 @@ private constructor(
                             JdbcDriver.HSQLDB -> HSQLDBMigrations.getMigrations(config.tableName)
                             JdbcDriver.Sqlite -> SqliteMigrations.getMigrations(config.tableName)
                             JdbcDriver.MsSqlServer ->
-                                MsSqlServerMigrations.getMigrations(config.tableName)
+                                MsSqlServerMigrations.getMigrations(config.tableName)                            
                         }
 
                     val executed = MigrationRunner.runMigrations(connection.underlying, migrations)
