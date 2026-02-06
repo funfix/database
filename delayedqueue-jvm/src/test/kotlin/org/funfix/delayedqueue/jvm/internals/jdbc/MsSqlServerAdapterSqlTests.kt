@@ -25,7 +25,7 @@ class MsSqlServerAdapterSqlTests {
             DBTableRow(
                 pKey = "key-1",
                 pKind = "kind-1",
-                payload = "payload",
+                payload = "payload".toByteArray(),
                 scheduledAt = Instant.parse("2024-01-01T00:00:00Z"),
                 scheduledAtInitially = Instant.parse("2024-01-01T00:00:00Z"),
                 lockUuid = null,
@@ -125,7 +125,7 @@ class MsSqlServerAdapterSqlTests {
             DBTableRow(
                 pKey = "key-1",
                 pKind = "kind-1",
-                payload = "payload-1",
+                payload = "payload-1".toByteArray(),
                 scheduledAt = Instant.parse("2024-01-01T00:00:00Z"),
                 scheduledAtInitially = Instant.parse("2024-01-01T00:00:00Z"),
                 lockUuid = "lock-1",
@@ -135,7 +135,7 @@ class MsSqlServerAdapterSqlTests {
             DBTableRow(
                 pKey = "key-1",
                 pKind = "kind-1",
-                payload = "payload-2",
+                payload = "payload-2".toByteArray(),
                 scheduledAt = Instant.parse("2024-01-02T00:00:00Z"),
                 scheduledAtInitially = Instant.parse("2024-01-01T00:00:00Z"),
                 lockUuid = "lock-2",
@@ -163,7 +163,7 @@ class MsSqlServerAdapterSqlTests {
                     DBTableRow(
                         pKey = "key-1",
                         pKind = "kind-1",
-                        payload = "payload-1",
+                        payload = "payload-1".toByteArray(),
                         scheduledAt = Instant.parse("2024-01-01T00:00:00Z"),
                         scheduledAtInitially = Instant.parse("2024-01-01T00:00:00Z"),
                         lockUuid = "lock-1",
@@ -187,7 +187,7 @@ class MsSqlServerAdapterSqlTests {
             DBTableRow(
                 pKey = "key-1",
                 pKind = "kind-1",
-                payload = "payload-1",
+                payload = "payload-1".toByteArray(),
                 scheduledAt = Instant.parse("2024-01-01T00:00:00Z"),
                 scheduledAtInitially = Instant.parse("2024-01-01T00:00:00Z"),
                 lockUuid = null,
@@ -229,6 +229,7 @@ class MsSqlServerAdapterSqlTests {
                             "executeBatch" -> IntArray(0)
                             "addBatch" -> null
                             "setString" -> null
+                            "setBytes" -> null
                             "setTimestamp" -> null
                             "setNull" -> null
                             "close" -> null

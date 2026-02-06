@@ -18,7 +18,7 @@ internal object MsSqlServerMigrations {
                         id BIGINT IDENTITY(1,1) NOT NULL,
                         pKey NVARCHAR(200) NOT NULL,
                         pKind NVARCHAR(100) NOT NULL,
-                        payload NVARCHAR(MAX) NOT NULL,
+                        payload VARBINARY(MAX) NOT NULL,
                         scheduledAt BIGINT NOT NULL,
                         scheduledAtInitially BIGINT NOT NULL,
                         lockUuid VARCHAR(36) NULL,

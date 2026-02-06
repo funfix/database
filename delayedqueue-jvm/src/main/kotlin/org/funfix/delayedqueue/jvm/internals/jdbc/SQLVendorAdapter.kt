@@ -51,7 +51,7 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
             for (row in rows) {
                 stmt.setString(1, row.pKey)
                 stmt.setString(2, row.pKind)
-                stmt.setString(3, row.payload)
+                stmt.setBytes(3, row.payload)
                 stmt.setEpochMillis(4, row.scheduledAt)
                 stmt.setEpochMillis(5, row.scheduledAtInitially)
                 row.lockUuid?.let { stmt.setString(6, it) }
@@ -93,7 +93,7 @@ internal sealed class SQLVendorAdapter(val driver: JdbcDriver, protected val tab
             """
 
         return connection.prepareStatement(sql).use { stmt ->
-            stmt.setString(1, updatedRow.payload)
+            stmt.setBytes(1, updatedRow.payload)
             stmt.setEpochMillis(2, updatedRow.scheduledAt)
             stmt.setEpochMillis(3, updatedRow.scheduledAtInitially)
             stmt.setString(4, updatedRow.lockUuid)
@@ -393,7 +393,7 @@ private class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
             connection.prepareStatement(sql).use { stmt ->
                 stmt.setString(1, row.pKey)
                 stmt.setString(2, row.pKind)
-                stmt.setString(3, row.payload)
+                stmt.setBytes(3, row.payload)
                 stmt.setEpochMillis(4, row.scheduledAt)
                 stmt.setEpochMillis(5, row.scheduledAtInitially)
                 stmt.setEpochMillis(6, row.createdAt)
@@ -495,7 +495,7 @@ private class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
             stmt.setString(2, row.pKind)
             stmt.setString(3, row.pKey)
             stmt.setString(4, row.pKind)
-            stmt.setString(5, row.payload)
+            stmt.setBytes(5, row.payload)
             stmt.setEpochMillis(6, row.scheduledAt)
             stmt.setEpochMillis(7, row.scheduledAtInitially)
             stmt.setEpochMillis(8, row.createdAt)
@@ -652,7 +652,7 @@ private fun ResultSet.toDBTableRowWithId(): DBTableRowWithId =
             DBTableRow(
                 pKey = getString("pKey"),
                 pKind = getString("pKind"),
-                payload = getString("payload"),
+                payload = getBytes("payload"),
                 scheduledAt = getInstant("scheduledAt"),
                 scheduledAtInitially = getInstant("scheduledAtInitially"),
                 lockUuid = getString("lockUuid"),

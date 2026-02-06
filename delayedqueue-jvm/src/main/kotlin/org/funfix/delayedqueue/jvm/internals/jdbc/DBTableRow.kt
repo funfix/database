@@ -16,7 +16,7 @@ import java.time.Instant
 internal data class DBTableRow(
     val pKey: String,
     val pKind: String,
-    val payload: String,
+    val payload: ByteArray,
     val scheduledAt: Instant,
     val scheduledAtInitially: Instant,
     val lockUuid: String?,
@@ -29,7 +29,7 @@ internal data class DBTableRow(
     fun isDuplicate(other: DBTableRow): Boolean =
         pKey == other.pKey &&
             pKind == other.pKind &&
-            payload == other.payload &&
+            payload.contentEquals(other.payload) &&
             scheduledAtInitially == other.scheduledAtInitially
 }
 
