@@ -1,5 +1,6 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc
 
+import java.sql.BatchUpdateException
 import java.sql.SQLException
 import java.sql.SQLIntegrityConstraintViolationException
 import java.sql.SQLTransactionRollbackException
@@ -297,6 +298,14 @@ class SqlExceptionFiltersTest {
             val cause = SQLException("Record has changed since last read", "HY000", 1020)
             val wrapper = RuntimeException("batch failed", cause)
             assertTrue(MariaDBFilters.transientFailure.matches(wrapper))
+        }
+
+        @Test
+        fun `transientFailure should match record changed in nextException chain`() {
+            val next = SQLException("Record has changed since last read", "HY000", 1020)
+            val batch = BatchUpdateException("batch failed", IntArray(0))
+            batch.nextException = next
+            assertTrue(MariaDBFilters.transientFailure.matches(batch))
         }
 
         @Test

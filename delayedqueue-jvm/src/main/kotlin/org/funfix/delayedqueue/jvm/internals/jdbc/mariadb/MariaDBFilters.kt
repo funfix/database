@@ -12,11 +12,8 @@ internal object MariaDBFilters : RdbmsExceptionFilters {
         object : SqlExceptionFilter {
             override fun matches(e: Throwable): Boolean =
                 when {
-                    CommonSqlFilters.transactionTransient.matches(e) -> true
-                    e is SQLException && e.errorCode == 1213 -> true // Deadlock
-                    e is SQLException && e.errorCode == 1205 -> true // Lock wait timeout
-                    e is SQLException && e.errorCode == 1020 ->
-                        true // Record changed since last read
+                    matchesTransient(e) -> true
+                    matchesNextExceptionChain(e) -> true
                     else -> {
                         val cause = e.cause
                         cause != null && cause !== e && matches(cause)
@@ -54,4 +51,25 @@ internal object MariaDBFilters : RdbmsExceptionFilters {
 
     private val DUPLICATE_KEY_KEYWORDS =
         listOf("duplicate entry", "primary key constraint", "unique constraint")
+
+    private fun matchesTransient(e: Throwable): Boolean =
+        when {
+            CommonSqlFilters.transactionTransient.matches(e) -> true
+            e is SQLException && e.errorCode == 1213 -> true // Deadlock
+            e is SQLException && e.errorCode == 1205 -> true // Lock wait timeout
+            e is SQLException && e.errorCode == 1020 -> true // Record changed since last read
+            else -> false
+        }
+
+    private fun matchesNextExceptionChain(e: Throwable): Boolean {
+        val sqlException = e as? SQLException ?: return false
+        var next = sqlException.nextException
+        while (next != null && next !== e) {
+            if (matchesTransient(next)) {
+                return true
+            }
+            next = next.nextException
+        }
+        return false
+    }
 }
