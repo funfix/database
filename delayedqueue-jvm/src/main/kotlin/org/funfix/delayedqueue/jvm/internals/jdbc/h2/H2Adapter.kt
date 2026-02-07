@@ -97,7 +97,7 @@ internal class H2Adapter(driver: JdbcDriver, tableName: String) :
                 "createdAt"
             FROM "$tableName"
             WHERE "pKind" = ? AND "scheduledAt" <= ?
-            ORDER BY "scheduledAt"
+            ORDER BY "scheduledAt", "id"
             LIMIT 1
             FOR UPDATE
             """
@@ -136,7 +136,7 @@ internal class H2Adapter(driver: JdbcDriver, tableName: String) :
                 SELECT TOP $limit "id"
                 FROM "$tableName"
                 WHERE "pKind" = ? AND "scheduledAt" <= ?
-                ORDER BY "scheduledAt"
+                ORDER BY "scheduledAt", "id"
             )
             """
 

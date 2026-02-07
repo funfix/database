@@ -99,7 +99,7 @@ internal class PostgreSQLAdapter(driver: JdbcDriver, tableName: String) :
                 "createdAt"
             FROM "$tableName"
             WHERE "pKind" = ? AND "scheduledAt" <= ?
-            ORDER BY "scheduledAt"
+            ORDER BY "scheduledAt", "id"
             LIMIT 1
             FOR UPDATE SKIP LOCKED
             """
@@ -140,7 +140,7 @@ internal class PostgreSQLAdapter(driver: JdbcDriver, tableName: String) :
                 FROM "$tableName"
                 WHERE 
                     "pKind" = ? AND "scheduledAt" <= ?
-                ORDER BY "scheduledAt"
+                ORDER BY "scheduledAt", "id"
                 LIMIT $limit
                 FOR UPDATE SKIP LOCKED
             )

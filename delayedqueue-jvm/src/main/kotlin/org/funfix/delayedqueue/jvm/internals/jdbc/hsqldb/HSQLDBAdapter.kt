@@ -74,7 +74,7 @@ internal class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
                 "createdAt"
             FROM "$tableName"
             WHERE "pKind" = ? AND "scheduledAt" <= ?
-            ORDER BY "scheduledAt"
+            ORDER BY "scheduledAt", "id"
             FETCH FIRST 1 ROWS ONLY
             """
 
@@ -112,7 +112,7 @@ internal class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
                 SELECT "id"
                 FROM "$tableName"
                 WHERE "pKind" = ? AND "scheduledAt" <= ?
-                ORDER BY "scheduledAt"
+                ORDER BY "scheduledAt", "id"
                 LIMIT $limit
             )
             """

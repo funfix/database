@@ -112,7 +112,7 @@ internal class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
             WITH (UPDLOCK, READPAST)
             WHERE 
                 [pKind] = ? AND [scheduledAt] <= ?
-            ORDER BY [scheduledAt]
+            ORDER BY [scheduledAt], [id]
             """
 
         return conn.prepareStatement(sql) { stmt ->
@@ -153,7 +153,7 @@ internal class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
                 WITH (UPDLOCK, READPAST)
                 WHERE 
                     [pKind] = ? AND [scheduledAt] <= ?
-                ORDER BY [scheduledAt]
+                ORDER BY [scheduledAt], [id]
             )
             """
 

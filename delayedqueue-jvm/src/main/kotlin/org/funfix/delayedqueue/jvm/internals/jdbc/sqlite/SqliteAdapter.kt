@@ -81,7 +81,7 @@ internal class SqliteAdapter(driver: JdbcDriver, tableName: String) :
                 "createdAt"
             FROM "$tableName"
             WHERE "pKind" = ? AND "scheduledAt" <= ?
-            ORDER BY "scheduledAt"
+            ORDER BY "scheduledAt", "id"
             LIMIT 1
             """
 
@@ -120,7 +120,7 @@ internal class SqliteAdapter(driver: JdbcDriver, tableName: String) :
                 SELECT "id"
                 FROM "$tableName"
                 WHERE "pKind" = ? AND "scheduledAt" <= ?
-                ORDER BY "scheduledAt"
+                ORDER BY "scheduledAt", "id"
                 LIMIT $limit
             )
             """
