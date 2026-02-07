@@ -5,6 +5,10 @@ import java.sql.SQLIntegrityConstraintViolationException
 import java.sql.SQLTransactionRollbackException
 import java.sql.SQLTransientConnectionException
 import org.funfix.delayedqueue.jvm.JdbcDriver
+import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MSSQLFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SQLiteFilters
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested

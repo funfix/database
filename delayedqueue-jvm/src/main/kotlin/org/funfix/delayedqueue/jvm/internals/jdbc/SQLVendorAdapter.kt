@@ -6,6 +6,7 @@ import java.sql.ResultSet
 import java.time.Duration
 import java.time.Instant
 import org.funfix.delayedqueue.jvm.JdbcDriver
+import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBFilters
 
 /**
  * Describes actual SQL queries executed — can be overridden to provide driver-specific queries.
