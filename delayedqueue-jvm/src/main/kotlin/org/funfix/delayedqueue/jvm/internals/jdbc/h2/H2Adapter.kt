@@ -22,8 +22,34 @@ internal class H2Adapter(driver: JdbcDriver, tableName: String) :
         kind: String,
         key: String,
     ): DBTableRowWithId? {
-        // H2 supports row-level locking, but we align with HSQLDB semantics and fall back to SELECT.
-        return selectByKey(conn, kind, key)
+        val sql =
+            """
+            SELECT
+                "id",
+                "pKey",
+                "pKind",
+                "payload",
+                "scheduledAt",
+                "scheduledAtInitially",
+                "lockUuid",
+                "createdAt"
+            FROM "$tableName"
+            WHERE "pKey" = ? AND "pKind" = ?
+            LIMIT 1
+            FOR UPDATE
+            """
+
+        return conn.prepareStatement(sql) { stmt ->
+            stmt.setString(1, key)
+            stmt.setString(2, kind)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) {
+                    rs.toDBTableRowWithId()
+                } else {
+                    null
+                }
+            }
+        }
     }
 
     context(_: Raise<InterruptedException>, _: Raise<SQLException>)
@@ -73,6 +99,7 @@ internal class H2Adapter(driver: JdbcDriver, tableName: String) :
             WHERE "pKind" = ? AND "scheduledAt" <= ?
             ORDER BY "scheduledAt"
             LIMIT 1
+            FOR UPDATE
             """
 
         return conn.prepareStatement(sql) { stmt ->
