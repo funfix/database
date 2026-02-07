@@ -82,4 +82,5 @@ internal fun filtersForDriver(driver: JdbcDriver): RdbmsExceptionFilters =
         JdbcDriver.Sqlite -> SQLiteFilters
         JdbcDriver.MariaDB -> MariaDBFilters
         JdbcDriver.PostgreSQL -> PostgreSQLFilters
+        else -> throw IllegalArgumentException("Unsupported JDBC driver: ${driver.className}")
     }

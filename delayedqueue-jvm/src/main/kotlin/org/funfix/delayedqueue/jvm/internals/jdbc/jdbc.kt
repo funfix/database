@@ -195,6 +195,7 @@ internal fun JdbcDriver.quote(name: String): String =
         JdbcDriver.PostgreSQL -> "\"$name\""
         JdbcDriver.Sqlite -> "\"$name\""
         JdbcDriver.MsSqlServer -> "[$name]"
+        else -> throw IllegalArgumentException("Unsupported JDBC driver: ${className}")
     }
 
 /** Quotes a database identifier using the connection's driver. */

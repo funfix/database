@@ -615,6 +615,10 @@ private constructor(
                             JdbcDriver.MsSqlServer ->
                                 MsSqlServerMigrations.getMigrations(config.tableName)
                             JdbcDriver.MariaDB -> MariaDBMigrations.getMigrations(config.tableName)
+                            else ->
+                                throw IllegalArgumentException(
+                                    "Unsupported JDBC driver: ${config.db.driver}"
+                                )
                         }
 
                     val executed = MigrationRunner.runMigrations(connection, migrations)
