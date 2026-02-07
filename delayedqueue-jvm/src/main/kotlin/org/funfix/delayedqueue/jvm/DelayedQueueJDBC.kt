@@ -275,21 +275,10 @@ private constructor(
                             }
                         }
                     } catch (e: Exception) {
-                        // On duplicate key or transient failure (e.g., concurrent modification),
-                        // return empty map to trigger one-by-one fallback.
-                        // This matches: recover { case SQLExceptionExtractors.DuplicateKey(_) =>
-                        // Map.empty }
                         when {
                             filters.duplicateKey.matches(e) -> {
                                 logger.debug(
                                     "Batch insert failed due to duplicate key (concurrent insert), " +
-                                        "falling back to one-by-one offers"
-                                )
-                                emptyMap() // Trigger fallback
-                            }
-                            filters.transientFailure.matches(e) -> {
-                                logger.debug(
-                                    "Batch insert failed due to transient failure (concurrent modification), " +
                                         "falling back to one-by-one offers"
                                 )
                                 emptyMap() // Trigger fallback
