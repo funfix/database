@@ -19,6 +19,7 @@ Supported database systems:
 - HSQLDB
 - MariaDB
 - Microsoft SQL Server
+- MySQL
 - PostgreSQL
 - SQLite
 

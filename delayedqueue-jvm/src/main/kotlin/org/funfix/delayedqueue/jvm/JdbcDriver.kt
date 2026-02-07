@@ -15,13 +15,15 @@ public class JdbcDriver private constructor(public val className: String) {
 
         @JvmField public val MariaDB: JdbcDriver = JdbcDriver("org.mariadb.jdbc.Driver")
 
+        @JvmField public val MySQL: JdbcDriver = JdbcDriver("com.mysql.cj.jdbc.Driver")
+
         @JvmField public val PostgreSQL: JdbcDriver = JdbcDriver("org.postgresql.Driver")
 
         @JvmField public val Oracle: JdbcDriver = JdbcDriver("oracle.jdbc.OracleDriver")
 
         @JvmStatic
         public val entries: List<JdbcDriver> =
-            listOf(H2, HSQLDB, MariaDB, MsSqlServer, PostgreSQL, Sqlite)
+            listOf(H2, HSQLDB, MariaDB, MsSqlServer, MySQL, PostgreSQL, Sqlite)
 
         /**
          * Attempt to find a [JdbcDriver] by its class name.

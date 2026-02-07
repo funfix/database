@@ -11,6 +11,7 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.h2.H2Adapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MsSqlServerAdapter
+import org.funfix.delayedqueue.jvm.internals.jdbc.mysql.MySQLAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.oracle.OracleAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.postgres.PostgreSQLAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SqliteAdapter
@@ -474,6 +475,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
                 JdbcDriver.MsSqlServer -> MsSqlServerAdapter(driver, tableName)
                 JdbcDriver.PostgreSQL -> PostgreSQLAdapter(driver, tableName)
                 JdbcDriver.MariaDB -> MariaDBAdapter(driver, tableName)
+                JdbcDriver.MySQL -> MySQLAdapter(driver, tableName)
                 JdbcDriver.Oracle -> OracleAdapter(driver, tableName)
                 else -> throw IllegalArgumentException("Unsupported JDBC driver: $driver")
             }
