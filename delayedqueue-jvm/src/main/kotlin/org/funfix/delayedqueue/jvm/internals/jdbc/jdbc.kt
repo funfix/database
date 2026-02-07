@@ -165,7 +165,8 @@ internal object ConnectionPool {
                 PRAGMA synchronous=NORMAL;
                 PRAGMA cache_size=-64000;
                 PRAGMA temp_store=MEMORY;
-                """.trimIndent()
+                """
+                    .trimIndent()
         }
 
         return hikariConfig
