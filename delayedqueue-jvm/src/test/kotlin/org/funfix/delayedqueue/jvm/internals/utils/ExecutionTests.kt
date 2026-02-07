@@ -1,9 +1,11 @@
 package org.funfix.delayedqueue.jvm.internals.utils
 
+import java.time.Duration
 import java.util.concurrent.ExecutionException
 import org.funfix.tasks.jvm.TaskCancellationException
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.opentest4j.AssertionFailedError
 
 class ExecutionTests {
     @Test
@@ -31,6 +33,13 @@ class ExecutionTests {
     fun `runBlockingIO runs on shared executor`() = unsafeSneakyRaises {
         val threadName = runBlockingIO { Thread.currentThread().name }
         assertTrue(threadName.contains("virtual"))
+    }
+
+    @Test
+    fun `runBlockingIO hangs when block throws AssertionFailedError`() {
+        assertThrows(AssertionFailedError::class.java) {
+            unsafeSneakyRaises { runBlockingIO { throw AssertionFailedError("boom") } }
+        }
     }
 
     @Test

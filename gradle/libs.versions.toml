@@ -18,7 +18,7 @@ vanniktech-publish-plugin = { module = "com.vanniktech:gradle-maven-publish-plug
 ktfmt-gradle-plugin = { module = "com.ncorti.ktfmt.gradle:com.ncorti.ktfmt.gradle.gradle.plugin", version.ref = "ktfmt-plugin" }
 
 # Libraries
-funfix-tasks-jvm = { module = "org.funfix:tasks-jvm", version = "0.4.0" }
+funfix-tasks-jvm = { module = "org.funfix:tasks-jvm", version = "0.4.1" }
 hikaricp = { module = "com.zaxxer:HikariCP", version = "7.0.2" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version = "1.5.27" }
 jdbc-hsqldb = { module = "org.hsqldb:hsqldb", version = "2.7.4" }

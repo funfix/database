@@ -12,6 +12,7 @@ import javax.sql.DataSource
 import org.funfix.delayedqueue.jvm.JdbcConnectionConfig
 import org.funfix.delayedqueue.jvm.JdbcDriver
 import org.funfix.delayedqueue.jvm.internals.utils.Raise
+import org.funfix.delayedqueue.jvm.internals.utils.runBlockingIO
 import org.funfix.tasks.jvm.Task
 import org.funfix.tasks.jvm.TaskCancellationException
 import org.funfix.tasks.jvm.TaskExecutors
@@ -43,7 +44,7 @@ internal inline fun <T> runSQLOperation(block: () -> T): T = block()
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
 internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T =
-    _root_ide_package_.org.funfix.delayedqueue.jvm.internals.utils.runBlockingIO {
+    runBlockingIO {
         runSQLOperation {
             source.connection.let {
                 try {
