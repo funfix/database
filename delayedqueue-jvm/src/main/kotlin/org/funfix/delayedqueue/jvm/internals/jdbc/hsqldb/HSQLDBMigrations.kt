@@ -1,4 +1,6 @@
-package org.funfix.delayedqueue.jvm.internals.jdbc
+package org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb
+
+import org.funfix.delayedqueue.jvm.internals.jdbc.Migration
 
 /** HSQLDB-specific migrations for the DelayedQueue table. */
 internal object HSQLDBMigrations {
@@ -10,7 +12,7 @@ internal object HSQLDBMigrations {
      */
     fun getMigrations(tableName: String): List<Migration> =
         listOf(
-            Migration.createTableIfNotExists(
+            Migration.Companion.createTableIfNotExists(
                 tableName = tableName,
                 sql =
                     """

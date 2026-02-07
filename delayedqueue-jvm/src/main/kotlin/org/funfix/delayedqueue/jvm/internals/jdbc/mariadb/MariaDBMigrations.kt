@@ -1,4 +1,6 @@
-package org.funfix.delayedqueue.jvm.internals.jdbc
+package org.funfix.delayedqueue.jvm.internals.jdbc.mariadb
+
+import org.funfix.delayedqueue.jvm.internals.jdbc.Migration
 
 /** MariaDB-specific migrations for the DelayedQueue table. */
 internal object MariaDBMigrations {
@@ -10,7 +12,7 @@ internal object MariaDBMigrations {
      */
     fun getMigrations(tableName: String): List<Migration> =
         listOf(
-            Migration.createTableIfNotExists(
+            Migration.Companion.createTableIfNotExists(
                 tableName = tableName,
                 sql =
                     """
