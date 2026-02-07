@@ -17,7 +17,7 @@ public class DelayedQueueJDBCAdvancedTest extends DelayedQueueJDBCAdvancedTestBa
         var queueConfig = new DelayedQueueJDBCConfig(
             dbConfig,
             tableName,
-            DelayedQueueTimeConfig.DEFAULT,
+            DelayedQueueTimeConfig.DEFAULT_TESTING,
             "advanced-test-queue"
         );
 
@@ -43,7 +43,7 @@ public class DelayedQueueJDBCAdvancedTest extends DelayedQueueJDBCAdvancedTestBa
         var queueConfig = new DelayedQueueJDBCConfig(
             dbConfig,
             tableName,
-            DelayedQueueTimeConfig.DEFAULT,
+            DelayedQueueTimeConfig.DEFAULT_TESTING,
             "shared-db-test-queue-" + tableName
         );
 

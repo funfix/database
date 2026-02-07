@@ -2,7 +2,7 @@
 binary-compatibility-validator = "0.18.1"
 dokka = "2.1.0"
 kotlin = "2.3.10"
-kover = "0.9.5"
+kover = "0.9.6"
 publish-plugin = "0.36.0"
 versions-plugin = "0.53.0"
 ktfmt-plugin = "0.25.0"
@@ -20,12 +20,13 @@ ktfmt-gradle-plugin = { module = "com.ncorti.ktfmt.gradle:com.ncorti.ktfmt.gradl
 # Libraries
 funfix-tasks-jvm = { module = "org.funfix:tasks-jvm", version = "0.4.1" }
 hikaricp = { module = "com.zaxxer:HikariCP", version = "7.0.2" }
-logback-classic = { module = "ch.qos.logback:logback-classic", version = "1.5.27" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version = "1.5.28" }
 jdbc-hsqldb = { module = "org.hsqldb:hsqldb", version = "2.7.4" }
+jdbc-h2 = { module = "com.h2database:h2", version = "2.3.232" }
 jdbc-sqlite = { module = "org.xerial:sqlite-jdbc", version = "3.51.1.0" }
-jdbc-mssql = { module = "com.microsoft.sqlserver:mssql-jdbc", version = "12.4.2.jre11" }
-jdbc-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version = "3.5.3" }
-jdbc-postgresql = { module = "org.postgresql:postgresql", version = "42.7.7" }
+jdbc-mssql = { module = "com.microsoft.sqlserver:mssql-jdbc", version = "13.2.1.jre11" }
+jdbc-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version = "3.5.7" }
+jdbc-postgresql = { module = "org.postgresql:postgresql", version = "42.7.9" }
 jdbc-oracle = { module = "com.oracle.database.jdbc:ojdbc11", version = "23.4.0.24.05" }
 junit-bom = { module = "org.junit:junit-bom", version = "6.0.2" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }

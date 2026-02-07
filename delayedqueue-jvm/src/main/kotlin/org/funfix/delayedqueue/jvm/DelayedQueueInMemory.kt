@@ -1,7 +1,6 @@
 package org.funfix.delayedqueue.jvm
 
 import java.time.Clock as JavaClock
-import java.time.Duration
 import java.time.Instant
 import java.util.ArrayList
 import java.util.Collections
@@ -402,16 +401,15 @@ private constructor(
          * Creates an in-memory delayed queue with default configuration.
          *
          * @param A the type of message payloads
-         * @param timeConfig optional time configuration (defaults to 30s acquire timeout, 100ms
-         *   poll period)
+         * @param timeConfig optional time configuration (defaults to
+         *   [DelayedQueueTimeConfig.DEFAULT_IN_MEMORY])
          * @param ackEnvSource optional source identifier for envelopes (defaults to
          *   "delayed-queue-inmemory")
          */
         @JvmStatic
         @JvmOverloads
         public fun <A> create(
-            timeConfig: DelayedQueueTimeConfig =
-                DelayedQueueTimeConfig(Duration.ofSeconds(30), Duration.ofMillis(100)),
+            timeConfig: DelayedQueueTimeConfig = DelayedQueueTimeConfig.DEFAULT_IN_MEMORY,
             ackEnvSource: String = "delayed-queue-inmemory",
             clock: JavaClock = JavaClock.systemUTC(),
         ): DelayedQueueInMemory<A> {

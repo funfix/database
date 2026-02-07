@@ -26,7 +26,7 @@ public class DelayedQueueSqliteAdvancedTest extends DelayedQueueJDBCAdvancedTest
         var queueConfig = new DelayedQueueJDBCConfig(
             dbConfig,
             tableName,
-            DelayedQueueTimeConfig.DEFAULT,
+            DelayedQueueTimeConfig.DEFAULT_TESTING,
             "sqlite-advanced-test-queue"
         );
 
@@ -52,7 +52,7 @@ public class DelayedQueueSqliteAdvancedTest extends DelayedQueueJDBCAdvancedTest
         var queueConfig = new DelayedQueueJDBCConfig(
             dbConfig,
             tableName,
-            DelayedQueueTimeConfig.DEFAULT,
+            DelayedQueueTimeConfig.DEFAULT_TESTING,
             "sqlite-shared-db-test-queue-" + tableName
         );
 

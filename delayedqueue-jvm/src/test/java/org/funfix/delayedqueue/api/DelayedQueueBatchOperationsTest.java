@@ -35,7 +35,7 @@ public class DelayedQueueBatchOperationsTest {
     
     private DelayedQueue<String> createInMemoryQueue(MutableClock clock) {
         return DelayedQueueInMemory.create(
-            DelayedQueueTimeConfig.DEFAULT,
+            DelayedQueueTimeConfig.DEFAULT_IN_MEMORY,
             "test-source",
             clock
         );

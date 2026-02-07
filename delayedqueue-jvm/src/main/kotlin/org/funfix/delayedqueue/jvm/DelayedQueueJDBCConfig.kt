@@ -17,12 +17,12 @@ package org.funfix.delayedqueue.jvm
  * );
  *
  * DelayedQueueJDBCConfig config = new DelayedQueueJDBCConfig(
- *     dbConfig,                          // db
- *     "delayed_queue_table",             // tableName
- *     DelayedQueueTimeConfig.DEFAULT,    // time
- *     "my-queue",                        // queueName
- *     "DelayedQueueJDBC:my-queue",       // ackEnvSource
- *     RetryConfig.DEFAULT                // retryPolicy (optional, can be null)
+ *     dbConfig,                            // db
+ *     "delayed_queue_table",               // tableName
+ *     DelayedQueueTimeConfig.DEFAULT_JDBC, // time
+ *     "my-queue",                          // queueName
+ *     "DelayedQueueJDBC:my-queue",         // ackEnvSource
+ *     RetryConfig.DEFAULT                  // retryPolicy (optional, can be null)
  * );
  * ```
  *
@@ -72,7 +72,7 @@ constructor(
             DelayedQueueJDBCConfig(
                 db = db,
                 tableName = tableName,
-                time = DelayedQueueTimeConfig.DEFAULT,
+                time = DelayedQueueTimeConfig.DEFAULT_JDBC,
                 queueName = queueName,
                 ackEnvSource = "DelayedQueueJDBC:$queueName",
                 retryPolicy = RetryConfig.DEFAULT,

@@ -16,7 +16,7 @@ public class DelayedQueueJDBCMariaDbAdvancedTest extends DelayedQueueJDBCAdvance
         var queueConfig = new DelayedQueueJDBCConfig(
             dbConfig,
             tableName,
-            DelayedQueueTimeConfig.DEFAULT,
+            DelayedQueueTimeConfig.DEFAULT_TESTING,
             "advanced-mariadb-test-queue"
         );
 
@@ -43,7 +43,7 @@ public class DelayedQueueJDBCMariaDbAdvancedTest extends DelayedQueueJDBCAdvance
         var queueConfig = new DelayedQueueJDBCConfig(
             dbConfig,
             tableName,
-            DelayedQueueTimeConfig.DEFAULT,
+            DelayedQueueTimeConfig.DEFAULT_TESTING,
             "shared-mariadb-test-queue-" + tableName
         );
 
