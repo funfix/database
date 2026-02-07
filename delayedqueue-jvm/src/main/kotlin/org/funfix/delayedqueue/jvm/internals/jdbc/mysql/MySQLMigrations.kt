@@ -1,8 +1,13 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc.mysql
 
 import org.funfix.delayedqueue.jvm.internals.jdbc.Migration
+import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MySQLCompatibleMigrations
 
-/** MySQL-specific migrations for the DelayedQueue table. */
+/**
+ * MySQL-specific migrations for the DelayedQueue table.
+ *
+ * MySQL shares the same SQL syntax as MariaDB, so we use the shared MySQLCompatibleMigrations.
+ */
 internal object MySQLMigrations {
     /**
      * Gets the list of migrations for MySQL.
@@ -11,27 +16,5 @@ internal object MySQLMigrations {
      * @return List of migrations in order
      */
     fun getMigrations(tableName: String): List<Migration> =
-        listOf(
-            Migration.createTableIfNotExists(
-                tableName = tableName,
-                sql =
-                    """
-                    CREATE TABLE `${tableName}` (
-                        `id` BIGINT NOT NULL AUTO_INCREMENT,
-                        `pKey` VARCHAR(200) NOT NULL,
-                        `pKind` VARCHAR(100) NOT NULL,
-                        `payload` LONGBLOB NOT NULL,
-                        `scheduledAt` BIGINT NOT NULL,
-                        `scheduledAtInitially` BIGINT NOT NULL,
-                        `lockUuid` VARCHAR(36) NULL,
-                        `createdAt` BIGINT NOT NULL,
-                        PRIMARY KEY (`id`),
-                        UNIQUE KEY `${tableName}__KindPlusKeyUniqueIndex` (`pKind`, `pKey`)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-                    CREATE INDEX `${tableName}__KindPlusScheduledAtIndex` ON `$tableName`(`pKind`, `scheduledAt`);
-                    CREATE INDEX `${tableName}__LockUuidPlusIdIndex` ON `$tableName`(`lockUuid`, `id`)
-                    """,
-            )
-        )
+        MySQLCompatibleMigrations.getMigrations(tableName)
 }
