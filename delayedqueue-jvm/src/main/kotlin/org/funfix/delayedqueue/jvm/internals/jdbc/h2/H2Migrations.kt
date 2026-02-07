@@ -31,11 +31,44 @@ internal object H2Migrations {
                     ON "$tableName" ("pKind", "pKey");
 
                     CREATE INDEX "${tableName}__KindPlusScheduledAtIndex"
-                    ON "$tableName" ("pKind", "scheduledAt");
+                    ON "$tableName" ("pKind", "scheduledAt", "id");
 
                     CREATE INDEX "${tableName}__LockUuidPlusIdIndex"
                     ON "$tableName" ("lockUuid", "id");
                     """,
-            )
+            ),
+            // Migration 2: Update index to include 'id' column for deterministic ordering
+            Migration(
+                sql =
+                    """
+                    DROP INDEX IF EXISTS "${tableName}__KindPlusScheduledAtIndex";
+                    CREATE INDEX "${tableName}__KindPlusScheduledAtIndex"
+                    ON "$tableName" ("pKind", "scheduledAt", "id");
+                    """,
+                needsExecution = { conn ->
+                    // Check if index exists but doesn't have the 'id' column
+                    val metadata = conn.underlying.metaData
+                    var hasIndex = false
+                    var hasIdColumn = false
+                    
+                    metadata.getIndexInfo(null, null, tableName, false, false).use { rs ->
+                        while (rs.next()) {
+                            val indexName = rs.getString("INDEX_NAME")
+                            if (indexName == "${tableName}__KindPlusScheduledAtIndex") {
+                                hasIndex = true
+                                val columnName = rs.getString("COLUMN_NAME")
+                                val ordinalPosition = rs.getShort("ORDINAL_POSITION")
+                                // Check if 'id' is in position 3
+                                if (columnName == "id" && ordinalPosition == 3.toShort()) {
+                                    hasIdColumn = true
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Run migration if index exists but doesn't have id column
+                    hasIndex && !hasIdColumn
+                },
+            ),
         )
 }
