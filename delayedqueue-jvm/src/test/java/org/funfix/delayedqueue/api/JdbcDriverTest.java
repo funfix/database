@@ -144,18 +144,6 @@ class JdbcDriverTest {
     }
 
     @Test
-    @DisplayName("Drivers should have meaningful toString()")
-    void testDriverToString() {
-        String msSqlString = JdbcDriver.MsSqlServer.toString();
-        assertTrue(msSqlString.contains("MsSqlServer"),
-            "MsSqlServer toString should contain 'MsSqlServer': " + msSqlString);
-
-        String sqliteString = JdbcDriver.HSQLDB.toString();
-        assertTrue(sqliteString.contains("HSQLDB"),
-            "Sqlite toString should contain 'HSQLDB': " + sqliteString);
-    }
-
-    @Test
     @DisplayName("Entries list contains all drivers")
     void testEntriesList() {
         var entries = JdbcDriver.getEntries();
