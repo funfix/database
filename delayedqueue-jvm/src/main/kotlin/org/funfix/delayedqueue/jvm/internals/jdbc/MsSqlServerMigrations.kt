@@ -25,9 +25,12 @@ internal object MsSqlServerMigrations {
                         createdAt BIGINT NOT NULL
                     );
 
-                    ALTER TABLE $tableName ADD PRIMARY KEY (pKey, pKind);
+                    -- Make `id` the primary key to match other vendors (HSQLDB/SQLite)
+                    ALTER TABLE $tableName ADD PRIMARY KEY (id);
 
-                    CREATE UNIQUE INDEX ${tableName}__IdUniqueIndex ON $tableName(id);
+                    -- Unique index on (pKind, pKey) to enforce uniqueness like other vendors
+                    CREATE UNIQUE INDEX ${tableName}__PKindPKeyUniqueIndex
+                    ON $tableName (pKind, pKey);
                     CREATE INDEX ${tableName}__KindPlusScheduledAtIndex ON $tableName(pKind, scheduledAt);
                     CREATE INDEX ${tableName}__LockUuidPlusIdIndex ON $tableName(lockUuid, id);
                     """
