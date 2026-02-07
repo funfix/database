@@ -17,7 +17,7 @@ public class DelayedQueueJDBCOracleAdvancedTest extends DelayedQueueJDBCAdvanced
         var queueConfig = new DelayedQueueJDBCConfig(
             dbConfig,
             tableName,
-            DelayedQueueTimeConfig.DEFAULT,
+            DelayedQueueTimeConfig.DEFAULT_TESTING,
             "advanced-oracle-test-queue"
         );
 
@@ -44,7 +44,7 @@ public class DelayedQueueJDBCOracleAdvancedTest extends DelayedQueueJDBCAdvanced
         var queueConfig = new DelayedQueueJDBCConfig(
             dbConfig,
             tableName,
-            DelayedQueueTimeConfig.DEFAULT,
+            DelayedQueueTimeConfig.DEFAULT_TESTING,
             "shared-oracle-test-queue-" + tableName
         );
 

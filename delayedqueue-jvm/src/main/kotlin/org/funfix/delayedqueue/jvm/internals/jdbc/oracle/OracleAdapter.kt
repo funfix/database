@@ -18,6 +18,9 @@ internal class OracleAdapter(driver: JdbcDriver, tableName: String) :
 
     context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean {
+        // NOTE: this query can still throw an SQLException under concurrency,
+        // because the NOT EXISTS check is not atomic. But this is still fine,
+        // as we reduce the error rate, and the call-site does catch the SQLException.
         val sql =
             """
             INSERT INTO "$tableName"
@@ -134,13 +137,9 @@ internal class OracleAdapter(driver: JdbcDriver, tableName: String) :
                 "lockUuid",
                 "createdAt"
             FROM "$tableName"
-            WHERE ROWID IN (
-                SELECT ROWID
-                FROM "$tableName"
-                WHERE "pKind" = ? AND "scheduledAt" <= ?
-                ORDER BY "scheduledAt"
-                FETCH FIRST 1 ROWS ONLY
-            )
+            WHERE "pKind" = ? AND "scheduledAt" <= ?
+            ORDER BY "scheduledAt"
+            FETCH FIRST 1 ROWS ONLY
             FOR UPDATE SKIP LOCKED
             """
 
@@ -173,13 +172,9 @@ internal class OracleAdapter(driver: JdbcDriver, tableName: String) :
             """
             SELECT "id"
             FROM "$tableName"
-            WHERE ROWID IN (
-                SELECT ROWID
-                FROM "$tableName"
-                WHERE "pKind" = ? AND "scheduledAt" <= ?
-                ORDER BY "scheduledAt"
-                FETCH FIRST $limit ROWS ONLY
-            )
+            WHERE "pKind" = ? AND "scheduledAt" <= ?
+            ORDER BY "scheduledAt"
+            FETCH FIRST $limit ROWS ONLY
             FOR UPDATE SKIP LOCKED
             """
 
