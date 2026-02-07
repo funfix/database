@@ -20,12 +20,13 @@ final class OracleTestContainer {
             synchronized (OracleTestContainer.class) {
                 if (container == null) {
                     assumeDockerAvailable();
-                    container =
+                    OracleContainer newContainer =
                         new OracleContainer(IMAGE)
                             .withDatabaseName("testdb")
                             .withUsername("test")
                             .withPassword("test");
-                    container.start();
+                    newContainer.start();
+                    container = newContainer;
                 }
             }
         }

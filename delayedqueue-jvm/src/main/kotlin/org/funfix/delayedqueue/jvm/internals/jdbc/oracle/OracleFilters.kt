@@ -8,13 +8,16 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.matchesMessage
 
 /** Oracle-specific exception filters. */
 internal object OracleFilters : RdbmsExceptionFilters {
+    private val TRANSIENT_ERROR_CODES = setOf(60, 54, 8177)
+    private val DUPLICATE_KEY_KEYWORDS = listOf("unique constraint", "duplicate key")
+
     override val transientFailure: SqlExceptionFilter =
         object : SqlExceptionFilter {
             override fun matches(e: Throwable): Boolean =
                 when {
                     CommonSqlFilters.transactionTransient.matches(e) -> true
                     // ORA-00060 (deadlock), ORA-00054 (resource busy), ORA-08177 (serialization)
-                    e is SQLException && e.errorCode in setOf(60, 54, 8177) -> true
+                    e is SQLException && e.errorCode in TRANSIENT_ERROR_CODES -> true
                     // SQLSTATE 40001 (serialization failure)
                     e is SQLException && e.sqlState == "40001" -> true
                     else -> false
@@ -31,6 +34,4 @@ internal object OracleFilters : RdbmsExceptionFilters {
                     else -> false
                 }
         }
-
-    private val DUPLICATE_KEY_KEYWORDS = listOf("unique constraint", "duplicate key")
 }
