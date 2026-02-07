@@ -19,6 +19,7 @@ Supported database systems:
 - HSQLDB
 - MariaDB
 - Microsoft SQL Server
+- Oracle
 - PostgreSQL
 - SQLite
 
@@ -50,3 +51,12 @@ sbt:
 ```scala
 libraryDependencies += "org.funfix" % "delayedqueue-jvm" % "0.2.1"
 ```
+
+You will need to add a supported JDBC driver:
+- H2: [com.h2database:h2](https://central.sonatype.com/artifact/com.h2database/h2)
+- HSQLDB: [org.hsqldb:hsqldb](https://central.sonatype.com/artifact/org.hsqldb/hsqldb)
+- MariaDB: [org.mariadb.jdbc:mariadb-java-client](https://central.sonatype.com/artifact/org.mariadb.jdbc/mariadb-java-client)
+- MS-SQL: [com.microsoft.sqlserver:mssql-jdbc](https://central.sonatype.com/artifact/com.microsoft.sqlserver/mssql-jdbc)
+- Oracle: [com.oracle.database.jdbc:ojdbc11](https://central.sonatype.com/artifact/com.oracle.database.jdbc/ojdbc11)
+- PostgreSQL: [org.postgresql:postgresql](https://central.sonatype.com/artifact/org.postgresql/postgresql)
+- SQLite: [org.xerial:sqlite-jdbc](https://central.sonatype.com/artifact/org.xerial/sqlite-jdbc)
