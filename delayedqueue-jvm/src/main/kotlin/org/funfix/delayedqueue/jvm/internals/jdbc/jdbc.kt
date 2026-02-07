@@ -156,6 +156,19 @@ internal object ConnectionPool {
             }
         }
 
+        // SQLite-specific optimizations for concurrency
+        if (config.driver == JdbcDriver.Sqlite) {
+            hikariConfig.connectionInitSql =
+                """
+                PRAGMA journal_mode=WAL;
+                PRAGMA busy_timeout=30000;
+                PRAGMA synchronous=NORMAL;
+                PRAGMA cache_size=-64000;
+                PRAGMA temp_store=MEMORY;
+                """
+                    .trimIndent()
+        }
+
         return hikariConfig
     }
 
@@ -168,8 +181,7 @@ internal object ConnectionPool {
  * for the target database system. This prevents naming conflicts and allows reserved keywords to be
  * used as identifiers.
  * - MariaDB: uses backticks (`)
- * - PostgreSQL, HSQLDB, SQLite: use double quotes (")
- * - Oracle: uses double quotes (")
+ * - PostgreSQL, HSQLDB, H2, SQLite: use double quotes (")
  * - MS SQL Server: uses square brackets ([])
  *
  * @param name The identifier to quote
@@ -179,10 +191,12 @@ internal fun JdbcDriver.quote(name: String): String =
     when (this) {
         JdbcDriver.MariaDB -> "`$name`"
         JdbcDriver.HSQLDB -> "\"$name\""
+        JdbcDriver.H2 -> "\"$name\""
         JdbcDriver.PostgreSQL -> "\"$name\""
         JdbcDriver.Sqlite -> "\"$name\""
         JdbcDriver.MsSqlServer -> "[$name]"
         JdbcDriver.Oracle -> "\"$name\""
+        else -> throw IllegalArgumentException("Unsupported JDBC driver: ${className}")
     }
 
 /** Quotes a database identifier using the connection's driver. */

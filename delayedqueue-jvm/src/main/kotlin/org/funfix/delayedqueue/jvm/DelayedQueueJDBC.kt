@@ -18,6 +18,7 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.MigrationRunner
 import org.funfix.delayedqueue.jvm.internals.jdbc.RdbmsExceptionFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.filtersForDriver
+import org.funfix.delayedqueue.jvm.internals.jdbc.h2.H2Migrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MsSqlServerMigrations
@@ -35,7 +36,7 @@ import org.slf4j.LoggerFactory
  * JDBC-based implementation of [DelayedQueue] with support for multiple database backends.
  *
  * This implementation stores messages in a relational database table and supports vendor-specific
- * optimizations for different databases (HSQLDB, MS-SQL, SQLite, PostgreSQL).
+ * optimizations for different databases (HSQLDB, H2, MS-SQL, SQLite, PostgreSQL, MariaDB).
  *
  * ## Features
  * - Persistent storage in relational databases
@@ -608,6 +609,7 @@ private constructor(
                     val migrations =
                         when (config.db.driver) {
                             JdbcDriver.HSQLDB -> HSQLDBMigrations.getMigrations(config.tableName)
+                            JdbcDriver.H2 -> H2Migrations.getMigrations(config.tableName)
                             JdbcDriver.Sqlite -> SqliteMigrations.getMigrations(config.tableName)
                             JdbcDriver.PostgreSQL ->
                                 PostgreSQLMigrations.getMigrations(config.tableName)
@@ -615,6 +617,10 @@ private constructor(
                                 MsSqlServerMigrations.getMigrations(config.tableName)
                             JdbcDriver.MariaDB -> MariaDBMigrations.getMigrations(config.tableName)
                             JdbcDriver.Oracle -> OracleMigrations.getMigrations(config.tableName)
+                            else ->
+                                throw IllegalArgumentException(
+                                    "Unsupported JDBC driver: ${config.db.driver}"
+                                )
                         }
 
                     val executed = MigrationRunner.runMigrations(connection, migrations)

@@ -18,6 +18,7 @@ dependencies {
     implementation(libs.hikaricp)
 
     testImplementation(libs.logback.classic)
+    testImplementation(libs.jdbc.h2)
     testImplementation(libs.jdbc.hsqldb)
     testImplementation(libs.jdbc.sqlite)
     testImplementation(libs.jdbc.mssql)
@@ -27,12 +28,12 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(platform(libs.testcontainers.bom))
-    testImplementation(libs.testcontainers)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.mssqlserver)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.testcontainers.mariadb)
     testImplementation(libs.testcontainers.oracle)
+    testImplementation(libs.testcontainers)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
