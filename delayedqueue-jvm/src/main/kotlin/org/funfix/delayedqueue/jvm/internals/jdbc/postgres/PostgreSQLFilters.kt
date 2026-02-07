@@ -23,26 +23,11 @@ internal object PostgreSQLFilters : RdbmsExceptionFilters {
         object : SqlExceptionFilter {
             override fun matches(e: Throwable): Boolean =
                 when {
-                    CommonSqlFilters.integrityConstraint.matches(e) -> true
                     // PostgreSQL unique_violation (23505)
                     e is SQLException && e.sqlState == "23505" -> true
                     e is SQLException && matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
                     else -> false
                 }
-        }
-
-    override val invalidTable: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                // PostgreSQL undefined_table (42P01)
-                e is SQLException && e.sqlState == "42P01"
-        }
-
-    override val objectAlreadyExists: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                // PostgreSQL duplicate_table (42P07) or duplicate_object (42710)
-                e is SQLException && e.sqlState in setOf("42P07", "42710")
         }
 
     private val DUPLICATE_KEY_KEYWORDS =

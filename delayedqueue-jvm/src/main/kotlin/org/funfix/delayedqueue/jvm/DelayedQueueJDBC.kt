@@ -153,7 +153,16 @@ private constructor(
         // This matches the original Scala implementation's approach:
         // Try to insert first, and only SELECT+UPDATE if the insert fails
         val inserted =
-            database.withTransaction { connection -> adapter.insertOneRow(connection, newRow) }
+            try {
+                database.withTransaction { connection -> adapter.insertOneRow(connection, newRow) }
+            } catch (e: Exception) {
+                // If it's a duplicate key violation, treat as not inserted (key already exists)
+                if (filters.duplicateKey.matches(e)) {
+                    false
+                } else {
+                    throw e
+                }
+            }
 
         if (inserted) {
             lock.withLock { condition.signalAll() }

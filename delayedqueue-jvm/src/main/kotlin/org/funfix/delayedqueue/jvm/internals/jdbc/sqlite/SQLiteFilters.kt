@@ -25,7 +25,6 @@ internal object SQLiteFilters : RdbmsExceptionFilters {
         object : SqlExceptionFilter {
             override fun matches(e: Throwable): Boolean =
                 when {
-                    CommonSqlFilters.integrityConstraint.matches(e) -> true
                     // SQLite CONSTRAINT_PRIMARYKEY (2067) and CONSTRAINT_UNIQUE (2579)
                     e is SQLException && isSQLiteResultCode(e, 2067, 2579) -> true
                     // SQLite generic CONSTRAINT (19) when paired with duplicate-key text
@@ -36,18 +35,6 @@ internal object SQLiteFilters : RdbmsExceptionFilters {
                     e is SQLException && matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
                     else -> false
                 }
-        }
-
-    override val invalidTable: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                e is SQLException && matchesMessage(e.message, listOf("no such table"))
-        }
-
-    override val objectAlreadyExists: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                e is SQLException && matchesMessage(e.message, listOf("already exists"))
         }
 
     private val DUPLICATE_KEY_KEYWORDS = listOf("primary key constraint", "unique constraint")

@@ -2,25 +2,25 @@ package org.funfix.delayedqueue.api;
 
 import org.junit.jupiter.api.Assumptions;
 import org.testcontainers.DockerClientFactory;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 final class PostgresTestContainer {
     private static final DockerImageName IMAGE =
         DockerImageName.parse("postgres:16-alpine");
 
-    private static volatile PostgreSQLContainer<?> container;
+    private static volatile PostgreSQLContainer container;
 
     private PostgresTestContainer() {}
 
-    static PostgreSQLContainer<?> container() {
+    static PostgreSQLContainer container() {
         assumeDockerAvailable();
         if (container == null) {
             synchronized (PostgresTestContainer.class) {
                 if (container == null) {
                     assumeDockerAvailable();
                     container =
-                        new PostgreSQLContainer<>(IMAGE)
+                        new PostgreSQLContainer(IMAGE)
                             .withDatabaseName("testdb")
                             .withUsername("test")
                             .withPassword("test");

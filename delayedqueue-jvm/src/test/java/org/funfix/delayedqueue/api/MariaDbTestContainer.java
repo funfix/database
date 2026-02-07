@@ -2,23 +2,23 @@ package org.funfix.delayedqueue.api;
 
 import org.junit.jupiter.api.Assumptions;
 import org.testcontainers.DockerClientFactory;
-import org.testcontainers.containers.MariaDBContainer;
+import org.testcontainers.mariadb.MariaDBContainer;
 
 final class MariaDbTestContainer {
     private static final String IMAGE = "mariadb:11.7";
 
-    private static volatile MariaDBContainer<?> container;
+    private static volatile MariaDBContainer container;
 
     private MariaDbTestContainer() {}
 
-    static MariaDBContainer<?> container() {
+    static MariaDBContainer container() {
         assumeDockerAvailable();
         if (container == null) {
             synchronized (MariaDbTestContainer.class) {
                 if (container == null) {
                     assumeDockerAvailable();
                     container =
-                        new MariaDBContainer<>(IMAGE)
+                        new MariaDBContainer(IMAGE)
                             .withDatabaseName("testdb")
                             .withUsername("test")
                             .withPassword("test");

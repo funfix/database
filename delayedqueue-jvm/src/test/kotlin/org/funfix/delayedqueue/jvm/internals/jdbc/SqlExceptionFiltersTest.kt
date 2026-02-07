@@ -96,9 +96,9 @@ class SqlExceptionFiltersTest {
         }
 
         @Test
-        fun `duplicateKey should match SQLIntegrityConstraintViolationException`() {
+        fun `duplicateKey should not match generic SQLIntegrityConstraintViolationException`() {
             val ex = SQLIntegrityConstraintViolationException("duplicate")
-            assertTrue(HSQLDBFilters.duplicateKey.matches(ex))
+            assertFalse(HSQLDBFilters.duplicateKey.matches(ex))
         }
 
         @Test
@@ -120,33 +120,15 @@ class SqlExceptionFiltersTest {
         }
 
         @Test
-        fun `duplicateKey should match integrity constraint message`() {
+        fun `duplicateKey should not match integrity constraint message`() {
             val ex = SQLException("INTEGRITY CONSTRAINT failed")
-            assertTrue(HSQLDBFilters.duplicateKey.matches(ex))
+            assertFalse(HSQLDBFilters.duplicateKey.matches(ex))
         }
 
         @Test
         fun `duplicateKey should not match unrelated SQLException`() {
             val ex = SQLException("Some other error")
             assertFalse(HSQLDBFilters.duplicateKey.matches(ex))
-        }
-
-        @Test
-        fun `invalidTable should match message`() {
-            val ex = SQLException("invalid object name 'my_table'")
-            assertTrue(HSQLDBFilters.invalidTable.matches(ex))
-        }
-
-        @Test
-        fun `invalidTable should not match other exceptions`() {
-            val ex = SQLException("other error")
-            assertFalse(HSQLDBFilters.invalidTable.matches(ex))
-        }
-
-        @Test
-        fun `objectAlreadyExists should not match for HSQLDB`() {
-            val ex = SQLException("object exists")
-            assertFalse(HSQLDBFilters.objectAlreadyExists.matches(ex))
         }
     }
 
@@ -177,21 +159,9 @@ class SqlExceptionFiltersTest {
         }
 
         @Test
-        fun `duplicateKey should match SQLIntegrityConstraintViolationException`() {
+        fun `duplicateKey should not match generic SQLIntegrityConstraintViolationException`() {
             val ex = SQLIntegrityConstraintViolationException("constraint violation")
-            assertTrue(MSSQLFilters.duplicateKey.matches(ex))
-        }
-
-        @Test
-        fun `invalidTable should match MSSQL error code`() {
-            val ex = SQLException("Invalid object name", "42S02", 208)
-            assertTrue(MSSQLFilters.invalidTable.matches(ex))
-        }
-
-        @Test
-        fun `invalidTable should match message`() {
-            val ex = SQLException("Invalid object name 'dbo.MyTable'")
-            assertTrue(MSSQLFilters.invalidTable.matches(ex))
+            assertFalse(MSSQLFilters.duplicateKey.matches(ex))
         }
 
         @Test
@@ -216,9 +186,9 @@ class SqlExceptionFiltersTest {
         }
 
         @Test
-        fun `duplicateKey should match SQLIntegrityConstraintViolationException`() {
+        fun `duplicateKey should not match generic SQLIntegrityConstraintViolationException`() {
             val ex = SQLIntegrityConstraintViolationException("duplicate")
-            assertTrue(SQLiteFilters.duplicateKey.matches(ex))
+            assertFalse(SQLiteFilters.duplicateKey.matches(ex))
         }
 
         @Test
@@ -237,33 +207,6 @@ class SqlExceptionFiltersTest {
         fun `duplicateKey should not match unrelated SQLException`() {
             val ex = SQLException("Some other error")
             assertFalse(SQLiteFilters.duplicateKey.matches(ex))
-        }
-
-        @Test
-        fun `invalidTable should match no such table message`() {
-            val ex =
-                SQLException(
-                    "[SQLITE_ERROR] SQL error or missing database (no such table: my_table)"
-                )
-            assertTrue(SQLiteFilters.invalidTable.matches(ex))
-        }
-
-        @Test
-        fun `invalidTable should not match other exceptions`() {
-            val ex = SQLException("other error")
-            assertFalse(SQLiteFilters.invalidTable.matches(ex))
-        }
-
-        @Test
-        fun `objectAlreadyExists should match already exists message`() {
-            val ex = SQLException("table my_table already exists")
-            assertTrue(SQLiteFilters.objectAlreadyExists.matches(ex))
-        }
-
-        @Test
-        fun `objectAlreadyExists should not match other exceptions`() {
-            val ex = SQLException("other error")
-            assertFalse(SQLiteFilters.objectAlreadyExists.matches(ex))
         }
     }
 
@@ -315,9 +258,9 @@ class SqlExceptionFiltersTest {
         }
 
         @Test
-        fun `duplicateKey should match SQLIntegrityConstraintViolationException`() {
+        fun `duplicateKey should not match generic SQLIntegrityConstraintViolationException`() {
             val ex = SQLIntegrityConstraintViolationException("constraint violation")
-            assertTrue(MariaDBFilters.duplicateKey.matches(ex))
+            assertFalse(MariaDBFilters.duplicateKey.matches(ex))
         }
 
         @Test
@@ -330,18 +273,6 @@ class SqlExceptionFiltersTest {
         fun `duplicateKey should not match unrelated SQLException`() {
             val ex = SQLException("Some other error")
             assertFalse(MariaDBFilters.duplicateKey.matches(ex))
-        }
-
-        @Test
-        fun `invalidTable should match MariaDB error code 1146`() {
-            val ex = SQLException("Table 'testdb.my_table' doesn't exist", "42S02", 1146)
-            assertTrue(MariaDBFilters.invalidTable.matches(ex))
-        }
-
-        @Test
-        fun `objectAlreadyExists should match MariaDB error code 1050`() {
-            val ex = SQLException("Table 'my_table' already exists", "42S01", 1050)
-            assertTrue(MariaDBFilters.objectAlreadyExists.matches(ex))
         }
     }
 

@@ -23,7 +23,6 @@ internal object MSSQLFilters : RdbmsExceptionFilters {
         object : SqlExceptionFilter {
             override fun matches(e: Throwable): Boolean =
                 when {
-                    CommonSqlFilters.integrityConstraint.matches(e) -> true
                     e is SQLException && hasSQLServerError(e, 2627, 2601) -> true
                     e is SQLException &&
                         e.errorCode in setOf(2627, 2601) &&
@@ -31,23 +30,6 @@ internal object MSSQLFilters : RdbmsExceptionFilters {
                     e is SQLException && matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
                     else -> false
                 }
-        }
-
-    override val invalidTable: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                when {
-                    e is SQLException && e.errorCode == 208 && e.sqlState == "42S02" -> true
-                    e is SQLException && matchesMessage(e.message, listOf("invalid object name")) ->
-                        true
-                    else -> false
-                }
-        }
-
-    override val objectAlreadyExists: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                e is SQLException && hasSQLServerError(e, 2714, 2705, 1913, 15248, 15335)
         }
 
     val failedToResumeTransaction: SqlExceptionFilter =

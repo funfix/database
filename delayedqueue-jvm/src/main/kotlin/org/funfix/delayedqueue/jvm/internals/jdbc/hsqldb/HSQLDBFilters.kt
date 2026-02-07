@@ -14,24 +14,11 @@ internal object HSQLDBFilters : RdbmsExceptionFilters {
         object : SqlExceptionFilter {
             override fun matches(e: Throwable): Boolean =
                 when {
-                    CommonSqlFilters.integrityConstraint.matches(e) -> true
                     e is SQLException && e.errorCode == -104 && e.sqlState == "23505" -> true
                     e is SQLException && matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
                     else -> false
                 }
         }
 
-    override val invalidTable: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                e is SQLException && matchesMessage(e.message, listOf("invalid object name"))
-        }
-
-    override val objectAlreadyExists: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean = false
-        }
-
-    private val DUPLICATE_KEY_KEYWORDS =
-        listOf("primary key constraint", "unique constraint", "integrity constraint")
+    private val DUPLICATE_KEY_KEYWORDS = listOf("primary key constraint", "unique constraint")
 }

@@ -18,6 +18,9 @@ internal class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
 
     context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean {
+        // NOTE: this query can still throw an SQLException, because the
+        // IF NOT EXISTS check is not atomic. But this is still fine, as we
+        // reduce the error rate, and the call-site does catch the SQLException.
         val sql =
             """
             IF NOT EXISTS (

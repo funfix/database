@@ -29,6 +29,8 @@ internal class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
 
     context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean {
+        // NOTE: it's fine if this INSERT fails with a duplicate key error,
+        // since the call-site is supposed to handle it by catching the SQLException
         val sql =
             """
             INSERT INTO "$tableName"
@@ -42,26 +44,14 @@ internal class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
             )
             VALUES (?, ?, ?, ?, ?, ?)
             """
-
-        return try {
-            conn.prepareStatement(sql) { stmt ->
-                stmt.setString(1, row.pKey)
-                stmt.setString(2, row.pKind)
-                stmt.setBytes(3, row.payload)
-                stmt.setEpochMillis(4, row.scheduledAt)
-                stmt.setEpochMillis(5, row.scheduledAtInitially)
-                stmt.setEpochMillis(6, row.createdAt)
-                stmt.executeUpdate() > 0
-            }
-        } catch (e: Exception) {
-            // If it's a duplicate key violation, return false (key already exists)
-            // This matches the original Scala implementation's behavior:
-            // insertIntoTable(...).recover { case SQLExceptionExtractors.DuplicateKey(_) => false }
-            if (HSQLDBFilters.duplicateKey.matches(e)) {
-                false
-            } else {
-                throw e
-            }
+        return conn.prepareStatement(sql) { stmt ->
+            stmt.setString(1, row.pKey)
+            stmt.setString(2, row.pKind)
+            stmt.setBytes(3, row.payload)
+            stmt.setEpochMillis(4, row.scheduledAt)
+            stmt.setEpochMillis(5, row.scheduledAtInitially)
+            stmt.setEpochMillis(6, row.createdAt)
+            stmt.executeUpdate() > 0
         }
     }
 

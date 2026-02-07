@@ -56,8 +56,6 @@ internal object CommonSqlFilters {
 internal interface RdbmsExceptionFilters {
     val transientFailure: SqlExceptionFilter
     val duplicateKey: SqlExceptionFilter
-    val invalidTable: SqlExceptionFilter
-    val objectAlreadyExists: SqlExceptionFilter
 }
 
 internal fun matchesMessage(message: String?, keywords: List<String>): Boolean {
