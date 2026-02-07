@@ -171,25 +171,24 @@ Use your own serialization for complex types:
 ```java
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class PaymentRequest {
-    public String orderId;
-    public double amount;
-    public String currency;
+public class Task {
+    public String taskId;
+    public String description;
     
     // Constructors, getters, setters...
 }
 
 // Create a custom serializer
-MessageSerializer<PaymentRequest> serializer = new MessageSerializer<PaymentRequest>() {
+MessageSerializer<Task> serializer = new MessageSerializer<Task>() {
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     @Override
     public String getTypeName() {
-        return PaymentRequest.class.getName();
+        return Task.class.getName();
     }
     
     @Override
-    public byte[] serialize(PaymentRequest payload) {
+    public byte[] serialize(Task payload) {
         try {
             return objectMapper.writeValueAsBytes(payload);
         } catch (Exception e) {
@@ -198,9 +197,9 @@ MessageSerializer<PaymentRequest> serializer = new MessageSerializer<PaymentRequ
     }
     
     @Override
-    public PaymentRequest deserialize(byte[] serialized) {
+    public Task deserialize(byte[] serialized) {
         try {
-            return objectMapper.readValue(serialized, PaymentRequest.class);
+            return objectMapper.readValue(serialized, Task.class);
         } catch (Exception e) {
             throw new IllegalArgumentException("Deserialization failed", e);
         }
@@ -208,547 +207,283 @@ MessageSerializer<PaymentRequest> serializer = new MessageSerializer<PaymentRequ
 };
 
 // Use it
-try (DelayedQueue<PaymentRequest> queue = DelayedQueueJDBC.create(
+try (DelayedQueue<Task> queue = DelayedQueueJDBC.create(
     serializer,
     queueConfig
 )) {
-    PaymentRequest payment = new PaymentRequest();
-    payment.orderId = "ORD-123";
-    payment.amount = 99.99;
-    payment.currency = "USD";
+    Task task = new Task();
+    task.taskId = "TASK-123";
+    task.description = "Process monthly report";
     
     queue.offerOrUpdate(
-        "payment-" + payment.orderId,
-        payment,
+        "task-" + task.taskId,
+        task,
         Instant.now().plus(Duration.ofMinutes(5))
     );
 }
 ```
 
-## Real-World Scenarios
+### Cron-like Scheduling
 
-### Scenario 1: HTTP Server with Business Hours
+Schedule recurring tasks using the CronService:
 
-**Use Case**: Your API receives payment transactions 24/7, but your payment processor only operates during business hours (08:00 - 20:00). Transactions received outside business hours should be automatically scheduled for processing at 08:00 the next morning.
+#### Periodic Tick
+
+Run a task every N hours/minutes:
 
 ```java
-import io.javalin.Javalin;
-import io.javalin.http.Context;
+try (DelayedQueue<String> queue = DelayedQueueJDBC.create(
+    MessageSerializer.forStrings(),
+    queueConfig
+)) {
+    // Schedule a message every hour
+    AutoCloseable cronJob = queue.getCron().installPeriodicTick(
+        "health-check",              // Key prefix
+        Duration.ofHours(1),         // Run every hour
+        instant -> "Health check at " + instant
+    );
+    
+    // Later, when shutting down
+    cronJob.close();
+}
+```
+
+#### Daily Schedule
+
+Run tasks at specific times each day:
+
+```java
+try (DelayedQueue<String> queue = DelayedQueueJDBC.create(
+    MessageSerializer.forStrings(),
+    queueConfig
+)) {
+    // Run at 2:00 AM and 2:00 PM daily (Eastern time)
+    CronDailySchedule schedule = CronDailySchedule.create(
+        ZoneId.of("America/New_York"),
+        List.of(LocalTime.of(2, 0), LocalTime.of(14, 0)),
+        Duration.ofDays(7),          // Schedule 7 days ahead
+        Duration.ofHours(1)          // Check every hour
+    );
+    
+    AutoCloseable cronJob = queue.getCron().installDailySchedule(
+        "daily-backup",
+        schedule,
+        instant -> new CronMessage<>("Run backup", instant)
+    );
+    
+    // Later, when shutting down
+    cronJob.close();
+}
+```
+
+#### Install One-Time Schedule
+
+For a fixed set of future events:
+
+```java
+try (DelayedQueue<String> queue = DelayedQueueJDBC.create(
+    MessageSerializer.forStrings(),
+    queueConfig
+)) {
+    // Create a config hash to identify this set of messages
+    CronConfigHash configHash = CronConfigHash.fromPeriodicTick(Duration.ofDays(1));
+    
+    // Schedule multiple messages at once
+    List<CronMessage<String>> messages = List.of(
+        new CronMessage<>("Event 1", Instant.now().plus(Duration.ofHours(1))),
+        new CronMessage<>("Event 2", Instant.now().plus(Duration.ofHours(2))),
+        new CronMessage<>("Event 3", Instant.now().plus(Duration.ofHours(3)))
+    );
+    
+    queue.getCron().installTick(configHash, "event-batch-", messages);
+    
+    // Update or remove them later
+    queue.getCron().uninstallTick(configHash, "event-batch-");
+}
+```
+
+## Real-World Scenarios
+
+### Scenario 1: Scheduling Outside Business Hours
+
+**Use Case**: You need to send email notifications, but want to avoid sending them during nighttime hours (20:00 - 08:00). Messages queued during off-hours should be scheduled for 08:00 the next morning.
+
+```java
 import org.funfix.delayedqueue.jvm.*;
-
 import java.time.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
-public class PaymentProcessingServer {
+public class EmailScheduler {
     
-    private static final LocalTime BUSINESS_HOURS_START = LocalTime.of(8, 0);
-    private static final LocalTime BUSINESS_HOURS_END = LocalTime.of(20, 0);
-    private static final ZoneId BUSINESS_TIMEZONE = ZoneId.of("America/New_York");
+    private static final LocalTime QUIET_HOURS_END = LocalTime.of(8, 0);
+    private static final LocalTime QUIET_HOURS_START = LocalTime.of(20, 0);
     
-    private final DelayedQueue<PaymentTransaction> paymentQueue;
-    private final ScheduledExecutorService workerPool;
-    
-    public PaymentProcessingServer() throws Exception {
-        // Initialize the queue
+    public static void main(String[] args) throws Exception {
+        // Setup queue
         JdbcConnectionConfig dbConfig = new JdbcConnectionConfig(
-            "jdbc:sqlite:/var/app/payments.db",
+            "jdbc:sqlite:/tmp/emails.db",
             JdbcDriver.Sqlite,
             null, null, null
         );
         
-        DelayedQueueJDBCConfig queueConfig = DelayedQueueJDBCConfig.create(
-            dbConfig,
-            "payment_queue",
-            "payments"
+        DelayedQueueJDBCConfig config = DelayedQueueJDBCConfig.create(
+            dbConfig, "email_queue", "emails"
         );
+        DelayedQueueJDBC.runMigrations(config);
         
-        DelayedQueueJDBC.runMigrations(queueConfig);
-        
-        this.paymentQueue = DelayedQueueJDBC.create(
-            new PaymentTransactionSerializer(),
-            queueConfig
-        );
-        
-        // Start background workers
-        this.workerPool = Executors.newScheduledThreadPool(4);
-        startWorkers();
-    }
-    
-    public void start() {
-        Javalin app = Javalin.create().start(8080);
-        
-        app.post("/api/payments", this::handlePayment);
-        
-        System.out.println("Payment server started on http://localhost:8080");
-    }
-    
-    private void handlePayment(Context ctx) {
-        try {
-            PaymentTransaction transaction = ctx.bodyAsClass(PaymentTransaction.class);
+        try (DelayedQueue<String> queue = DelayedQueueJDBC.create(
+            MessageSerializer.forStrings(), config
+        )) {
+            // Schedule an email notification
+            String emailMessage = "Order #12345 has shipped";
+            Instant sendAt = calculateSendTime(Instant.now());
             
-            // Calculate when to process this payment
-            Instant scheduleAt = calculateProcessingTime(Instant.now());
+            queue.offerOrUpdate("email-order-12345", emailMessage, sendAt);
+            System.out.println("Email scheduled for: " + sendAt);
             
-            // Schedule the payment
-            OfferOutcome outcome = paymentQueue.offerOrUpdate(
-                "payment-" + transaction.transactionId,
-                transaction,
-                scheduleAt
-            );
-            
-            ctx.json(new Response(
-                "Payment scheduled",
-                transaction.transactionId,
-                scheduleAt
-            ));
-            
-        } catch (Exception e) {
-            ctx.status(500).json(new ErrorResponse(e.getMessage()));
-        }
-    }
-    
-    /**
-     * Calculates when a payment should be processed based on business hours.
-     * 
-     * - If current time is during business hours (08:00-20:00): process immediately
-     * - If outside business hours: schedule for 08:00 the next business day
-     */
-    private Instant calculateProcessingTime(Instant now) {
-        ZonedDateTime zonedNow = now.atZone(BUSINESS_TIMEZONE);
-        LocalTime currentTime = zonedNow.toLocalTime();
-        
-        if (isBusinessHours(currentTime)) {
-            // Process immediately
-            return now;
-        } else {
-            // Schedule for next opening at 08:00
-            ZonedDateTime nextOpening;
-            
-            if (currentTime.isBefore(BUSINESS_HOURS_START)) {
-                // Before 08:00 - schedule for today at 08:00
-                nextOpening = zonedNow.with(BUSINESS_HOURS_START);
-            } else {
-                // After 20:00 - schedule for tomorrow at 08:00
-                nextOpening = zonedNow.plusDays(1).with(BUSINESS_HOURS_START);
-            }
-            
-            return nextOpening.toInstant();
-        }
-    }
-    
-    private boolean isBusinessHours(LocalTime time) {
-        return !time.isBefore(BUSINESS_HOURS_START) && time.isBefore(BUSINESS_HOURS_END);
-    }
-    
-    /**
-     * Background workers continuously poll for payments and process them.
-     */
-    private void startWorkers() {
-        // Start 4 worker threads that poll every 500ms
-        for (int i = 0; i < 4; i++) {
-            int workerId = i + 1;
-            workerPool.scheduleWithFixedDelay(
-                () -> processPayments(workerId),
-                0,
-                500,
-                TimeUnit.MILLISECONDS
-            );
-        }
-        
-        System.out.println("Started 4 payment processing workers");
-    }
-    
-    private void processPayments(int workerId) {
-        try {
-            AckEnvelope<PaymentTransaction> envelope = paymentQueue.tryPoll();
-            
+            // Worker: poll and send emails
+            AckEnvelope<String> envelope = queue.tryPoll();
             if (envelope != null) {
-                PaymentTransaction payment = envelope.payload();
-                
-                System.out.printf(
-                    "[Worker %d] Processing payment %s for $%.2f%n",
-                    workerId,
-                    payment.transactionId,
-                    payment.amount
-                );
-                
                 try {
-                    // Process the payment (call external payment processor)
-                    processPaymentWithProcessor(payment);
-                    
-                    // Mark as successfully processed
+                    sendEmail(envelope.payload());
                     envelope.acknowledge();
-                    
-                    System.out.printf(
-                        "[Worker %d] Payment %s completed successfully%n",
-                        workerId,
-                        payment.transactionId
-                    );
-                    
+                    System.out.println("Email sent successfully");
                 } catch (Exception e) {
-                    System.err.printf(
-                        "[Worker %d] Payment %s failed: %s (will retry)%n",
-                        workerId,
-                        payment.transactionId,
-                        e.getMessage()
-                    );
-                    // Don't acknowledge - will be redelivered
+                    // Don't acknowledge - will retry later
+                    System.err.println("Failed to send: " + e.getMessage());
                 }
             }
-            
-        } catch (Exception e) {
-            System.err.println("Worker error: " + e.getMessage());
         }
     }
     
-    private void processPaymentWithProcessor(PaymentTransaction payment) throws Exception {
-        // Simulate payment processing
-        Thread.sleep(100);
+    /**
+     * Calculate when to send based on quiet hours.
+     * - During daytime (08:00-20:00): send immediately
+     * - During nighttime: schedule for 08:00 next morning
+     */
+    static Instant calculateSendTime(Instant now) {
+        ZonedDateTime zdt = now.atZone(ZoneId.systemDefault());
+        LocalTime time = zdt.toLocalTime();
         
-        // In reality, you'd call your payment processor API here
-        // paymentProcessorClient.charge(payment.cardToken, payment.amount);
-    }
-    
-    public void shutdown() {
-        System.out.println("Shutting down payment server...");
-        workerPool.shutdown();
-        try {
-            paymentQueue.close();
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (time.isBefore(QUIET_HOURS_END)) {
+            // Before 08:00 - send at 08:00 today
+            return zdt.with(QUIET_HOURS_END).toInstant();
+        } else if (time.isBefore(QUIET_HOURS_START)) {
+            // 08:00-20:00 - send now
+            return now;
+        } else {
+            // After 20:00 - send at 08:00 tomorrow
+            return zdt.plusDays(1).with(QUIET_HOURS_END).toInstant();
         }
     }
     
-    // Data classes
-    public static class PaymentTransaction {
-        public String transactionId;
-        public String customerId;
-        public double amount;
-        public String currency;
-        public String cardToken;
-    }
-    
-    public static class PaymentTransactionSerializer implements MessageSerializer<PaymentTransaction> {
-        private final com.fasterxml.jackson.databind.ObjectMapper mapper = 
-            new com.fasterxml.jackson.databind.ObjectMapper();
-        
-        @Override
-        public String getTypeName() {
-            return PaymentTransaction.class.getName();
-        }
-        
-        @Override
-        public byte[] serialize(PaymentTransaction payload) {
-            try {
-                return mapper.writeValueAsBytes(payload);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-        
-        @Override
-        public PaymentTransaction deserialize(byte[] serialized) {
-            try {
-                return mapper.readValue(serialized, PaymentTransaction.class);
-            } catch (Exception e) {
-                throw new IllegalArgumentException(e);
-            }
-        }
-    }
-    
-    public static class Response {
-        public String status;
-        public String transactionId;
-        public Instant scheduledFor;
-        
-        public Response(String status, String transactionId, Instant scheduledFor) {
-            this.status = status;
-            this.transactionId = transactionId;
-            this.scheduledFor = scheduledFor;
-        }
-    }
-    
-    public static class ErrorResponse {
-        public String error;
-        
-        public ErrorResponse(String error) {
-            this.error = error;
-        }
-    }
-    
-    public static void main(String[] args) throws Exception {
-        PaymentProcessingServer server = new PaymentProcessingServer();
-        
-        // Add shutdown hook for graceful shutdown
-        Runtime.getRuntime().addShutdownHook(new Thread(server::shutdown));
-        
-        server.start();
+    static void sendEmail(String message) {
+        System.out.println("Sending email: " + message);
+        // Actually send the email...
     }
 }
 ```
 
 **Key Points:**
-- **Business hours logic**: Automatically delays processing to 08:00 if received outside hours
-- **Worker pool**: Multiple threads continuously poll the queue for work
-- **Graceful shutdown**: Properly closes resources using try-with-resources and shutdown hooks
-- **Automatic retry**: Failed payments are retried because `acknowledge()` isn't called
+- `calculateSendTime()` implements the business hours logic
+- `offerOrUpdate()` schedules the message for the calculated time
+- `tryPoll()` retrieves messages when they're ready
+- `acknowledge()` marks successful processing (or skip it to retry)
 
-### Scenario 2: Daily Cron Job with Multi-Node Processing
+### Scenario 2: Daily Cron Job with Multi-Node Coordination
 
-**Use Case**: You need to run a daily report generation job at 02:00 AM. Multiple application instances are running (for high availability), but the job should only run once per day - whichever node picks it up first wins the race.
+**Use Case**: Run a daily data cleanup job at 02:00 AM. Multiple application instances are running for high availability, but the job should only run once per day - the first node to poll wins.
 
 ```java
 import org.funfix.delayedqueue.jvm.*;
-
 import java.time.*;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
-public class DailyReportGenerator {
+public class DailyCleanupJob {
     
-    private static final ZoneId SCHEDULE_TIMEZONE = ZoneId.of("America/New_York");
-    
-    private final DelayedQueue<ReportTask> reportQueue;
-    private final ScheduledExecutorService executor;
-    private AutoCloseable cronSchedule;
-    
-    public DailyReportGenerator() throws Exception {
-        // Setup the queue
+    public static void main(String[] args) throws Exception {
+        // Setup queue
         JdbcConnectionConfig dbConfig = new JdbcConnectionConfig(
             "jdbc:postgresql://db.example.com:5432/myapp",
             JdbcDriver.PostgreSQL,
             "appuser",
             "password",
-            new JdbcDatabasePoolConfig(
-                10,  // maxPoolSize
-                30000  // connectionTimeoutMs
-            )
+            null
         );
         
-        DelayedQueueJDBCConfig queueConfig = DelayedQueueJDBCConfig.create(
-            dbConfig,
-            "cron_tasks",
-            "daily-reports"
+        DelayedQueueJDBCConfig config = DelayedQueueJDBCConfig.create(
+            dbConfig, "scheduled_jobs", "cleanup"
         );
+        DelayedQueueJDBC.runMigrations(config);
         
-        DelayedQueueJDBC.runMigrations(queueConfig);
-        
-        this.reportQueue = DelayedQueueJDBC.create(
-            new ReportTaskSerializer(),
-            queueConfig
-        );
-        
-        this.executor = Executors.newSingleThreadScheduledExecutor();
-    }
-    
-    /**
-     * Starts the cron schedule and worker.
-     * 
-     * The cron service automatically:
-     * - Schedules tasks for 02:00 AM every day
-     * - Handles configuration changes
-     * - Cleans up old scheduled tasks
-     * 
-     * Multiple nodes can call this safely - only one will process each task.
-     */
-    public void start() throws Exception {
-        // Define when reports should run (02:00 AM daily)
-        CronDailySchedule schedule = CronDailySchedule.create(
-            SCHEDULE_TIMEZONE,
-            List.of(LocalTime.of(2, 0)),      // Run at 02:00
-            Duration.ofDays(7),                // Schedule 7 days in advance
-            Duration.ofHours(1)                // Check/update schedule every hour
-        );
-        
-        // Install the daily schedule
-        this.cronSchedule = reportQueue.getCron().installDailySchedule(
-            "daily-report",
-            schedule,
-            scheduleTime -> new CronMessage<>(
-                new ReportTask("daily-sales-report", scheduleTime),
-                scheduleTime
-            )
-        );
-        
-        // Start the worker that processes the tasks
-        executor.scheduleWithFixedDelay(
-            this::processReports,
-            0,
-            30,  // Poll every 30 seconds
-            TimeUnit.SECONDS
-        );
-        
-        System.out.println("Daily report cron started");
-    }
-    
-    /**
-     * Worker that polls for and processes report tasks.
-     * 
-     * This runs on ALL nodes, but DelayedQueue guarantees that only
-     * one node will successfully acquire any given task.
-     */
-    private void processReports() {
-        try {
-            AckEnvelope<ReportTask> envelope = reportQueue.tryPoll();
+        try (DelayedQueue<String> queue = DelayedQueueJDBC.create(
+            MessageSerializer.forStrings(), config
+        )) {
+            // Install daily schedule: run at 02:00 AM Eastern time
+            CronDailySchedule schedule = CronDailySchedule.create(
+                ZoneId.of("America/New_York"),
+                List.of(LocalTime.of(2, 0)),    // 02:00 AM
+                Duration.ofDays(7),              // Schedule 7 days ahead
+                Duration.ofHours(1)              // Update schedule hourly
+            );
             
-            if (envelope != null) {
-                ReportTask task = envelope.payload();
+            AutoCloseable cronJob = queue.getCron().installDailySchedule(
+                "daily-cleanup",
+                schedule,
+                instant -> new CronMessage<>("Cleanup job for " + instant, instant)
+            );
+            
+            // Worker loop: continuously poll for jobs
+            // This runs on ALL nodes, but only one will get each job
+            while (true) {
+                AckEnvelope<String> envelope = queue.tryPoll();
                 
-                String nodeId = getNodeId();
-                System.out.printf(
-                    "[Node %s] Acquired report task: %s (scheduled for %s)%n",
-                    nodeId,
-                    task.reportType,
-                    task.scheduledFor
-                );
-                
-                try {
-                    // Generate the report
-                    generateReport(task);
+                if (envelope != null) {
+                    System.out.println("[Node-" + getNodeId() + "] Got job: " + 
+                        envelope.payload());
                     
-                    // Acknowledge - prevents other nodes from processing it
-                    envelope.acknowledge();
-                    
-                    System.out.printf(
-                        "[Node %s] Report completed: %s%n",
-                        nodeId,
-                        task.reportType
-                    );
-                    
-                } catch (Exception e) {
-                    System.err.printf(
-                        "[Node %s] Report failed: %s - %s%n",
-                        nodeId,
-                        task.reportType,
-                        e.getMessage()
-                    );
-                    // Don't acknowledge - another node can retry
+                    try {
+                        runCleanup();
+                        envelope.acknowledge();  // Success - job done
+                        System.out.println("Cleanup completed");
+                    } catch (Exception e) {
+                        // Don't acknowledge - another node can retry
+                        System.err.println("Cleanup failed: " + e.getMessage());
+                    }
+                } else {
+                    Thread.sleep(30_000);  // Wait 30s before polling again
                 }
             }
-            
-        } catch (Exception e) {
-            System.err.println("Worker error: " + e.getMessage());
         }
     }
     
-    private void generateReport(ReportTask task) throws Exception {
-        System.out.println("Generating " + task.reportType + "...");
-        
-        // Simulate report generation
-        Thread.sleep(5000);
-        
-        // In reality:
-        // - Query database for report data
-        // - Generate PDF/Excel
-        // - Upload to S3
-        // - Send email notification
+    static void runCleanup() {
+        System.out.println("Deleting old records...");
+        // Delete expired sessions, old logs, etc.
     }
     
-    private String getNodeId() {
-        // In a real application, this would be your actual node ID
-        // Could be hostname, container ID, etc.
+    static String getNodeId() {
         try {
             return java.net.InetAddress.getLocalHost().getHostName();
         } catch (Exception e) {
             return "unknown";
         }
     }
-    
-    public void shutdown() throws Exception {
-        System.out.println("Shutting down daily report generator...");
-        
-        if (cronSchedule != null) {
-            cronSchedule.close();
-        }
-        
-        executor.shutdown();
-        executor.awaitTermination(30, TimeUnit.SECONDS);
-        
-        reportQueue.close();
-    }
-    
-    // Data classes
-    public static class ReportTask {
-        public String reportType;
-        public Instant scheduledFor;
-        
-        public ReportTask() {}
-        
-        public ReportTask(String reportType, Instant scheduledFor) {
-            this.reportType = reportType;
-            this.scheduledFor = scheduledFor;
-        }
-    }
-    
-    public static class ReportTaskSerializer implements MessageSerializer<ReportTask> {
-        private final com.fasterxml.jackson.databind.ObjectMapper mapper = 
-            new com.fasterxml.jackson.databind.ObjectMapper()
-                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-        
-        @Override
-        public String getTypeName() {
-            return ReportTask.class.getName();
-        }
-        
-        @Override
-        public byte[] serialize(ReportTask payload) {
-            try {
-                return mapper.writeValueAsBytes(payload);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-        
-        @Override
-        public ReportTask deserialize(byte[] serialized) {
-            try {
-                return mapper.readValue(serialized, ReportTask.class);
-            } catch (Exception e) {
-                throw new IllegalArgumentException(e);
-            }
-        }
-    }
-    
-    public static void main(String[] args) throws Exception {
-        DailyReportGenerator generator = new DailyReportGenerator();
-        
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                generator.shutdown();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }));
-        
-        generator.start();
-        
-        System.out.println("Daily report generator is running. Press Ctrl+C to stop.");
-        
-        // Keep the application running
-        Thread.currentThread().join();
-    }
 }
 ```
 
 **Key Points:**
-- **Multi-node safe**: Only one node acquires each task through database-level locking
-- **Automatic scheduling**: CronService handles creating future tasks
-- **High availability**: If one node fails, another node picks up the work
-- **Configuration-driven**: Schedule is defined declaratively
-- **Graceful shutdown**: Properly releases all resources
+- `CronDailySchedule` automatically creates future tasks at 02:00 AM
+- Multiple nodes can run this code - **database locking ensures only one gets each task**
+- `tryPoll()` returns `null` on nodes that don't win the race
+- If the winning node fails without calling `acknowledge()`, the task becomes available again
 
-**How the Race Works:**
-
-1. **CronService** creates scheduled tasks in the database (e.g., one for each day at 02:00 AM)
-2. **All nodes** run workers that call `tryPoll()`
-3. **Database locking** ensures only one node successfully acquires each task
-4. The **winning node** processes the task and calls `acknowledge()`
-5. **Other nodes** get `null` from `tryPoll()` (task already taken)
-6. If the winning node **fails** without acknowledging, the task becomes available again after the timeout
+**How Multi-Node Works:**
+1. CronService creates scheduled tasks in the database (one per day at 02:00 AM)
+2. All nodes continuously call `tryPoll()`
+3. Database-level locking ensures only one node acquires each task
+4. The winning node processes and calls `acknowledge()`
+5. Other nodes get `null` (task already taken)
+6. If the winner crashes, the task is automatically retried after the timeout
 
 ## Best Practices
 
