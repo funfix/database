@@ -137,7 +137,6 @@ internal class H2Adapter(driver: JdbcDriver, tableName: String) :
                 FROM "$tableName"
                 WHERE "pKind" = ? AND "scheduledAt" <= ?
                 ORDER BY "scheduledAt"
-                FOR UPDATE
             )
             """
 
