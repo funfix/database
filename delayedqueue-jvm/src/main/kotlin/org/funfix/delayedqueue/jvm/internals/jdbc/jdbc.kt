@@ -43,22 +43,21 @@ context(_: Raise<SQLException>)
 internal inline fun <T> runSQLOperation(block: () -> T): T = block()
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
-internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T =
-    runBlockingIO {
-        runSQLOperation {
-            source.connection.let {
+internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T = runBlockingIO {
+    runSQLOperation {
+        source.connection.let {
+            try {
+                block(SafeConnection(it, driver))
+            } finally {
                 try {
-                    block(SafeConnection(it, driver))
-                } finally {
-                    try {
-                        it.close()
-                    } catch (e: SQLException) {
-                        logger.warn("While closing JDBC connection", e)
-                    }
+                    it.close()
+                } catch (e: SQLException) {
+                    logger.warn("While closing JDBC connection", e)
                 }
             }
         }
     }
+}
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
 internal fun <T> Database.withTransaction(block: (SafeConnection) -> T) =
@@ -169,7 +168,7 @@ internal object ConnectionPool {
  * for the target database system. This prevents naming conflicts and allows reserved keywords to be
  * used as identifiers.
  * - MariaDB: uses backticks (`)
- * - PostgreSQL, HSQLDB, SQLite: use double quotes (")
+ * - PostgreSQL, HSQLDB, H2, SQLite: use double quotes (")
  * - MS SQL Server: uses square brackets ([])
  *
  * @param name The identifier to quote
@@ -179,6 +178,7 @@ internal fun JdbcDriver.quote(name: String): String =
     when (this) {
         JdbcDriver.MariaDB -> "`$name`"
         JdbcDriver.HSQLDB -> "\"$name\""
+        JdbcDriver.H2 -> "\"$name\""
         JdbcDriver.PostgreSQL -> "\"$name\""
         JdbcDriver.Sqlite -> "\"$name\""
         JdbcDriver.MsSqlServer -> "[$name]"

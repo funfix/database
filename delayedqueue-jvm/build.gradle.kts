@@ -18,6 +18,7 @@ dependencies {
     implementation(libs.hikaricp)
 
     testImplementation(libs.logback.classic)
+    testImplementation(libs.jdbc.h2)
     testImplementation(libs.jdbc.hsqldb)
     testImplementation(libs.jdbc.sqlite)
     testImplementation(libs.jdbc.mssql)

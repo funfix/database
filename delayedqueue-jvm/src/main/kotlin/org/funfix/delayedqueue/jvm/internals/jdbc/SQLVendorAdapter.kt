@@ -7,6 +7,7 @@ import java.sql.Types
 import java.time.Duration
 import java.time.Instant
 import org.funfix.delayedqueue.jvm.JdbcDriver
+import org.funfix.delayedqueue.jvm.internals.jdbc.h2.H2Adapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MsSqlServerAdapter
@@ -467,6 +468,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
         fun create(driver: JdbcDriver, tableName: String): SQLVendorAdapter =
             when (driver) {
                 JdbcDriver.HSQLDB -> HSQLDBAdapter(driver, tableName)
+                JdbcDriver.H2 -> H2Adapter(driver, tableName)
                 JdbcDriver.Sqlite -> SqliteAdapter(driver, tableName)
                 JdbcDriver.MsSqlServer -> MsSqlServerAdapter(driver, tableName)
                 JdbcDriver.PostgreSQL -> PostgreSQLAdapter(driver, tableName)

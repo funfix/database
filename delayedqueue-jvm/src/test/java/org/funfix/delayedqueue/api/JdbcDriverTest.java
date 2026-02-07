@@ -27,6 +27,13 @@ class JdbcDriverTest {
     }
 
     @Test
+    @DisplayName("H2 driver should have correct class name")
+    void testH2ClassName() {
+        JdbcDriver driver = JdbcDriver.H2;
+        assertEquals("org.h2.Driver", driver.getClassName());
+    }
+
+    @Test
     @DisplayName("of() should find MsSqlServer driver by exact match")
     void testOfMsSqlServerExactMatch() {
         JdbcDriver driver = JdbcDriver.invoke("com.microsoft.sqlserver.jdbc.SQLServerDriver");
@@ -56,6 +63,22 @@ class JdbcDriverTest {
         JdbcDriver driver = JdbcDriver.invoke("ORG.HSQLDB.JDBC.JDBCDRIVER");
         assertNotNull(driver);
         assertSame(JdbcDriver.HSQLDB, driver);
+    }
+
+    @Test
+    @DisplayName("of() should find H2 driver by exact match")
+    void testOfH2ExactMatch() {
+        JdbcDriver driver = JdbcDriver.invoke("org.h2.Driver");
+        assertNotNull(driver);
+        assertSame(JdbcDriver.H2, driver);
+    }
+
+    @Test
+    @DisplayName("of() should find H2 driver by case-insensitive match")
+    void testOfH2CaseInsensitive() {
+        JdbcDriver driver = JdbcDriver.invoke("ORG.H2.DRIVER");
+        assertNotNull(driver);
+        assertSame(JdbcDriver.H2, driver);
     }
 
     @Test
@@ -91,6 +114,7 @@ class JdbcDriverTest {
     private String switchOnDriver(JdbcDriver driver) {
         return switch (driver) {
             case HSQLDB -> "hsqldb";
+            case H2 -> "h2";
             case MsSqlServer -> "mssqlserver";
             case Sqlite -> "sqlite";
             case PostgreSQL -> "postgresql";
@@ -105,6 +129,8 @@ class JdbcDriverTest {
         assertSame(JdbcDriver.MsSqlServer, JdbcDriver.MsSqlServer);
         //noinspection EqualsWithItself
         assertSame(JdbcDriver.HSQLDB, JdbcDriver.HSQLDB);
+        //noinspection EqualsWithItself
+        assertSame(JdbcDriver.H2, JdbcDriver.H2);
     }
 
     @Test
@@ -132,6 +158,7 @@ class JdbcDriverTest {
         String result = switch (driver) {
             //noinspection DataFlowIssue
             case HSQLDB -> "hsqldb";
+            case H2 -> "h2";
             case MsSqlServer -> "mssql";
             case Sqlite -> "sqlite";
             case MariaDB -> "mariadb";
@@ -143,6 +170,7 @@ class JdbcDriverTest {
         result = switch (driver) {
             case Sqlite -> "sqlite";
             case HSQLDB -> "hsqldb";
+            case H2 -> "h2";
             //noinspection DataFlowIssue
             case MsSqlServer -> "mssql";
             case PostgreSQL -> "postgresql";

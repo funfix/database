@@ -4,6 +4,7 @@ import java.sql.SQLIntegrityConstraintViolationException
 import java.sql.SQLTransactionRollbackException
 import java.sql.SQLTransientConnectionException
 import org.funfix.delayedqueue.jvm.JdbcDriver
+import org.funfix.delayedqueue.jvm.internals.jdbc.h2.H2Filters
 import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MSSQLFilters
@@ -76,6 +77,7 @@ internal fun matchesMessage(message: String?, keywords: List<String>): Boolean {
 internal fun filtersForDriver(driver: JdbcDriver): RdbmsExceptionFilters =
     when (driver) {
         JdbcDriver.HSQLDB -> HSQLDBFilters
+        JdbcDriver.H2 -> H2Filters
         JdbcDriver.MsSqlServer -> MSSQLFilters
         JdbcDriver.Sqlite -> SQLiteFilters
         JdbcDriver.MariaDB -> MariaDBFilters

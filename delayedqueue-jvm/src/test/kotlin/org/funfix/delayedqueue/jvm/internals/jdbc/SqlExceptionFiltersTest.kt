@@ -6,6 +6,7 @@ import java.sql.SQLIntegrityConstraintViolationException
 import java.sql.SQLTransactionRollbackException
 import java.sql.SQLTransientConnectionException
 import org.funfix.delayedqueue.jvm.JdbcDriver
+import org.funfix.delayedqueue.jvm.internals.jdbc.h2.H2Filters
 import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MSSQLFilters
@@ -172,6 +173,39 @@ class SqlExceptionFiltersTest {
     }
 
     @Nested
+    inner class H2FiltersTest {
+        @Test
+        fun `transientFailure should match transient exceptions`() {
+            val ex = SQLTransactionRollbackException("rollback")
+            assertTrue(H2Filters.transientFailure.matches(ex))
+        }
+
+        @Test
+        fun `duplicateKey should match H2 error code`() {
+            val ex = SQLException("unique index", "23505", 23505)
+            assertTrue(H2Filters.duplicateKey.matches(ex))
+        }
+
+        @Test
+        fun `duplicateKey should match unique index message`() {
+            val ex = SQLException("Unique index or primary key violation")
+            assertTrue(H2Filters.duplicateKey.matches(ex))
+        }
+
+        @Test
+        fun `duplicateKey should not match generic SQLIntegrityConstraintViolationException`() {
+            val ex = SQLIntegrityConstraintViolationException("constraint violation")
+            assertFalse(H2Filters.duplicateKey.matches(ex))
+        }
+
+        @Test
+        fun `duplicateKey should not match unrelated SQLException`() {
+            val ex = SQLException("Some other error")
+            assertFalse(H2Filters.duplicateKey.matches(ex))
+        }
+    }
+
+    @Nested
     inner class SQLiteFiltersTest {
         @Test
         fun `transientFailure should match transient exceptions`() {
@@ -294,6 +328,12 @@ class SqlExceptionFiltersTest {
         fun `should return SQLiteFilters for Sqlite driver`() {
             val filters = filtersForDriver(JdbcDriver.Sqlite)
             assertTrue(filters === SQLiteFilters)
+        }
+
+        @Test
+        fun `should return H2Filters for H2 driver`() {
+            val filters = filtersForDriver(JdbcDriver.H2)
+            assertTrue(filters === H2Filters)
         }
 
         @Test

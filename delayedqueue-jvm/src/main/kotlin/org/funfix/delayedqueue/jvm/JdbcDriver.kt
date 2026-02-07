@@ -5,6 +5,9 @@ public enum class JdbcDriver(public val className: String) {
     /** HSQLDB (HyperSQL Database) driver. */
     HSQLDB("org.hsqldb.jdbc.JDBCDriver"),
 
+    /** H2 database driver. */
+    H2("org.h2.Driver"),
+
     /** Microsoft SQL Server driver. */
     MsSqlServer("com.microsoft.sqlserver.jdbc.SQLServerDriver"),
 

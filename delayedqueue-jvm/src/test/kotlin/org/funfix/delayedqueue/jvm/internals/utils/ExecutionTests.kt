@@ -1,6 +1,5 @@
 package org.funfix.delayedqueue.jvm.internals.utils
 
-import java.time.Duration
 import java.util.concurrent.ExecutionException
 import org.funfix.tasks.jvm.TaskCancellationException
 import org.junit.jupiter.api.Assertions.*
