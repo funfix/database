@@ -156,6 +156,18 @@ internal object ConnectionPool {
             }
         }
 
+        // SQLite-specific optimizations for concurrency
+        if (config.driver == JdbcDriver.Sqlite) {
+            hikariConfig.connectionInitSql =
+                """
+                PRAGMA journal_mode=WAL;
+                PRAGMA busy_timeout=30000;
+                PRAGMA synchronous=NORMAL;
+                PRAGMA cache_size=-64000;
+                PRAGMA temp_store=MEMORY;
+                """.trimIndent()
+        }
+
         return hikariConfig
     }
 
