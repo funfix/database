@@ -33,9 +33,9 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 
 testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version = "2.0.3" }
-testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version = "1.21.4" }
 testcontainers-mssqlserver = { module = "org.testcontainers:testcontainers-mssqlserver" }
 testcontainers-mariadb = { module = "org.testcontainers:testcontainers-mariadb" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
-testcontainers-oracle = { module = "org.testcontainers:oracle-xe" }
+testcontainers-oracle = { module = "org.testcontainers:oracle-xe", version = "1.21.4" }
 testcontainers = { module = "org.testcontainers:testcontainers" }

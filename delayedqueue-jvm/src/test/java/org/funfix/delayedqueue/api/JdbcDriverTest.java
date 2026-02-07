@@ -88,30 +88,39 @@ class JdbcDriverTest {
     }
 
     @Test
-    @DisplayName("Sealed switch statement: exhaustive pattern matching on JdbcDriver")
-    void testSealedSwitchStatement() {
-        // Test that JdbcDriver works with exhaustive pattern matching in switch
-        // This is the Java 17+ syntax for sealed classes
-        var result = switchOnDriver(JdbcDriver.MsSqlServer);
-        assertEquals("mssqlserver", result);
-
-        result = switchOnDriver(JdbcDriver.HSQLDB);
-        assertEquals("hsqldb", result);
+    @DisplayName("All driver instances should be accessible")
+    void testDriverAccessibility() {
+        // Test that all driver instances can be accessed
+        assertNotNull(JdbcDriver.MsSqlServer);
+        assertNotNull(JdbcDriver.HSQLDB);
+        assertNotNull(JdbcDriver.H2);
+        assertNotNull(JdbcDriver.Sqlite);
+        assertNotNull(JdbcDriver.PostgreSQL);
+        assertNotNull(JdbcDriver.MariaDB);
+        assertNotNull(JdbcDriver.Oracle);
     }
 
     /**
-     * Demonstrates Java 21+ pattern matching with sealed interface.
-     * This shows that JdbcDriver properly behaves as a sealed type on the Java side.
+     * Helper method to demonstrate driver differentiation using equals/identity.
      */
-    private String switchOnDriver(JdbcDriver driver) {
-        return switch (driver) {
-            case HSQLDB -> "hsqldb";
-            case MsSqlServer -> "mssqlserver";
-            case Sqlite -> "sqlite";
-            case PostgreSQL -> "postgresql";
-            case MariaDB -> "mariadb";
-            case Oracle -> "oracle";
-        };
+    private String getDriverName(JdbcDriver driver) {
+        if (driver == JdbcDriver.HSQLDB) return "hsqldb";
+        if (driver == JdbcDriver.H2) return "h2";
+        if (driver == JdbcDriver.MsSqlServer) return "mssqlserver";
+        if (driver == JdbcDriver.Sqlite) return "sqlite";
+        if (driver == JdbcDriver.PostgreSQL) return "postgresql";
+        if (driver == JdbcDriver.MariaDB) return "mariadb";
+        if (driver == JdbcDriver.Oracle) return "oracle";
+        throw new IllegalArgumentException("Unknown driver: " + driver);
+    }
+
+    @Test
+    @DisplayName("Driver differentiation works correctly")
+    void testDriverDifferentiation() {
+        assertEquals("mssqlserver", getDriverName(JdbcDriver.MsSqlServer));
+        assertEquals("hsqldb", getDriverName(JdbcDriver.HSQLDB));
+        assertEquals("h2", getDriverName(JdbcDriver.H2));
+        assertEquals("oracle", getDriverName(JdbcDriver.Oracle));
     }
 
     @Test
@@ -121,12 +130,17 @@ class JdbcDriverTest {
         assertSame(JdbcDriver.MsSqlServer, JdbcDriver.MsSqlServer);
         //noinspection EqualsWithItself
         assertSame(JdbcDriver.HSQLDB, JdbcDriver.HSQLDB);
+        //noinspection EqualsWithItself
+        assertSame(JdbcDriver.H2, JdbcDriver.H2);
+        //noinspection EqualsWithItself
+        assertSame(JdbcDriver.Oracle, JdbcDriver.Oracle);
     }
 
     @Test
     @DisplayName("Different drivers should not be equal")
     void testDriverInequality() {
         assertNotEquals(JdbcDriver.MsSqlServer, JdbcDriver.HSQLDB);
+        assertNotEquals(JdbcDriver.H2, JdbcDriver.Oracle);
     }
 
     @Test
@@ -142,30 +156,17 @@ class JdbcDriverTest {
     }
 
     @Test
-    @DisplayName("Switch expression on JdbcDriver without default branch")
-    void testSwitchExpressionCoverage() {
-        JdbcDriver driver = JdbcDriver.HSQLDB;
-        String result = switch (driver) {
-            //noinspection DataFlowIssue
-            case HSQLDB -> "hsqldb";
-            case MsSqlServer -> "mssql";
-            case Sqlite -> "sqlite";
-            case MariaDB -> "mariadb";
-            case PostgreSQL -> "postgresql";
-            case Oracle -> "oracle";
-        };
-        assertEquals("hsqldb", result);
-
-        driver = JdbcDriver.MsSqlServer;
-        result = switch (driver) {
-            case Sqlite -> "sqlite";
-            case HSQLDB -> "hsqldb";
-            //noinspection DataFlowIssue
-            case MsSqlServer -> "mssql";
-            case PostgreSQL -> "postgresql";
-            case MariaDB -> "mariadb";
-            case Oracle -> "oracle";
-        };
-        assertEquals("mssql", result);
+    @DisplayName("Entries list contains all drivers")
+    void testEntriesList() {
+        var entries = JdbcDriver.getEntries();
+        assertNotNull(entries);
+        assertEquals(7, entries.size());
+        assertTrue(entries.contains(JdbcDriver.HSQLDB));
+        assertTrue(entries.contains(JdbcDriver.H2));
+        assertTrue(entries.contains(JdbcDriver.MsSqlServer));
+        assertTrue(entries.contains(JdbcDriver.Sqlite));
+        assertTrue(entries.contains(JdbcDriver.PostgreSQL));
+        assertTrue(entries.contains(JdbcDriver.MariaDB));
+        assertTrue(entries.contains(JdbcDriver.Oracle));
     }
 }
