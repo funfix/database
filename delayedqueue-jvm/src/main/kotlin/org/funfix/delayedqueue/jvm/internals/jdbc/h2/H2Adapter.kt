@@ -138,6 +138,7 @@ internal class H2Adapter(driver: JdbcDriver, tableName: String) :
                 WHERE "pKind" = ? AND "scheduledAt" <= ?
                 ORDER BY "scheduledAt"
                 LIMIT $limit
+                FOR UPDATE
             )
             """
 
