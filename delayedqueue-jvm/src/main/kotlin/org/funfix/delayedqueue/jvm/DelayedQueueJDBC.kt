@@ -13,14 +13,15 @@ import org.funfix.delayedqueue.jvm.internals.CronServiceImpl
 import org.funfix.delayedqueue.jvm.internals.PollResult
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRow
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRowWithId
-import org.funfix.delayedqueue.jvm.internals.jdbc.HSQLDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.MigrationRunner
-import org.funfix.delayedqueue.jvm.internals.jdbc.MsSqlServerMigrations
-import org.funfix.delayedqueue.jvm.internals.jdbc.PostgreSQLMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.RdbmsExceptionFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
-import org.funfix.delayedqueue.jvm.internals.jdbc.SqliteMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.filtersForDriver
+import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBMigrations
+import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBMigrations
+import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MsSqlServerMigrations
+import org.funfix.delayedqueue.jvm.internals.jdbc.postgres.PostgreSQLMigrations
+import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SqliteMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.withDbRetries
 import org.funfix.delayedqueue.jvm.internals.utils.Database
 import org.funfix.delayedqueue.jvm.internals.utils.Raise
@@ -268,13 +269,21 @@ private constructor(
                             }
                         }
                     } catch (e: Exception) {
-                        // On duplicate key, return empty map to trigger one-by-one fallback
+                        // On duplicate key or transient failure (e.g., concurrent modification),
+                        // return empty map to trigger one-by-one fallback.
                         // This matches: recover { case SQLExceptionExtractors.DuplicateKey(_) =>
                         // Map.empty }
                         when {
                             filters.duplicateKey.matches(e) -> {
                                 logger.debug(
                                     "Batch insert failed due to duplicate key (concurrent insert), " +
+                                        "falling back to one-by-one offers"
+                                )
+                                emptyMap() // Trigger fallback
+                            }
+                            filters.transientFailure.matches(e) -> {
+                                logger.debug(
+                                    "Batch insert failed due to transient failure (concurrent modification), " +
                                         "falling back to one-by-one offers"
                                 )
                                 emptyMap() // Trigger fallback
@@ -616,6 +625,7 @@ private constructor(
                                 PostgreSQLMigrations.getMigrations(config.tableName)
                             JdbcDriver.MsSqlServer ->
                                 MsSqlServerMigrations.getMigrations(config.tableName)
+                            JdbcDriver.MariaDB -> MariaDBMigrations.getMigrations(config.tableName)
                         }
 
                     val executed = MigrationRunner.runMigrations(connection.underlying, migrations)

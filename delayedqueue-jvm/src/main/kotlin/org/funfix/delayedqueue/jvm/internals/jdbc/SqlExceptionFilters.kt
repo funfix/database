@@ -1,10 +1,14 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc
 
-import java.sql.SQLException
 import java.sql.SQLIntegrityConstraintViolationException
 import java.sql.SQLTransactionRollbackException
 import java.sql.SQLTransientConnectionException
 import org.funfix.delayedqueue.jvm.JdbcDriver
+import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MSSQLFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.postgres.PostgreSQLFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SQLiteFilters
 
 /**
  * Filter for matching SQL exceptions based on specific criteria. Designed for extensibility across
@@ -56,307 +60,11 @@ internal interface RdbmsExceptionFilters {
     val objectAlreadyExists: SqlExceptionFilter
 }
 
-/** HSQLDB-specific exception filters. */
-internal object HSQLDBFilters : RdbmsExceptionFilters {
-    override val transientFailure: SqlExceptionFilter = CommonSqlFilters.transactionTransient
-
-    override val duplicateKey: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                when {
-                    CommonSqlFilters.integrityConstraint.matches(e) -> true
-                    e is SQLException && e.errorCode == -104 && e.sqlState == "23505" -> true
-                    e is SQLException && matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
-                    else -> false
-                }
-        }
-
-    override val invalidTable: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                e is SQLException && matchesMessage(e.message, listOf("invalid object name"))
-        }
-
-    override val objectAlreadyExists: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean = false
-        }
-
-    private val DUPLICATE_KEY_KEYWORDS =
-        listOf("primary key constraint", "unique constraint", "integrity constraint")
-}
-
-/** SQLite-specific exception filters. */
-internal object SQLiteFilters : RdbmsExceptionFilters {
-    override val transientFailure: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                when {
-                    CommonSqlFilters.transactionTransient.matches(e) -> true
-                    // SQLite BUSY (error code 5) — database is locked by another connection
-                    e is SQLException && isSQLiteBaseCode(e, 5) -> true
-                    // SQLite LOCKED (error code 6) — table-level lock within a connection
-                    e is SQLException && isSQLiteBaseCode(e, 6) -> true
-                    else -> false
-                }
-        }
-
-    override val duplicateKey: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                when {
-                    CommonSqlFilters.integrityConstraint.matches(e) -> true
-                    // SQLite CONSTRAINT_PRIMARYKEY (2067) and CONSTRAINT_UNIQUE (2579)
-                    e is SQLException && isSQLiteResultCode(e, 2067, 2579) -> true
-                    // SQLite generic CONSTRAINT (19)
-                    e is SQLException &&
-                        isSQLiteResultCode(e, 19) &&
-                        matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
-                    e is SQLException &&
-                        isSQLiteException(e) &&
-                        matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
-                    else -> false
-                }
-        }
-
-    override val invalidTable: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                e is SQLException && matchesMessage(e.message, listOf("no such table"))
-        }
-
-    override val objectAlreadyExists: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                e is SQLException && matchesMessage(e.message, listOf("already exists"))
-        }
-
-    private val DUPLICATE_KEY_KEYWORDS =
-        listOf("primary key constraint", "unique constraint", "unique")
-}
-
-/**
- * Attempts to detect SQLite-specific result codes in exceptions in a defensive way.
- *
- * Strategy:
- * 1. Walk the cause chain searching for a throwable whose class name contains "SQLiteException";
- * 2. Try JDBC-standard accessors first: if the throwable is a SQLException, use getErrorCode();
- * 3. As a last resort, attempt reflection on well-known driver methods (getResultCode -> code) but
- *    be defensive and return false on any reflection failure.
- */
-private fun isSQLiteResultCode(e: Throwable, vararg codes: Int): Boolean {
-    val code = sqliteResultCode(e) ?: return false
-    return code in codes
-}
-
-/**
- * Checks if a SQLite result code matches a base code (e.g. BUSY/LOCKED), including extended codes.
- * SQLite extended result codes preserve the base code in the low byte.
- */
-private fun isSQLiteBaseCode(e: Throwable, baseCode: Int): Boolean {
-    val code = sqliteResultCode(e) ?: return false
-    return code == baseCode || (code and 0xFF) == baseCode
-}
-
-private fun sqliteResultCode(e: Throwable): Int? {
-    var t: Throwable? = e
-    while (t != null) {
-        val className = t.javaClass.name
-        if (className.contains("SQLiteException") || className.contains("sqlite")) {
-            if (t is SQLException) {
-                val ec =
-                    try {
-                        t.errorCode
-                    } catch (_: Exception) {
-                        null
-                    }
-                if (ec != null && ec != 0) return ec
-            }
-
-            val reflected = trySQLiteResultCodeReflectively(t)
-            if (reflected != null && reflected != 0) return reflected
-
-            if (t is SQLException) {
-                val ec =
-                    try {
-                        t.errorCode
-                    } catch (_: Exception) {
-                        null
-                    }
-                if (ec != null) return ec
-            }
-        }
-
-        t = t.cause
-        if (t === e) break
-    }
-
-    return null
-}
-
-private fun trySQLiteResultCodeReflectively(e: Throwable): Int? {
-    return try {
-        val getResultCode =
-            e.javaClass.methods.firstOrNull { it.name == "getResultCode" && it.parameterCount == 0 }
-        if (getResultCode != null) {
-            val resultCode = getResultCode.invoke(e) ?: return null
-            val codeField =
-                resultCode.javaClass.declaredFields.firstOrNull {
-                    it.name.equals("code", ignoreCase = true)
-                }
-            if (codeField != null) {
-                codeField.isAccessible = true
-                return when (val v = codeField.get(resultCode)) {
-                    is Int -> v
-                    is Number -> v.toInt()
-                    else -> null
-                }
-            }
-        }
-        null
-    } catch (_: Exception) {
-        null
-    }
-}
-
-private fun isSQLiteException(e: Throwable): Boolean {
-    var t: Throwable? = e
-    while (t != null) {
-        val className = t.javaClass.name
-        if (className.contains("SQLiteException") || className.contains("sqlite")) {
-            return true
-        }
-        t = t.cause
-        if (t === e) break
-    }
-    return false
-}
-
-/** Microsoft SQL Server-specific exception filters. */
-internal object MSSQLFilters : RdbmsExceptionFilters {
-    override val transientFailure: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                when {
-                    CommonSqlFilters.transactionTransient.matches(e) -> true
-                    e is SQLException && hasSQLServerError(e, 1205) -> true // Deadlock
-                    failedToResumeTransaction.matches(e) -> true
-                    else -> false
-                }
-        }
-
-    override val duplicateKey: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                when {
-                    CommonSqlFilters.integrityConstraint.matches(e) -> true
-                    e is SQLException && hasSQLServerError(e, 2627, 2601) -> true
-                    e is SQLException &&
-                        e.errorCode in setOf(2627, 2601) &&
-                        e.sqlState == "23000" -> true
-                    e is SQLException && matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
-                    else -> false
-                }
-        }
-
-    override val invalidTable: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                when {
-                    e is SQLException && e.errorCode == 208 && e.sqlState == "42S02" -> true
-                    e is SQLException && matchesMessage(e.message, listOf("invalid object name")) ->
-                        true
-                    else -> false
-                }
-        }
-
-    override val objectAlreadyExists: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                e is SQLException && hasSQLServerError(e, 2714, 2705, 1913, 15248, 15335)
-        }
-
-    val failedToResumeTransaction: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                isSQLServerException(e) &&
-                    e.message?.contains("The server failed to resume the transaction") == true
-        }
-
-    private val DUPLICATE_KEY_KEYWORDS =
-        listOf("primary key constraint", "unique constraint", "integrity constraint")
-}
-
-/** PostgreSQL-specific exception filters. */
-internal object PostgreSQLFilters : RdbmsExceptionFilters {
-    override val transientFailure: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                when {
-                    CommonSqlFilters.transactionTransient.matches(e) -> true
-                    // PostgreSQL serialization failure (40001) or deadlock detected (40P01)
-                    e is SQLException && e.sqlState in setOf("40001", "40P01") -> true
-                    else -> false
-                }
-        }
-
-    override val duplicateKey: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                when {
-                    CommonSqlFilters.integrityConstraint.matches(e) -> true
-                    // PostgreSQL unique_violation (23505)
-                    e is SQLException && e.sqlState == "23505" -> true
-                    e is SQLException && matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
-                    else -> false
-                }
-        }
-
-    override val invalidTable: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                // PostgreSQL undefined_table (42P01)
-                e is SQLException && e.sqlState == "42P01"
-        }
-
-    override val objectAlreadyExists: SqlExceptionFilter =
-        object : SqlExceptionFilter {
-            override fun matches(e: Throwable): Boolean =
-                // PostgreSQL duplicate_table (42P07) or duplicate_object (42710)
-                e is SQLException && e.sqlState in setOf("42P07", "42710")
-        }
-
-    private val DUPLICATE_KEY_KEYWORDS =
-        listOf("primary key constraint", "unique constraint", "duplicate key")
-}
-
-private fun matchesMessage(message: String?, keywords: List<String>): Boolean {
+internal fun matchesMessage(message: String?, keywords: List<String>): Boolean {
     if (message == null) return false
     val lowerMessage = message.lowercase()
     return keywords.any { lowerMessage.contains(it.lowercase()) }
 }
-
-private fun hasSQLServerError(e: Throwable, vararg errorNumbers: Int): Boolean {
-    if (!isSQLServerException(e)) return false
-
-    return try {
-        val sqlServerErrorMethod = e.javaClass.getMethod("getSQLServerError")
-        val sqlServerError = sqlServerErrorMethod.invoke(e)
-
-        if (sqlServerError != null) {
-            val getErrorNumberMethod = sqlServerError.javaClass.getMethod("getErrorNumber")
-            val errorNumber = getErrorNumberMethod.invoke(sqlServerError) as? Int
-            errorNumber != null && errorNumber in errorNumbers
-        } else {
-            false
-        }
-    } catch (_: Exception) {
-        false
-    }
-}
-
-private fun isSQLServerException(e: Throwable): Boolean =
-    e.javaClass.name == "com.microsoft.sqlserver.jdbc.SQLServerException"
 
 /**
  * Maps a JDBC driver to its corresponding exception filters.
@@ -372,5 +80,6 @@ internal fun filtersForDriver(driver: JdbcDriver): RdbmsExceptionFilters =
         JdbcDriver.HSQLDB -> HSQLDBFilters
         JdbcDriver.MsSqlServer -> MSSQLFilters
         JdbcDriver.Sqlite -> SQLiteFilters
+        JdbcDriver.MariaDB -> MariaDBFilters
         JdbcDriver.PostgreSQL -> PostgreSQLFilters
     }

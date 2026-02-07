@@ -11,6 +11,9 @@ public enum class JdbcDriver(public val className: String) {
     /** SQLite driver. */
     Sqlite("org.sqlite.JDBC"),
 
+    /** MariaDB driver. */
+    MariaDB("org.mariadb.jdbc.Driver"),
+
     /** PostgreSQL driver. */
     PostgreSQL("org.postgresql.Driver");
 

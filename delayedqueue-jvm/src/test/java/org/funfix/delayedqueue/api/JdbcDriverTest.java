@@ -94,6 +94,7 @@ class JdbcDriverTest {
             case MsSqlServer -> "mssqlserver";
             case Sqlite -> "sqlite";
             case PostgreSQL -> "postgresql";
+            case MariaDB -> "mariadb";
         };
     }
 
@@ -133,6 +134,7 @@ class JdbcDriverTest {
             case HSQLDB -> "hsqldb";
             case MsSqlServer -> "mssql";
             case Sqlite -> "sqlite";
+            case MariaDB -> "mariadb";
             case PostgreSQL -> "postgresql";
         };
         assertEquals("hsqldb", result);
@@ -144,6 +146,7 @@ class JdbcDriverTest {
             //noinspection DataFlowIssue
             case MsSqlServer -> "mssql";
             case PostgreSQL -> "postgresql";
+            case MariaDB -> "mariadb";
         };
         assertEquals("mssql", result);
     }

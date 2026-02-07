@@ -1,10 +1,15 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc
 
+import java.sql.BatchUpdateException
 import java.sql.SQLException
 import java.sql.SQLIntegrityConstraintViolationException
 import java.sql.SQLTransactionRollbackException
 import java.sql.SQLTransientConnectionException
 import org.funfix.delayedqueue.jvm.JdbcDriver
+import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MSSQLFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SQLiteFilters
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
@@ -263,6 +268,84 @@ class SqlExceptionFiltersTest {
     }
 
     @Nested
+    inner class MariaDBFiltersTest {
+        @Test
+        fun `transientFailure should match transient exceptions`() {
+            val ex = SQLTransactionRollbackException("rollback")
+            assertTrue(MariaDBFilters.transientFailure.matches(ex))
+        }
+
+        @Test
+        fun `transientFailure should match MariaDB deadlock error code`() {
+            val ex = SQLException("Deadlock found", "40001", 1213)
+            assertTrue(MariaDBFilters.transientFailure.matches(ex))
+        }
+
+        @Test
+        fun `transientFailure should match MariaDB lock wait timeout error code`() {
+            val ex = SQLException("Lock wait timeout exceeded", "HY000", 1205)
+            assertTrue(MariaDBFilters.transientFailure.matches(ex))
+        }
+
+        @Test
+        fun `transientFailure should match MariaDB record changed error code`() {
+            val ex = SQLException("Record has changed since last read", "HY000", 1020)
+            assertTrue(MariaDBFilters.transientFailure.matches(ex))
+        }
+
+        @Test
+        fun `transientFailure should match record changed in cause chain`() {
+            val cause = SQLException("Record has changed since last read", "HY000", 1020)
+            val wrapper = RuntimeException("batch failed", cause)
+            assertTrue(MariaDBFilters.transientFailure.matches(wrapper))
+        }
+
+        @Test
+        fun `transientFailure should match record changed in nextException chain`() {
+            val next = SQLException("Record has changed since last read", "HY000", 1020)
+            val batch = BatchUpdateException("batch failed", IntArray(0))
+            batch.nextException = next
+            assertTrue(MariaDBFilters.transientFailure.matches(batch))
+        }
+
+        @Test
+        fun `duplicateKey should match MariaDB error code 1062`() {
+            val ex = SQLException("Duplicate entry 'key1' for key 'PRIMARY'", "23000", 1062)
+            assertTrue(MariaDBFilters.duplicateKey.matches(ex))
+        }
+
+        @Test
+        fun `duplicateKey should match SQLIntegrityConstraintViolationException`() {
+            val ex = SQLIntegrityConstraintViolationException("constraint violation")
+            assertTrue(MariaDBFilters.duplicateKey.matches(ex))
+        }
+
+        @Test
+        fun `duplicateKey should match duplicate entry message`() {
+            val ex = SQLException("Duplicate entry '123' for key 'PRIMARY'")
+            assertTrue(MariaDBFilters.duplicateKey.matches(ex))
+        }
+
+        @Test
+        fun `duplicateKey should not match unrelated SQLException`() {
+            val ex = SQLException("Some other error")
+            assertFalse(MariaDBFilters.duplicateKey.matches(ex))
+        }
+
+        @Test
+        fun `invalidTable should match MariaDB error code 1146`() {
+            val ex = SQLException("Table 'testdb.my_table' doesn't exist", "42S02", 1146)
+            assertTrue(MariaDBFilters.invalidTable.matches(ex))
+        }
+
+        @Test
+        fun `objectAlreadyExists should match MariaDB error code 1050`() {
+            val ex = SQLException("Table 'my_table' already exists", "42S01", 1050)
+            assertTrue(MariaDBFilters.objectAlreadyExists.matches(ex))
+        }
+    }
+
+    @Nested
     inner class FiltersForDriverTest {
         @Test
         fun `should return HSQLDBFilters for HSQLDB driver`() {
@@ -280,6 +363,12 @@ class SqlExceptionFiltersTest {
         fun `should return SQLiteFilters for Sqlite driver`() {
             val filters = filtersForDriver(JdbcDriver.Sqlite)
             assertTrue(filters === SQLiteFilters)
+        }
+
+        @Test
+        fun `should return MariaDBFilters for MariaDB driver`() {
+            val filters = filtersForDriver(JdbcDriver.MariaDB)
+            assertTrue(filters === MariaDBFilters)
         }
     }
 }

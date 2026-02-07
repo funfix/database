@@ -1,4 +1,6 @@
-package org.funfix.delayedqueue.jvm.internals.jdbc
+package org.funfix.delayedqueue.jvm.internals.jdbc.sqlite
+
+import org.funfix.delayedqueue.jvm.internals.jdbc.Migration
 
 /** SQLite-specific migrations for the DelayedQueue table. */
 internal object SqliteMigrations {
@@ -10,7 +12,7 @@ internal object SqliteMigrations {
      */
     fun getMigrations(tableName: String): List<Migration> =
         listOf(
-            Migration.createTableIfNotExists(
+            Migration.Companion.createTableIfNotExists(
                 tableName = tableName,
                 sql =
                     """

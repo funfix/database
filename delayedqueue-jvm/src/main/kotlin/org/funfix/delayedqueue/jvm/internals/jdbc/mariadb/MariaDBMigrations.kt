@@ -1,34 +1,36 @@
-package org.funfix.delayedqueue.jvm.internals.jdbc
+package org.funfix.delayedqueue.jvm.internals.jdbc.mariadb
 
-/** PostgreSQL-specific migrations for the DelayedQueue table. */
-internal object PostgreSQLMigrations {
+import org.funfix.delayedqueue.jvm.internals.jdbc.Migration
+
+/** MariaDB-specific migrations for the DelayedQueue table. */
+internal object MariaDBMigrations {
     /**
-     * Gets the list of migrations for PostgreSQL.
+     * Gets the list of migrations for MariaDB.
      *
      * @param tableName The name of the delayed queue table
      * @return List of migrations in order
      */
     fun getMigrations(tableName: String): List<Migration> =
         listOf(
-            Migration.createTableIfNotExists(
+            Migration.Companion.createTableIfNotExists(
                 tableName = tableName,
                 sql =
                     """
                     CREATE TABLE $tableName (
-                        id BIGSERIAL NOT NULL,
+                        id BIGINT NOT NULL AUTO_INCREMENT,
                         pKey VARCHAR(200) NOT NULL,
                         pKind VARCHAR(100) NOT NULL,
-                        payload BYTEA NOT NULL,
+                        payload MEDIUMBLOB NOT NULL,
                         scheduledAt BIGINT NOT NULL,
                         scheduledAtInitially BIGINT NOT NULL,
                         lockUuid VARCHAR(36) NULL,
                         createdAt BIGINT NOT NULL,
-                        PRIMARY KEY (pKey, pKind)
-                    );
+                        PRIMARY KEY (pKey, pKind),
+                        UNIQUE KEY ${tableName}__IdUniqueIndex (id)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-                    CREATE UNIQUE INDEX ${tableName}__IdUniqueIndex ON $tableName(id);
                     CREATE INDEX ${tableName}__KindPlusScheduledAtIndex ON $tableName(pKind, scheduledAt);
-                    CREATE INDEX ${tableName}__LockUuidPlusIdIndex ON $tableName(lockUuid, id);
+                    CREATE INDEX ${tableName}__LockUuidPlusIdIndex ON $tableName(lockUuid, id)
                     """
                         .trimIndent(),
             )

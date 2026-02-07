@@ -1,4 +1,6 @@
-package org.funfix.delayedqueue.jvm.internals.jdbc
+package org.funfix.delayedqueue.jvm.internals.jdbc.mssql
+
+import org.funfix.delayedqueue.jvm.internals.jdbc.Migration
 
 /** MS-SQL-specific migrations for the DelayedQueue table. */
 internal object MsSqlServerMigrations {
@@ -10,7 +12,7 @@ internal object MsSqlServerMigrations {
      */
     fun getMigrations(tableName: String): List<Migration> =
         listOf(
-            Migration.createTableIfNotExists(
+            Migration.Companion.createTableIfNotExists(
                 tableName = tableName,
                 sql =
                     """
