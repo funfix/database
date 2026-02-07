@@ -24,7 +24,7 @@ mavenPublishing {
 
     pom {
         inceptionYear.set("2026")
-        url = "https://github.com/funfix/delayedqueue"
+        url = "https://github.com/funfix/database"
         licenses {
             license {
                 name = "The Apache License, Version 2.0"
@@ -41,14 +41,14 @@ mavenPublishing {
         }
 
         scm {
-            connection = "scm:git:git://github.com/funfix/delayedqueue.git"
-            developerConnection = "scm:git:ssh://github.com/funfix/delayedqueue.git"
-            url = "https://github.com/funfix/delayedqueue"
+            connection = "scm:git:git://github.com/funfix/database.git"
+            developerConnection = "scm:git:ssh://github.com/funfix/database.git"
+            url = "https://github.com/funfix/database"
         }
 
         issueManagement {
             system = "GitHub"
-            url = "https://github.com/funfix/delayedqueue/issues"
+            url = "https://github.com/funfix/database/issues"
         }
     }
 }
