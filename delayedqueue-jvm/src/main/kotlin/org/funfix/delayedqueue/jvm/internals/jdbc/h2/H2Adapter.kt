@@ -133,11 +133,10 @@ internal class H2Adapter(driver: JdbcDriver, tableName: String) :
             SET "lockUuid" = ?,
                 "scheduledAt" = ?
             WHERE "id" IN (
-                SELECT "id"
+                SELECT TOP $limit "id"
                 FROM "$tableName"
                 WHERE "pKind" = ? AND "scheduledAt" <= ?
                 ORDER BY "scheduledAt"
-                LIMIT $limit
                 FOR UPDATE
             )
             """
