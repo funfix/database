@@ -475,7 +475,8 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
                 JdbcDriver.PostgreSQL -> PostgreSQLAdapter(driver, tableName)
                 JdbcDriver.MariaDB -> MariaDBAdapter(driver, tableName)
                 JdbcDriver.Oracle -> OracleAdapter(driver, tableName)
-                else -> throw IllegalArgumentException("Unsupported JDBC driver: $driver")
+                else ->
+                    throw IllegalArgumentException("Unsupported JDBC driver: ${driver.className}")
             }
     }
 }

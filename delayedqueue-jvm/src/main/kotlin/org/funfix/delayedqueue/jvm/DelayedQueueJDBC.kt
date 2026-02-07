@@ -619,7 +619,7 @@ private constructor(
                             JdbcDriver.Oracle -> OracleMigrations.getMigrations(config.tableName)
                             else ->
                                 throw IllegalArgumentException(
-                                    "Unsupported JDBC driver: ${config.db.driver}"
+                                    "Unsupported JDBC driver: ${config.db.driver.className}"
                                 )
                         }
 
