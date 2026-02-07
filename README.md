@@ -24,7 +24,8 @@ Supported database systems:
 
 ### Documentation
 
-- [Javadoc](https://javadoc.io/doc/org.funfix/delayedqueue-jvm/0.2.0/org/funfix/tasks/jvm/package-summary.html)
+- [Java Usage Guide](./docs/java-usage-guide.md)
+- [Javadoc](https://javadoc.io/doc/org.funfix/delayedqueue-jvm/0.2.1/org/funfix/tasks/jvm/package-summary.html)
 - [Internals](./docs/internals.md)
 
 ---
@@ -34,18 +35,18 @@ Maven:
 <dependency>
   <groupId>org.funfix</groupId>
   <artifactId>delayedqueue-jvm</artifactId>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
 </dependency>
 ```
 
 Gradle:
 ```kotlin
 dependencies {
-    implementation("org.funfix:delayedqueue-jvm:0.2.0")
+    implementation("org.funfix:delayedqueue-jvm:0.2.1")
 }
 ```
 
 sbt:
 ```scala
-libraryDependencies += "org.funfix" % "delayedqueue-jvm" % "0.2.0"
+libraryDependencies += "org.funfix" % "delayedqueue-jvm" % "0.2.1"
 ```
