@@ -23,7 +23,7 @@ public class JdbcDriver private constructor(public val className: String) {
 
         @JvmStatic
         public val entries: List<JdbcDriver> =
-            listOf(H2, HSQLDB, MariaDB, MsSqlServer, MySQL, PostgreSQL, Sqlite)
+            listOf(H2, HSQLDB, MariaDB, MsSqlServer, MySQL, PostgreSQL, Sqlite, Oracle)
 
         /**
          * Attempt to find a [JdbcDriver] by its class name.
