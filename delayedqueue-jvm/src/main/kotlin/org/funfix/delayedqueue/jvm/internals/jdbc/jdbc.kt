@@ -191,6 +191,7 @@ internal object ConnectionPool {
 internal fun JdbcDriver.quote(name: String): String =
     when (this) {
         JdbcDriver.MariaDB -> "`$name`"
+        JdbcDriver.MySQL -> "`$name`"
         JdbcDriver.HSQLDB -> "\"$name\""
         JdbcDriver.H2 -> "\"$name\""
         JdbcDriver.PostgreSQL -> "\"$name\""
