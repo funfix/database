@@ -134,13 +134,9 @@ internal class OracleAdapter(driver: JdbcDriver, tableName: String) :
                 "lockUuid",
                 "createdAt"
             FROM "$tableName"
-            WHERE ROWID IN (
-                SELECT ROWID
-                FROM "$tableName"
-                WHERE "pKind" = ? AND "scheduledAt" <= ?
-                ORDER BY "scheduledAt"
-                FETCH FIRST 1 ROWS ONLY
-            )
+            WHERE "pKind" = ? AND "scheduledAt" <= ?
+            ORDER BY "scheduledAt"
+            FETCH FIRST 1 ROWS ONLY
             FOR UPDATE SKIP LOCKED
             """
 
@@ -173,13 +169,9 @@ internal class OracleAdapter(driver: JdbcDriver, tableName: String) :
             """
             SELECT "id"
             FROM "$tableName"
-            WHERE ROWID IN (
-                SELECT ROWID
-                FROM "$tableName"
-                WHERE "pKind" = ? AND "scheduledAt" <= ?
-                ORDER BY "scheduledAt"
-                FETCH FIRST $limit ROWS ONLY
-            )
+            WHERE "pKind" = ? AND "scheduledAt" <= ?
+            ORDER BY "scheduledAt"
+            FETCH FIRST $limit ROWS ONLY
             FOR UPDATE SKIP LOCKED
             """
 
