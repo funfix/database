@@ -4,9 +4,9 @@
 [![javadoc](https://javadoc.io/badge2/org.funfix/delayedqueue-jvm/javadoc.svg)](https://javadoc.io/doc/org.funfix/delayedqueue-jvm)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-## Delayed Queue 💨
+## Delayed Queue
 
-A delayed, high-performance FIFO queue for the JVM, powered by your favorite RDBMS.
+A delayed, high-performance FIFO queue for the JVM, powered by your favorite RDBMS. 💨
 
 - Schedule messages for future delivery
 - Poll with an acknowledgement callback; unacked messages get redelivered after a timeout
