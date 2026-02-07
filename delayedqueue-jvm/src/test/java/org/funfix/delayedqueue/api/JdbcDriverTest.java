@@ -27,6 +27,13 @@ class JdbcDriverTest {
     }
 
     @Test
+    @DisplayName("Oracle driver should have correct class name")
+    void testOracleClassName() {
+        JdbcDriver driver = JdbcDriver.Oracle;
+        assertEquals("oracle.jdbc.OracleDriver", driver.getClassName());
+    }
+
+    @Test
     @DisplayName("of() should find MsSqlServer driver by exact match")
     void testOfMsSqlServerExactMatch() {
         JdbcDriver driver = JdbcDriver.invoke("com.microsoft.sqlserver.jdbc.SQLServerDriver");
@@ -48,6 +55,14 @@ class JdbcDriverTest {
         JdbcDriver driver = JdbcDriver.invoke("org.hsqldb.jdbc.JDBCDriver");
         assertNotNull(driver);
         assertSame(JdbcDriver.HSQLDB, driver);
+    }
+
+    @Test
+    @DisplayName("of() should find Oracle driver by exact match")
+    void testOfOracleExactMatch() {
+        JdbcDriver driver = JdbcDriver.invoke("oracle.jdbc.OracleDriver");
+        assertNotNull(driver);
+        assertSame(JdbcDriver.Oracle, driver);
     }
 
     @Test
@@ -95,6 +110,7 @@ class JdbcDriverTest {
             case Sqlite -> "sqlite";
             case PostgreSQL -> "postgresql";
             case MariaDB -> "mariadb";
+            case Oracle -> "oracle";
         };
     }
 
@@ -136,6 +152,7 @@ class JdbcDriverTest {
             case Sqlite -> "sqlite";
             case MariaDB -> "mariadb";
             case PostgreSQL -> "postgresql";
+            case Oracle -> "oracle";
         };
         assertEquals("hsqldb", result);
 
@@ -147,6 +164,7 @@ class JdbcDriverTest {
             case MsSqlServer -> "mssql";
             case PostgreSQL -> "postgresql";
             case MariaDB -> "mariadb";
+            case Oracle -> "oracle";
         };
         assertEquals("mssql", result);
     }

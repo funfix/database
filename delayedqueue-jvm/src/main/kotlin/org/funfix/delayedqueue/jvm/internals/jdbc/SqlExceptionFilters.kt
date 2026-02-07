@@ -7,6 +7,7 @@ import org.funfix.delayedqueue.jvm.JdbcDriver
 import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MSSQLFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.oracle.OracleFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.postgres.PostgreSQLFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SQLiteFilters
 
@@ -80,4 +81,5 @@ internal fun filtersForDriver(driver: JdbcDriver): RdbmsExceptionFilters =
         JdbcDriver.Sqlite -> SQLiteFilters
         JdbcDriver.MariaDB -> MariaDBFilters
         JdbcDriver.PostgreSQL -> PostgreSQLFilters
+        JdbcDriver.Oracle -> OracleFilters
     }

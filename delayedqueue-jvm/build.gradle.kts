@@ -23,13 +23,16 @@ dependencies {
     testImplementation(libs.jdbc.mssql)
     testImplementation(libs.jdbc.postgresql)
     testImplementation(libs.jdbc.mariadb)
+    testImplementation(libs.jdbc.oracle)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(platform(libs.testcontainers.bom))
+    testImplementation(libs.testcontainers)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.mssqlserver)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.testcontainers.mariadb)
+    testImplementation(libs.testcontainers.oracle)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 

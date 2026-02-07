@@ -15,7 +15,10 @@ public enum class JdbcDriver(public val className: String) {
     MariaDB("org.mariadb.jdbc.Driver"),
 
     /** PostgreSQL driver. */
-    PostgreSQL("org.postgresql.Driver");
+    PostgreSQL("org.postgresql.Driver"),
+
+    /** Oracle Database driver. */
+    Oracle("oracle.jdbc.OracleDriver");
 
     public companion object {
         /**

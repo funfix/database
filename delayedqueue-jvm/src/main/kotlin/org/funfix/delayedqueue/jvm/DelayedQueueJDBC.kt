@@ -21,6 +21,7 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.filtersForDriver
 import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MsSqlServerMigrations
+import org.funfix.delayedqueue.jvm.internals.jdbc.oracle.OracleMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.postgres.PostgreSQLMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SqliteMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.withConnection
@@ -613,6 +614,7 @@ private constructor(
                             JdbcDriver.MsSqlServer ->
                                 MsSqlServerMigrations.getMigrations(config.tableName)
                             JdbcDriver.MariaDB -> MariaDBMigrations.getMigrations(config.tableName)
+                            JdbcDriver.Oracle -> OracleMigrations.getMigrations(config.tableName)
                         }
 
                     val executed = MigrationRunner.runMigrations(connection, migrations)

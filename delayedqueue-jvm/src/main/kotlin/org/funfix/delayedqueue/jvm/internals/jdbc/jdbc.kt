@@ -43,22 +43,21 @@ context(_: Raise<SQLException>)
 internal inline fun <T> runSQLOperation(block: () -> T): T = block()
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
-internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T =
-    runBlockingIO {
-        runSQLOperation {
-            source.connection.let {
+internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T = runBlockingIO {
+    runSQLOperation {
+        source.connection.let {
+            try {
+                block(SafeConnection(it, driver))
+            } finally {
                 try {
-                    block(SafeConnection(it, driver))
-                } finally {
-                    try {
-                        it.close()
-                    } catch (e: SQLException) {
-                        logger.warn("While closing JDBC connection", e)
-                    }
+                    it.close()
+                } catch (e: SQLException) {
+                    logger.warn("While closing JDBC connection", e)
                 }
             }
         }
     }
+}
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
 internal fun <T> Database.withTransaction(block: (SafeConnection) -> T) =
@@ -170,6 +169,7 @@ internal object ConnectionPool {
  * used as identifiers.
  * - MariaDB: uses backticks (`)
  * - PostgreSQL, HSQLDB, SQLite: use double quotes (")
+ * - Oracle: uses double quotes (")
  * - MS SQL Server: uses square brackets ([])
  *
  * @param name The identifier to quote
@@ -182,6 +182,7 @@ internal fun JdbcDriver.quote(name: String): String =
         JdbcDriver.PostgreSQL -> "\"$name\""
         JdbcDriver.Sqlite -> "\"$name\""
         JdbcDriver.MsSqlServer -> "[$name]"
+        JdbcDriver.Oracle -> "\"$name\""
     }
 
 /** Quotes a database identifier using the connection's driver. */

@@ -9,6 +9,7 @@ import org.funfix.delayedqueue.jvm.JdbcDriver
 import org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb.HSQLDBFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MSSQLFilters
+import org.funfix.delayedqueue.jvm.internals.jdbc.oracle.OracleFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SQLiteFilters
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -277,6 +278,45 @@ class SqlExceptionFiltersTest {
     }
 
     @Nested
+    inner class OracleFiltersTest {
+        @Test
+        fun `transientFailure should match transient exceptions`() {
+            val ex = SQLTransactionRollbackException("rollback")
+            assertTrue(OracleFilters.transientFailure.matches(ex))
+        }
+
+        @Test
+        fun `transientFailure should match Oracle deadlock error code`() {
+            val ex = SQLException("deadlock detected", "40001", 60)
+            assertTrue(OracleFilters.transientFailure.matches(ex))
+        }
+
+        @Test
+        fun `transientFailure should match Oracle serialization error code`() {
+            val ex = SQLException("can't serialize access", "40001", 8177)
+            assertTrue(OracleFilters.transientFailure.matches(ex))
+        }
+
+        @Test
+        fun `duplicateKey should match Oracle unique constraint error code`() {
+            val ex = SQLException("unique constraint violated", "23000", 1)
+            assertTrue(OracleFilters.duplicateKey.matches(ex))
+        }
+
+        @Test
+        fun `duplicateKey should match unique constraint message`() {
+            val ex = SQLException("ORA-00001: unique constraint violated")
+            assertTrue(OracleFilters.duplicateKey.matches(ex))
+        }
+
+        @Test
+        fun `duplicateKey should not match unrelated SQLException`() {
+            val ex = SQLException("Some other error")
+            assertFalse(OracleFilters.duplicateKey.matches(ex))
+        }
+    }
+
+    @Nested
     inner class FiltersForDriverTest {
         @Test
         fun `should return HSQLDBFilters for HSQLDB driver`() {
@@ -300,6 +340,12 @@ class SqlExceptionFiltersTest {
         fun `should return MariaDBFilters for MariaDB driver`() {
             val filters = filtersForDriver(JdbcDriver.MariaDB)
             assertTrue(filters === MariaDBFilters)
+        }
+
+        @Test
+        fun `should return OracleFilters for Oracle driver`() {
+            val filters = filtersForDriver(JdbcDriver.Oracle)
+            assertTrue(filters === OracleFilters)
         }
     }
 }
