@@ -108,13 +108,12 @@ internal object SQLiteFilters : RdbmsExceptionFilters {
                     CommonSqlFilters.integrityConstraint.matches(e) -> true
                     // SQLite CONSTRAINT_PRIMARYKEY (2067) and CONSTRAINT_UNIQUE (2579)
                     e is SQLException && isSQLiteResultCode(e, 2067, 2579) -> true
-                    // SQLite generic CONSTRAINT (19)
+                    // SQLite generic CONSTRAINT (19) when paired with duplicate-key text
                     e is SQLException &&
                         isSQLiteResultCode(e, 19) &&
                         matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
-                    e is SQLException &&
-                        isSQLiteException(e) &&
-                        matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
+                    // If the message text indicates a duplicate-key violation, accept it
+                    e is SQLException && matchesMessage(e.message, DUPLICATE_KEY_KEYWORDS) -> true
                     else -> false
                 }
         }
@@ -131,8 +130,7 @@ internal object SQLiteFilters : RdbmsExceptionFilters {
                 e is SQLException && matchesMessage(e.message, listOf("already exists"))
         }
 
-    private val DUPLICATE_KEY_KEYWORDS =
-        listOf("primary key constraint", "unique constraint", "unique")
+    private val DUPLICATE_KEY_KEYWORDS = listOf("primary key constraint", "unique constraint")
 }
 
 /**
