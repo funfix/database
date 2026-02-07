@@ -21,7 +21,8 @@ final class MySQLTestContainer {
                         new MySQLContainer(IMAGE)
                             .withDatabaseName("testdb")
                             .withUsername("test")
-                            .withPassword("test");
+                            .withPassword("test")
+                            .withCommand("--max-connections=500");
                     localContainer.start();
                     container = localContainer;
                 }
