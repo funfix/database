@@ -549,18 +549,20 @@ try {
 ### 4. Use Unique, Meaningful Keys
 
 Keys should be:
-- **Unique**: Identify the message/transaction uniquely
-- **Meaningful**: Help with debugging and manual inspection
+- **Unique**: Each message needs a distinct identifier
+- **Meaningful**: Tied to business entities for debugging and correlation
 - **Stable**: Don't change between offer and acknowledgement
 
+Using random UUIDs works but makes debugging harder - you can't easily correlate messages with business entities. Prefer keys that reference your domain objects (order IDs, user IDs, transaction IDs, etc.).
+
 ```java
-// ✅ Good keys
-queue.offerOrUpdate("payment-" + orderId, payment, deliveryTime);
+// ✅ Good keys - correlate with business entities
+queue.offerOrUpdate("order-" + orderId, payment, deliveryTime);
 queue.offerOrUpdate("email-" + userId + "-" + timestamp, email, deliveryTime);
 
-// ❌ Bad keys (not unique or meaningful)
-queue.offerOrUpdate(UUID.randomUUID().toString(), payment, deliveryTime);
-queue.offerOrUpdate("msg", email, deliveryTime);
+// ❌ Bad keys
+queue.offerOrUpdate(UUID.randomUUID().toString(), payment, deliveryTime);  // Not meaningful
+queue.offerOrUpdate("msg", email, deliveryTime);  // Not unique
 ```
 
 ### 5. Configure Appropriate Timeouts
