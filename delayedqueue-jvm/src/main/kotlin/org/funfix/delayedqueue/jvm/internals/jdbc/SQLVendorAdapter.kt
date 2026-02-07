@@ -89,14 +89,14 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
                     }
                     stmt.setEpochMillis(paramIndex++, row.createdAt)
                 }
-                val wereInserted = try {
-                    stmt.execute()
-                    true
-                } catch (e: Exception) {
-                    if (!filtersForDriver(driver).duplicateKey.matches(e))
-                        throw e
-                    false
-                }
+                val wereInserted =
+                    try {
+                        stmt.execute()
+                        true
+                    } catch (e: Exception) {
+                        if (!filtersForDriver(driver).duplicateKey.matches(e)) throw e
+                        false
+                    }
                 if (wereInserted) {
                     for (row in chunk) {
                         inserted.add(row.pKey)

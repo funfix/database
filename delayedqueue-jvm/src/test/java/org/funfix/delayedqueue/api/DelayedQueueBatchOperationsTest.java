@@ -228,6 +228,45 @@ public class DelayedQueueBatchOperationsTest {
         var result3 = findResultByInput(results, 3);
         assertInstanceOf(OfferOutcome.Created.class, result3.outcome());
     }
+
+    @Test
+    public void jdbc_batchInsertLargeWithExistingDuplicates_shouldInsertNonDuplicates() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
+        queue = createJdbcQueue(clock);
+        var now = clock.now();
+
+        // Seed existing keys that will be duplicated in the batch
+        for (int i = 0; i < 10; i++) {
+            assertInstanceOf(OfferOutcome.Created.class,
+                queue.offerIfNotExists("key-" + i, "existing-" + i, now));
+        }
+
+        var messages = new java.util.ArrayList<BatchedMessage<Integer, String>>();
+        for (int i = 0; i < 250; i++) {
+            messages.add(new BatchedMessage<>(
+                i,
+                new ScheduledMessage<>("key-" + i, "batch-" + i, now, false)
+            ));
+        }
+
+        var results = queue.offerBatch(messages);
+
+        assertEquals(250, results.size());
+
+        for (int i = 0; i < 10; i++) {
+            var result = findResultByInput(results, i);
+            assertInstanceOf(OfferOutcome.Ignored.class, result.outcome());
+        }
+
+        for (int i = 10; i < 250; i++) {
+            var result = findResultByInput(results, i);
+            assertInstanceOf(OfferOutcome.Created.class, result.outcome());
+        }
+
+        var existing = queue.read("key-0");
+        assertNotNull(existing);
+        assertEquals("existing-0", existing.payload());
+    }
     
     // ========== Helper Methods ==========
     
