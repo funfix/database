@@ -31,14 +31,14 @@ Supported databases: H2, HSQLDB, MariaDB, Microsoft SQL Server, PostgreSQL, SQLi
 <dependency>
   <groupId>org.funfix</groupId>
   <artifactId>delayedqueue-jvm</artifactId>
-  <version>0.3.1</version>
+  <version>0.3.2</version>
 </dependency>
 ```
 
 **Gradle:**
 ```kotlin
 dependencies {
-    implementation("org.funfix:delayedqueue-jvm:0.3.1")
+    implementation("org.funfix:delayedqueue-jvm:0.3.2")
 }
 ```
 
