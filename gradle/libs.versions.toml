@@ -24,6 +24,7 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version = "1.5.27
 jdbc-hsqldb = { module = "org.hsqldb:hsqldb", version = "2.7.4" }
 jdbc-sqlite = { module = "org.xerial:sqlite-jdbc", version = "3.51.1.0" }
 jdbc-mssql = { module = "com.microsoft.sqlserver:mssql-jdbc", version = "12.4.2.jre11" }
+jdbc-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version = "3.5.3" }
 junit-bom = { module = "org.junit:junit-bom", version = "6.0.2" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
@@ -31,3 +32,4 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version = "2.0.3" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version = "1.21.4" }
 testcontainers-mssqlserver = { module = "org.testcontainers:testcontainers-mssqlserver" }
+testcontainers-mariadb = { module = "org.testcontainers:testcontainers-mariadb" }
