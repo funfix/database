@@ -337,6 +337,7 @@ public final class org/funfix/delayedqueue/jvm/JdbcDriver : java/lang/Enum {
 	public static final field HSQLDB Lorg/funfix/delayedqueue/jvm/JdbcDriver;
 	public static final field MariaDB Lorg/funfix/delayedqueue/jvm/JdbcDriver;
 	public static final field MsSqlServer Lorg/funfix/delayedqueue/jvm/JdbcDriver;
+	public static final field Oracle Lorg/funfix/delayedqueue/jvm/JdbcDriver;
 	public static final field PostgreSQL Lorg/funfix/delayedqueue/jvm/JdbcDriver;
 	public static final field Sqlite Lorg/funfix/delayedqueue/jvm/JdbcDriver;
 	public final fun getClassName ()Ljava/lang/String;
