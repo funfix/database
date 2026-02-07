@@ -4,6 +4,10 @@ import java.sql.SQLException
 import javax.sql.DataSource
 import org.funfix.delayedqueue.jvm.JdbcConnectionConfig
 import org.funfix.delayedqueue.jvm.JdbcDriver
+import org.funfix.delayedqueue.jvm.internals.jdbc.execute
+import org.funfix.delayedqueue.jvm.internals.jdbc.query
+import org.funfix.delayedqueue.jvm.internals.jdbc.withConnection
+import org.funfix.delayedqueue.jvm.internals.jdbc.withTransaction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -12,13 +16,19 @@ import org.junit.jupiter.api.Test
 class DatabaseTests {
     private lateinit var config: JdbcConnectionConfig
     private lateinit var dataSource: DataSource
-    private lateinit var database: Database
+    private lateinit var database: org.funfix.delayedqueue.jvm.internals.jdbc.Database
 
     @BeforeEach
     fun setUp() {
         config = JdbcConnectionConfig(url = "jdbc:sqlite::memory:", driver = JdbcDriver.Sqlite)
-        dataSource = ConnectionPool.createDataSource(config)
-        database = Database(dataSource, dataSource as AutoCloseable)
+        dataSource =
+            _root_ide_package_.org.funfix.delayedqueue.jvm.internals.jdbc.ConnectionPool
+                .createDataSource(config)
+        database =
+            _root_ide_package_.org.funfix.delayedqueue.jvm.internals.jdbc.Database(
+                dataSource,
+                dataSource as AutoCloseable,
+            )
     }
 
     @AfterEach
@@ -28,7 +38,9 @@ class DatabaseTests {
 
     @Test
     fun `buildHikariConfig sets correct values`() = unsafeSneakyRaises {
-        val hikariConfig = ConnectionPool.buildHikariConfig(config)
+        val hikariConfig =
+            _root_ide_package_.org.funfix.delayedqueue.jvm.internals.jdbc.ConnectionPool
+                .buildHikariConfig(config)
         assertEquals(config.url, hikariConfig.jdbcUrl)
         assertEquals(config.driver.className, hikariConfig.driverClassName)
     }
@@ -44,7 +56,7 @@ class DatabaseTests {
     @Test
     fun `Database withConnection executes block and closes connection`() = unsafeSneakyRaises {
         var connectionClosedAfter: Boolean
-        var connectionRef: SafeConnection? = null
+        var connectionRef: org.funfix.delayedqueue.jvm.internals.jdbc.SafeConnection? = null
         val result =
             database.withConnection { safeConn ->
                 connectionRef = safeConn

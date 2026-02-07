@@ -1,6 +1,7 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc
 
-import java.sql.Connection
+import java.sql.SQLException
+import org.funfix.delayedqueue.jvm.internals.utils.Raise
 
 /**
  * Represents a database migration with SQL and a test to check if it needs to run.
@@ -8,7 +9,7 @@ import java.sql.Connection
  * @property sql The SQL statement(s) to execute for this migration
  * @property needsExecution Function that tests if this migration needs to be executed
  */
-internal data class Migration(val sql: String, val needsExecution: (Connection) -> Boolean) {
+internal data class Migration(val sql: String, val needsExecution: (SafeConnection) -> Boolean) {
     companion object {
         /**
          * Creates a migration that checks if a table exists.
@@ -45,19 +46,19 @@ internal data class Migration(val sql: String, val needsExecution: (Connection) 
          */
         fun alwaysRun(sql: String): Migration = Migration(sql = sql, needsExecution = { _ -> true })
 
-        private fun tableExists(connection: Connection, tableName: String): Boolean {
-            val metadata = connection.metaData
+        private fun tableExists(conn: SafeConnection, tableName: String): Boolean {
+            val metadata = conn.underlying.metaData
             metadata.getTables(null, null, tableName, null).use { rs ->
                 return rs.next()
             }
         }
 
         private fun columnExists(
-            connection: Connection,
+            conn: SafeConnection,
             tableName: String,
             columnName: String,
         ): Boolean {
-            val metadata = connection.metaData
+            val metadata = conn.underlying.metaData
             metadata.getColumns(null, null, tableName, columnName).use { rs ->
                 return rs.next()
             }
@@ -70,17 +71,19 @@ internal object MigrationRunner {
     /**
      * Runs all migrations that need execution.
      *
-     * @param connection The database connection
+     * @param conn The database connection
      * @param migrations List of migrations to run
      * @return Number of migrations executed
      */
-    fun runMigrations(connection: Connection, migrations: List<Migration>): Int {
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    fun runMigrations(conn: SafeConnection, migrations: List<Migration>): Int {
         var executed = 0
         for (migration in migrations) {
-            if (migration.needsExecution(connection)) {
-                connection.createStatement().use { stmt ->
+            if (migration.needsExecution(conn)) {
+                conn.createStatement { stmt ->
                     // Split by semicolon to handle multiple statements
                     migration.sql
+                        .trimIndent()
                         .split(";")
                         .map { it.trim() }
                         .filter { it.isNotEmpty() }

@@ -12,31 +12,31 @@ internal object MsSqlServerMigrations {
      */
     fun getMigrations(tableName: String): List<Migration> =
         listOf(
-            Migration.Companion.createTableIfNotExists(
+            Migration.createTableIfNotExists(
                 tableName = tableName,
                 sql =
                     """
-                    CREATE TABLE $tableName (
-                        id BIGINT IDENTITY(1,1) NOT NULL,
-                        pKey NVARCHAR(200) NOT NULL,
-                        pKind NVARCHAR(100) NOT NULL,
-                        payload VARBINARY(MAX) NOT NULL,
-                        scheduledAt BIGINT NOT NULL,
-                        scheduledAtInitially BIGINT NOT NULL,
-                        lockUuid VARCHAR(36) NULL,
-                        createdAt BIGINT NOT NULL
+                    CREATE TABLE [$tableName] (
+                        [id] BIGINT IDENTITY(1,1) NOT NULL,
+                        [pKey] NVARCHAR(200) NOT NULL,
+                        [pKind] NVARCHAR(100) NOT NULL,
+                        [payload] VARBINARY(MAX) NOT NULL,
+                        [scheduledAt] BIGINT NOT NULL,
+                        [scheduledAtInitially] BIGINT NOT NULL,
+                        [lockUuid] VARCHAR(36) NULL,
+                        [createdAt] BIGINT NOT NULL
                     );
 
-                    -- Make `id` the primary key to match other vendors (HSQLDB/SQLite)
-                    ALTER TABLE $tableName ADD PRIMARY KEY (id);
-
-                    -- Unique index on (pKind, pKey) to enforce uniqueness like other vendors
-                    CREATE UNIQUE INDEX ${tableName}__PKindPKeyUniqueIndex
-                    ON $tableName (pKind, pKey);
-                    CREATE INDEX ${tableName}__KindPlusScheduledAtIndex ON $tableName(pKind, scheduledAt);
-                    CREATE INDEX ${tableName}__LockUuidPlusIdIndex ON $tableName(lockUuid, id);
-                    """
-                        .trimIndent(),
+                    ALTER TABLE [$tableName] ADD PRIMARY KEY ([id]);
+                    CREATE UNIQUE INDEX [${tableName}__PKindPKeyUniqueIndex]
+                    ON [$tableName] ([pKind], [pKey]);
+                    
+                    CREATE INDEX [${tableName}__KindPlusScheduledAtIndex] 
+                    ON [$tableName]([pKind], [scheduledAt]);
+                    
+                    CREATE INDEX [${tableName}__LockUuidPlusIdIndex] 
+                    ON [$tableName]([lockUuid], [id]);
+                    """,
             )
         )
 }

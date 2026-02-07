@@ -1,14 +1,17 @@
-package org.funfix.delayedqueue.jvm.internals.utils
+package org.funfix.delayedqueue.jvm.internals.jdbc
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Statement
 import java.util.concurrent.ExecutionException
 import javax.sql.DataSource
 import org.funfix.delayedqueue.jvm.JdbcConnectionConfig
+import org.funfix.delayedqueue.jvm.JdbcDriver
+import org.funfix.delayedqueue.jvm.internals.utils.Raise
 import org.funfix.tasks.jvm.Task
 import org.funfix.tasks.jvm.TaskCancellationException
 import org.funfix.tasks.jvm.TaskExecutors
@@ -16,8 +19,11 @@ import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger(ConnectionPool::class.java)
 
-internal class Database(val source: DataSource, private val closeRef: AutoCloseable) :
-    AutoCloseable {
+internal class Database(
+    val source: DataSource,
+    val driver: JdbcDriver,
+    private val closeRef: AutoCloseable,
+) : AutoCloseable {
     override fun close() {
         closeRef.close()
     }
@@ -25,32 +31,33 @@ internal class Database(val source: DataSource, private val closeRef: AutoClosea
     companion object {
         operator fun invoke(config: JdbcConnectionConfig): Database {
             val ref = ConnectionPool.createDataSource(config)
-            return Database(ref, ref)
+            return Database(source = ref, closeRef = ref, driver = config.driver)
         }
     }
 }
 
-@JvmInline internal value class SafeConnection(val underlying: Connection)
+internal data class SafeConnection(val underlying: Connection, val driver: JdbcDriver)
 
 context(_: Raise<SQLException>)
 internal inline fun <T> runSQLOperation(block: () -> T): T = block()
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
-internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T = runBlockingIO {
-    runSQLOperation {
-        source.connection.let {
-            try {
-                block(SafeConnection(it))
-            } finally {
+internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T =
+    _root_ide_package_.org.funfix.delayedqueue.jvm.internals.utils.runBlockingIO {
+        runSQLOperation {
+            source.connection.let {
                 try {
-                    it.close()
-                } catch (e: SQLException) {
-                    logger.warn("While closing JDBC connection", e)
+                    block(SafeConnection(it, driver))
+                } finally {
+                    try {
+                        it.close()
+                    } catch (e: SQLException) {
+                        logger.warn("While closing JDBC connection", e)
+                    }
                 }
             }
         }
     }
-}
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
 internal fun <T> Database.withTransaction(block: (SafeConnection) -> T) =
@@ -74,8 +81,16 @@ internal fun <T> Database.withTransaction(block: (SafeConnection) -> T) =
     }
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
-internal fun <T> SafeConnection.execute(sql: String): Boolean =
+internal fun SafeConnection.execute(sql: String): Boolean =
     withStatement({ it.createStatement() }) { statement -> statement.execute(sql) }
+
+context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+internal fun <T> SafeConnection.createStatement(block: (Statement) -> T): T =
+    withStatement({ it.createStatement() }, block)
+
+context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+internal fun <T> SafeConnection.prepareStatement(sql: String, block: (PreparedStatement) -> T): T =
+    withStatement({ it.prepareStatement(sql.trimIndent()) }, block)
 
 context(_: Raise<InterruptedException>, _: Raise<SQLException>)
 internal fun <T> SafeConnection.query(sql: String, block: (ResultSet) -> T): T =
@@ -147,3 +162,26 @@ internal object ConnectionPool {
     fun createDataSource(config: JdbcConnectionConfig): HikariDataSource =
         HikariDataSource(buildHikariConfig(config))
 }
+
+/**
+ * Quotes a database identifier (table name, column name, etc.) with the appropriate quote syntax
+ * for the target database system. This prevents naming conflicts and allows reserved keywords to be
+ * used as identifiers.
+ * - MariaDB: uses backticks (`)
+ * - PostgreSQL, HSQLDB, SQLite: use double quotes (")
+ * - MS SQL Server: uses square brackets ([])
+ *
+ * @param name The identifier to quote
+ * @return The quoted identifier in database-specific syntax
+ */
+internal fun JdbcDriver.quote(name: String): String =
+    when (this) {
+        JdbcDriver.MariaDB -> "`$name`"
+        JdbcDriver.HSQLDB -> "\"$name\""
+        JdbcDriver.PostgreSQL -> "\"$name\""
+        JdbcDriver.Sqlite -> "\"$name\""
+        JdbcDriver.MsSqlServer -> "[$name]"
+    }
+
+/** Quotes a database identifier using the connection's driver. */
+internal fun SafeConnection.quote(name: String): String = driver.quote(name)

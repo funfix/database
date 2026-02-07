@@ -1,32 +1,48 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc.mssql
 
-import java.sql.Connection
+import java.sql.SQLException
 import java.time.Duration
 import java.time.Instant
 import org.funfix.delayedqueue.jvm.JdbcDriver
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRow
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRowWithId
 import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
+import org.funfix.delayedqueue.jvm.internals.jdbc.SafeConnection
+import org.funfix.delayedqueue.jvm.internals.jdbc.prepareStatement
+import org.funfix.delayedqueue.jvm.internals.jdbc.quote
 import org.funfix.delayedqueue.jvm.internals.jdbc.toDBTableRowWithId
+import org.funfix.delayedqueue.jvm.internals.utils.Raise
 
 /** MS-SQL-specific adapter. */
 internal class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
     SQLVendorAdapter(driver, tableName) {
 
-    override fun insertOneRow(connection: Connection, row: DBTableRow): Boolean {
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    override fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean {
         val sql =
             """
             IF NOT EXISTS (
-                SELECT 1 FROM $tableName WHERE pKey = ? AND pKind = ?
+                SELECT 1 
+                FROM ${conn.quote(tableName)} 
+                WHERE 
+                    ${conn.quote("pKey")} = ? 
+                    AND ${conn.quote("pKind")} = ?
             )
             BEGIN
-                INSERT INTO $tableName
-                (pKey, pKind, payload, scheduledAt, scheduledAtInitially, createdAt)
+                INSERT INTO ${conn.quote(tableName)}
+                (
+                    ${conn.quote("pKey")},
+                    ${conn.quote("pKind")}, 
+                    ${conn.quote("payload")}, 
+                    ${conn.quote("scheduledAt")}, 
+                    ${conn.quote("scheduledAtInitially")}, 
+                    ${conn.quote("createdAt")}
+                )
                 VALUES (?, ?, ?, ?, ?, ?)
             END
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, row.pKey)
             stmt.setString(2, row.pKind)
             stmt.setString(3, row.pKey)
@@ -39,21 +55,31 @@ internal class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun selectForUpdateOneRow(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         key: String,
     ): DBTableRowWithId? {
         val sql =
             """
             SELECT TOP 1
-                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
-            FROM $tableName
+                ${conn.quote("id")}, 
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("lockUuid")}, 
+                ${conn.quote("createdAt")}
+            FROM ${conn.quote(tableName)}
             WITH (UPDLOCK)
-            WHERE pKey = ? AND pKind = ?
+            WHERE 
+                ${conn.quote("pKey")} = ? AND 
+                ${conn.quote("pKind")} = ?
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, key)
             stmt.setString(2, kind)
             stmt.executeQuery().use { rs ->
@@ -66,22 +92,32 @@ internal class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun selectFirstAvailableWithLock(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         now: Instant,
     ): DBTableRowWithId? {
         val sql =
             """
             SELECT TOP 1
-                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
-            FROM $tableName
+                ${conn.quote("id")}, 
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("lockUuid")}, 
+                ${conn.quote("createdAt")}
+            FROM ${conn.quote(tableName)}
             WITH (UPDLOCK, READPAST)
-            WHERE pKind = ? AND scheduledAt <= ?
-            ORDER BY scheduledAt
+            WHERE 
+                ${conn.quote("pKind")} = ? AND 
+                ${conn.quote("scheduledAt")} <= ?
+            ORDER BY ${conn.quote("scheduledAt")}
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, kind)
             stmt.setEpochMillis(2, now)
             stmt.executeQuery().use { rs ->
@@ -94,8 +130,9 @@ internal class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun acquireManyOptimistically(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         limit: Int,
         lockUuid: String,
@@ -107,19 +144,23 @@ internal class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
 
         val sql =
             """
-            UPDATE $tableName
-            SET lockUuid = ?,
-                scheduledAt = ?
-            WHERE id IN (
-                SELECT TOP $limit id
-                FROM $tableName
+            UPDATE ${conn.quote(tableName)}
+            SET 
+                ${conn.quote("lockUuid")} = ?,
+                ${conn.quote("scheduledAt")} = ?
+            WHERE ${conn.quote("id")} IN (
+                SELECT TOP $limit 
+                    ${conn.quote("id")}
+                FROM ${conn.quote(tableName)}
                 WITH (UPDLOCK, READPAST)
-                WHERE pKind = ? AND scheduledAt <= ?
-                ORDER BY scheduledAt
+                WHERE 
+                    ${conn.quote("pKind")} = ? AND 
+                    ${conn.quote("scheduledAt")} <= ?
+                ORDER BY ${conn.quote("scheduledAt")}
             )
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, lockUuid)
             stmt.setEpochMillis(2, expireAt)
             stmt.setString(3, kind)
@@ -128,16 +169,24 @@ internal class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    override fun selectByKey(connection: Connection, kind: String, key: String): DBTableRowWithId? {
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    override fun selectByKey(conn: SafeConnection, kind: String, key: String): DBTableRowWithId? {
         val sql =
             """
             SELECT TOP 1
-                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
-            FROM $tableName
-            WHERE pKey = ? AND pKind = ?
+                ${conn.quote("id")}, 
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")},
+                ${conn.quote("lockUuid")}, 
+                ${conn.quote("createdAt")}
+            FROM ${conn.quote(tableName)}
+            WHERE ${conn.quote("pKey")} = ? AND ${conn.quote("pKind")} = ?
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, key)
             stmt.setString(2, kind)
             stmt.executeQuery().use { rs ->
@@ -150,23 +199,31 @@ internal class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun selectAllAvailableWithLock(
-        connection: Connection,
+        conn: SafeConnection,
         lockUuid: String,
         count: Int,
         offsetId: Long?,
     ): List<DBTableRowWithId> {
-        val offsetClause = offsetId?.let { "AND id > ?" } ?: ""
+        val offsetClause = offsetId?.let { "AND ${conn.quote("id")} > ?" } ?: ""
         val sql =
             """
             SELECT TOP $count
-                id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
-            FROM $tableName
-            WHERE lockUuid = ? $offsetClause
-            ORDER BY id
+                ${conn.quote("id")}, 
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("lockUuid")}, 
+                ${conn.quote("createdAt")}
+            FROM ${conn.quote(tableName)}
+            WHERE ${conn.quote("lockUuid")} = ? $offsetClause
+            ORDER BY ${conn.quote("id")}
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, lockUuid)
             offsetId?.let { stmt.setLong(2, it) }
             stmt.executeQuery().use { rs ->

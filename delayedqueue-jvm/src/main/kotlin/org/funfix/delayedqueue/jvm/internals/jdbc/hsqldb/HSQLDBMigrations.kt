@@ -12,7 +12,7 @@ internal object HSQLDBMigrations {
      */
     fun getMigrations(tableName: String): List<Migration> =
         listOf(
-            Migration.Companion.createTableIfNotExists(
+            Migration.createTableIfNotExists(
                 tableName = tableName,
                 sql =
                     """
@@ -35,8 +35,7 @@ internal object HSQLDBMigrations {
 
                     CREATE INDEX ${tableName}__LockUuidPlusIdIndex
                     ON $tableName (lockUuid, id);
-                    """
-                        .trimIndent(),
+                    """,
             )
         )
 }

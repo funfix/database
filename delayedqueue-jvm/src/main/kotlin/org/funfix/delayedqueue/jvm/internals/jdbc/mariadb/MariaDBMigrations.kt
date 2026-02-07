@@ -12,27 +12,26 @@ internal object MariaDBMigrations {
      */
     fun getMigrations(tableName: String): List<Migration> =
         listOf(
-            Migration.Companion.createTableIfNotExists(
+            Migration.createTableIfNotExists(
                 tableName = tableName,
                 sql =
                     """
-                    CREATE TABLE $tableName (
-                        id BIGINT NOT NULL AUTO_INCREMENT,
-                        pKey VARCHAR(200) NOT NULL,
-                        pKind VARCHAR(100) NOT NULL,
-                        payload MEDIUMBLOB NOT NULL,
-                        scheduledAt BIGINT NOT NULL,
-                        scheduledAtInitially BIGINT NOT NULL,
-                        lockUuid VARCHAR(36) NULL,
-                        createdAt BIGINT NOT NULL,
-                        PRIMARY KEY (pKey, pKind),
-                        UNIQUE KEY ${tableName}__IdUniqueIndex (id)
+                    CREATE TABLE `${tableName}` (
+                        `id` BIGINT NOT NULL AUTO_INCREMENT,
+                        `pKey` VARCHAR(200) NOT NULL,
+                        `pKind` VARCHAR(100) NOT NULL,
+                        `payload` LONGBLOB NOT NULL,
+                        `scheduledAt` BIGINT NOT NULL,
+                        `scheduledAtInitially` BIGINT NOT NULL,
+                        `lockUuid` VARCHAR(36) NULL,
+                        `createdAt` BIGINT NOT NULL,
+                        PRIMARY KEY (`id`),
+                        UNIQUE KEY `${tableName}__KindPlusKeyUniqueIndex` (`pKind`, `pKey`)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-                    CREATE INDEX ${tableName}__KindPlusScheduledAtIndex ON $tableName(pKind, scheduledAt);
-                    CREATE INDEX ${tableName}__LockUuidPlusIdIndex ON $tableName(lockUuid, id)
-                    """
-                        .trimIndent(),
+                    CREATE INDEX `${tableName}__KindPlusScheduledAtIndex` ON `$tableName`(`pKind`, `scheduledAt`);
+                    CREATE INDEX `${tableName}__LockUuidPlusIdIndex` ON `$tableName`(`lockUuid`, `id`)
+                    """,
             )
         )
 }

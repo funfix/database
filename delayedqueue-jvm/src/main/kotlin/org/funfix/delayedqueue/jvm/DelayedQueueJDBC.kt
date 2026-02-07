@@ -13,6 +13,7 @@ import org.funfix.delayedqueue.jvm.internals.CronServiceImpl
 import org.funfix.delayedqueue.jvm.internals.PollResult
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRow
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRowWithId
+import org.funfix.delayedqueue.jvm.internals.jdbc.Database
 import org.funfix.delayedqueue.jvm.internals.jdbc.MigrationRunner
 import org.funfix.delayedqueue.jvm.internals.jdbc.RdbmsExceptionFilters
 import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
@@ -22,12 +23,11 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MsSqlServerMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.postgres.PostgreSQLMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SqliteMigrations
+import org.funfix.delayedqueue.jvm.internals.jdbc.withConnection
 import org.funfix.delayedqueue.jvm.internals.jdbc.withDbRetries
-import org.funfix.delayedqueue.jvm.internals.utils.Database
+import org.funfix.delayedqueue.jvm.internals.jdbc.withTransaction
 import org.funfix.delayedqueue.jvm.internals.utils.Raise
 import org.funfix.delayedqueue.jvm.internals.utils.unsafeSneakyRaises
-import org.funfix.delayedqueue.jvm.internals.utils.withConnection
-import org.funfix.delayedqueue.jvm.internals.utils.withTransaction
 import org.slf4j.LoggerFactory
 
 /**
@@ -153,9 +153,7 @@ private constructor(
         // This matches the original Scala implementation's approach:
         // Try to insert first, and only SELECT+UPDATE if the insert fails
         val inserted =
-            database.withTransaction { connection ->
-                adapter.insertOneRow(connection.underlying, newRow)
-            }
+            database.withTransaction { connection -> adapter.insertOneRow(connection, newRow) }
 
         if (inserted) {
             lock.withLock { condition.signalAll() }
@@ -174,7 +172,7 @@ private constructor(
                 database.withTransaction { connection ->
                     // Use locking SELECT to prevent concurrent modifications
                     val existing =
-                        adapter.selectForUpdateOneRow(connection.underlying, pKind, key)
+                        adapter.selectForUpdateOneRow(connection, pKind, key)
                             ?: return@withTransaction null // Row disappeared, retry
 
                     // Check if the row is a duplicate
@@ -183,8 +181,7 @@ private constructor(
                     }
 
                     // Try to update with guarded CAS (compare-and-swap)
-                    val updated =
-                        adapter.guardedUpdate(connection.underlying, existing.data, newRow)
+                    val updated = adapter.guardedUpdate(connection, existing.data, newRow)
                     if (updated) {
                         OfferOutcome.Updated
                     } else {
@@ -227,7 +224,7 @@ private constructor(
             database.withTransaction { connection ->
                 // Find existing keys in a SINGLE query (not N queries)
                 val keys = messages.map { it.message.key }
-                val existingKeys = adapter.searchAvailableKeys(connection.underlying, pKind, keys)
+                val existingKeys = adapter.searchAvailableKeys(connection, pKind, keys)
 
                 // Filter to only insert non-existing keys
                 val rowsToInsert =
@@ -251,7 +248,7 @@ private constructor(
                     messages.associate { it.message.key to OfferOutcome.Ignored }
                 } else {
                     try {
-                        val inserted = adapter.insertBatch(connection.underlying, rowsToInsert)
+                        val inserted = adapter.insertBatch(connection, rowsToInsert)
                         if (inserted.isNotEmpty()) {
                             lock.withLock { condition.signalAll() }
                         }
@@ -335,9 +332,7 @@ private constructor(
     private fun acknowledgeByLockUuid(lockUuid: String): AcknowledgeFun = {
         unsafeSneakyRaises {
             withRetries {
-                database.withTransaction { ackConn ->
-                    adapter.deleteRowsWithLock(ackConn.underlying, lockUuid)
-                }
+                database.withTransaction { conn -> adapter.deleteRowsWithLock(conn, lockUuid) }
             }
         }
     }
@@ -345,9 +340,7 @@ private constructor(
     private fun acknowledgeByFingerprint(row: DBTableRowWithId): AcknowledgeFun = {
         unsafeSneakyRaises {
             withRetries {
-                database.withTransaction { ackConn ->
-                    adapter.deleteRowByFingerprint(ackConn.underlying, row)
-                }
+                database.withTransaction { conn -> adapter.deleteRowByFingerprint(conn, row) }
             }
         }
     }
@@ -364,13 +357,13 @@ private constructor(
 
                     // Select first available message (with locking if supported by DB)
                     val row =
-                        adapter.selectFirstAvailableWithLock(connection.underlying, pKind, now)
+                        adapter.selectFirstAvailableWithLock(connection, pKind, now)
                             ?: return@withTransaction PollResult.NoMessages
 
                     // Try to acquire the row by updating it with our lock
                     val acquired =
                         adapter.acquireRowByUpdate(
-                            connection = connection.underlying,
+                            conn = connection,
                             row = row.data,
                             lockUuid = lockUuid,
                             timeout = config.time.acquireTimeout,
@@ -437,7 +430,7 @@ private constructor(
 
             val count =
                 adapter.acquireManyOptimistically(
-                    connection.underlying,
+                    connection,
                     pKind,
                     batchMaxSize,
                     lockUuid,
@@ -456,8 +449,7 @@ private constructor(
                 )
             }
 
-            val rows =
-                adapter.selectAllAvailableWithLock(connection.underlying, lockUuid, count, null)
+            val rows = adapter.selectAllAvailableWithLock(connection, lockUuid, count, null)
 
             val payloads = rows.map { row -> serializer.deserialize(row.data.payload) }
 
@@ -506,8 +498,7 @@ private constructor(
     context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     private fun readImpl(key: String): AckEnvelope<A>? {
         return database.withConnection { connection ->
-            val row =
-                adapter.selectByKey(connection.underlying, pKind, key) ?: return@withConnection null
+            val row = adapter.selectByKey(connection, pKind, key) ?: return@withConnection null
 
             val payload = serializer.deserialize(row.data.payload)
             val now = Instant.now(clock)
@@ -533,9 +524,7 @@ private constructor(
     @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun dropMessage(key: String): Boolean = unsafeSneakyRaises {
         withRetries {
-            database.withTransaction { connection ->
-                adapter.deleteOneRow(connection.underlying, key, pKind)
-            }
+            database.withTransaction { connection -> adapter.deleteOneRow(connection, key, pKind) }
         }
     }
 
@@ -543,7 +532,7 @@ private constructor(
     override fun containsMessage(key: String): Boolean = unsafeSneakyRaises {
         withRetries {
             database.withConnection { connection ->
-                adapter.checkIfKeyExists(connection.underlying, key, pKind)
+                adapter.checkIfKeyExists(connection, key, pKind)
             }
         }
     }
@@ -561,7 +550,7 @@ private constructor(
         return unsafeSneakyRaises {
             withRetries {
                 database.withTransaction { connection ->
-                    adapter.dropAllMessages(connection.underlying, pKind)
+                    adapter.dropAllMessages(connection, pKind)
                 }
             }
         }
@@ -572,7 +561,7 @@ private constructor(
     private val deleteCurrentCron: CronDeleteOperation = { configHash, keyPrefix ->
         withRetries {
             database.withTransaction { connection ->
-                adapter.deleteOldCron(connection.underlying, pKind, keyPrefix, configHash.value)
+                adapter.deleteOldCron(connection, pKind, keyPrefix, configHash.value)
             }
         }
     }
@@ -580,7 +569,7 @@ private constructor(
     private val deleteOldCron: CronDeleteOperation = { configHash, keyPrefix ->
         withRetries {
             database.withTransaction { connection ->
-                adapter.deleteOldCron(connection.underlying, pKind, keyPrefix, configHash.value)
+                adapter.deleteOldCron(connection, pKind, keyPrefix, configHash.value)
             }
         }
     }
@@ -628,7 +617,7 @@ private constructor(
                             JdbcDriver.MariaDB -> MariaDBMigrations.getMigrations(config.tableName)
                         }
 
-                    val executed = MigrationRunner.runMigrations(connection.underlying, migrations)
+                    val executed = MigrationRunner.runMigrations(connection, migrations)
                     if (executed > 0) {
                         logger.info("Executed $executed migrations for table ${config.tableName}")
                     }

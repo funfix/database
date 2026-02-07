@@ -75,7 +75,7 @@ class MsSqlServerAdapterSqlTests {
         val adapter = SQLVendorAdapter.create(JdbcDriver.MsSqlServer, tableName)
 
         adapter.acquireManyOptimistically(
-            connection = connection,
+            conn = connection,
             kind = "kind-1",
             limit = 5,
             lockUuid = "lock-uuid",

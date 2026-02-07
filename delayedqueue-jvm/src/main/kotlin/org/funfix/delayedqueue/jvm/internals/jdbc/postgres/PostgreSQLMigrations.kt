@@ -16,23 +16,26 @@ internal object PostgreSQLMigrations {
                 tableName = tableName,
                 sql =
                     """
-                    CREATE TABLE $tableName (
-                        id BIGSERIAL NOT NULL,
-                        pKey VARCHAR(200) NOT NULL,
-                        pKind VARCHAR(100) NOT NULL,
-                        payload BYTEA NOT NULL,
-                        scheduledAt BIGINT NOT NULL,
-                        scheduledAtInitially BIGINT NOT NULL,
-                        lockUuid VARCHAR(36) NULL,
-                        createdAt BIGINT NOT NULL,
-                        PRIMARY KEY (pKey, pKind)
+                    CREATE TABLE "$tableName" (
+                        "id" BIGSERIAL PRIMARY KEY,
+                        "pKey" VARCHAR(200) NOT NULL,
+                        "pKind" VARCHAR(100) NOT NULL,
+                        "payload" BYTEA NOT NULL,
+                        "scheduledAt" BIGINT NOT NULL,
+                        "scheduledAtInitially" BIGINT NOT NULL,
+                        "lockUuid" VARCHAR(36) NULL,
+                        "createdAt" BIGINT NOT NULL
                     );
 
-                    CREATE UNIQUE INDEX ${tableName}__IdUniqueIndex ON $tableName(id);
-                    CREATE INDEX ${tableName}__KindPlusScheduledAtIndex ON $tableName(pKind, scheduledAt);
-                    CREATE INDEX ${tableName}__LockUuidPlusIdIndex ON $tableName(lockUuid, id);
-                    """
-                        .trimIndent(),
+                    CREATE UNIQUE INDEX "${tableName}__PKeyPlusKindUniqueIndex" 
+                    ON "$tableName"("pKey", "pKind");
+                    
+                    CREATE INDEX "${tableName}__KindPlusScheduledAtIndex" 
+                    ON "$tableName"("pKind", "scheduledAt");
+                    
+                    CREATE INDEX "${tableName}__LockUuidPlusIdIndex" 
+                    ON "$tableName"("lockUuid", "id");
+                    """,
             )
         )
 }

@@ -74,7 +74,7 @@ class MariaDBAdapterSqlTests {
         val adapter = SQLVendorAdapter.create(JdbcDriver.MariaDB, tableName)
 
         adapter.acquireManyOptimistically(
-            connection = connection,
+            conn = connection,
             kind = "kind-1",
             limit = 5,
             lockUuid = "lock-uuid",

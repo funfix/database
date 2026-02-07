@@ -1,8 +1,9 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc
 
-import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.SQLException
+import java.sql.Types
 import java.time.Duration
 import java.time.Instant
 import org.funfix.delayedqueue.jvm.JdbcDriver
@@ -11,6 +12,7 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.mariadb.MariaDBAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.mssql.MsSqlServerAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.postgres.PostgreSQLAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SqliteAdapter
+import org.funfix.delayedqueue.jvm.internals.utils.Raise
 
 /**
  * Describes actual SQL queries executed — can be overridden to provide driver-specific queries.
@@ -23,9 +25,14 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SqliteAdapter
  */
 internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val tableName: String) {
     /** Checks if a key exists in the database. */
-    fun checkIfKeyExists(connection: Connection, key: String, kind: String): Boolean {
-        val sql = "SELECT 1 FROM $tableName WHERE pKey = ? AND pKind = ?"
-        return connection.prepareStatement(sql).use { stmt ->
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    fun checkIfKeyExists(conn: SafeConnection, key: String, kind: String): Boolean {
+        val sql =
+            """
+            SELECT 1 FROM ${conn.quote(tableName)} 
+            WHERE ${conn.quote("pKey")} = ? AND ${conn.quote("pKind")} = ?
+            """
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, key)
             stmt.setString(2, kind)
             stmt.executeQuery().use { rs -> rs.next() }
@@ -36,31 +43,40 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Inserts a single row into the database. Returns true if inserted, false if key already
      * exists.
      */
-    abstract fun insertOneRow(connection: Connection, row: DBTableRow): Boolean
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    abstract fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean
 
     /**
      * Inserts multiple rows in a batch. Returns the list of keys that were successfully inserted.
      */
-    fun insertBatch(connection: Connection, rows: List<DBTableRow>): List<String> {
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    fun insertBatch(conn: SafeConnection, rows: List<DBTableRow>): List<String> {
         if (rows.isEmpty()) return emptyList()
 
         val sql =
             """
-            INSERT INTO $tableName
-            (pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt)
+            INSERT INTO ${conn.quote(tableName)}
+            (
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("lockUuid")}, 
+                ${conn.quote("createdAt")}
+            )
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """
 
         val inserted = mutableListOf<String>()
-        connection.prepareStatement(sql).use { stmt ->
+        conn.prepareStatement(sql) { stmt ->
             for (row in rows) {
                 stmt.setString(1, row.pKey)
                 stmt.setString(2, row.pKind)
                 stmt.setBytes(3, row.payload)
                 stmt.setEpochMillis(4, row.scheduledAt)
                 stmt.setEpochMillis(5, row.scheduledAtInitially)
-                row.lockUuid?.let { stmt.setString(6, it) }
-                    ?: stmt.setNull(6, java.sql.Types.VARCHAR)
+                row.lockUuid?.let { stmt.setString(6, it) } ?: stmt.setNull(6, Types.VARCHAR)
                 stmt.setEpochMillis(7, row.createdAt)
                 stmt.addBatch()
             }
@@ -78,26 +94,29 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Updates an existing row with optimistic locking (compare-and-swap). Only updates if the
      * current row matches what's in the database.
      */
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     fun guardedUpdate(
-        connection: Connection,
+        conn: SafeConnection,
         currentRow: DBTableRow,
         updatedRow: DBTableRow,
     ): Boolean {
         val sql =
             """
-            UPDATE $tableName
-            SET payload = ?,
-                scheduledAt = ?,
-                scheduledAtInitially = ?,
-                lockUuid = ?,
-                createdAt = ?
-            WHERE pKey = ?
-              AND pKind = ?
-              AND scheduledAtInitially = ?
-              AND createdAt = ?
+            UPDATE ${conn.quote(tableName)}
+            SET 
+                ${conn.quote("payload")} = ?,
+                ${conn.quote("scheduledAt")} = ?,
+                ${conn.quote("scheduledAtInitially")} = ?,
+                ${conn.quote("lockUuid")} = ?,
+                ${conn.quote("createdAt")} = ?
+            WHERE 
+                ${conn.quote("pKey")} = ?
+                AND ${conn.quote("pKind")} = ?
+                AND ${conn.quote("scheduledAtInitially")} = ?
+                AND ${conn.quote("createdAt")} = ?
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setBytes(1, updatedRow.payload)
             stmt.setEpochMillis(2, updatedRow.scheduledAt)
             stmt.setEpochMillis(3, updatedRow.scheduledAtInitially)
@@ -112,16 +131,25 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     }
 
     /** Selects one row by its key. */
-    open fun selectByKey(connection: Connection, kind: String, key: String): DBTableRowWithId? {
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    open fun selectByKey(conn: SafeConnection, kind: String, key: String): DBTableRowWithId? {
         val sql =
             """
-            SELECT id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
-            FROM $tableName
-            WHERE pKey = ? AND pKind = ?
+            SELECT 
+                ${conn.quote("id")}, 
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("lockUuid")}, 
+                ${conn.quote("createdAt")}
+            FROM ${conn.quote(tableName)}
+            WHERE ${conn.quote("pKey")} = ? AND ${conn.quote("pKind")} = ?
             LIMIT 1
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, key)
             stmt.setString(2, kind)
             stmt.executeQuery().use { rs ->
@@ -142,8 +170,9 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * - MS-SQL: WITH (UPDLOCK)
      * - HSQLDB: Falls back to plain SELECT (limited row-level locking support)
      */
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     abstract fun selectForUpdateOneRow(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         key: String,
     ): DBTableRowWithId?
@@ -154,14 +183,22 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Returns the subset of keys that already exist in the database. This is used by batch
      * operations to avoid N+1 queries.
      */
-    fun searchAvailableKeys(connection: Connection, kind: String, keys: List<String>): Set<String> {
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    fun searchAvailableKeys(conn: SafeConnection, kind: String, keys: List<String>): Set<String> {
         if (keys.isEmpty()) return emptySet()
 
         // Build IN clause with placeholders
         val placeholders = keys.joinToString(",") { "?" }
-        val sql = "SELECT pKey FROM $tableName WHERE pKind = ? AND pKey IN ($placeholders)"
+        val sql =
+            """
+            SELECT ${conn.quote("pKey")} 
+            FROM ${conn.quote(tableName)} 
+            WHERE 
+                ${conn.quote("pKind")} = ? 
+                AND ${conn.quote("pKey")} IN ($placeholders)
+            """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, kind)
             keys.forEachIndexed { index, key -> stmt.setString(index + 2, key) }
             stmt.executeQuery().use { rs ->
@@ -175,9 +212,16 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     }
 
     /** Deletes one row by key and kind. */
-    fun deleteOneRow(connection: Connection, key: String, kind: String): Boolean {
-        val sql = "DELETE FROM $tableName WHERE pKey = ? AND pKind = ?"
-        return connection.prepareStatement(sql).use { stmt ->
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    fun deleteOneRow(conn: SafeConnection, key: String, kind: String): Boolean {
+        val sql =
+            """
+            DELETE FROM ${conn.quote(tableName)} 
+            WHERE 
+                ${conn.quote("pKey")} = ? 
+                AND ${conn.quote("pKind")} = ?
+            """
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, key)
             stmt.setString(2, kind)
             stmt.executeUpdate() > 0
@@ -185,23 +229,31 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     }
 
     /** Deletes rows with a specific lock UUID. */
-    fun deleteRowsWithLock(connection: Connection, lockUuid: String): Int {
-        val sql = "DELETE FROM $tableName WHERE lockUuid = ?"
-        return connection.prepareStatement(sql).use { stmt ->
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    fun deleteRowsWithLock(conn: SafeConnection, lockUuid: String): Int {
+        val sql =
+            """
+            DELETE FROM ${conn.quote(tableName)} 
+            WHERE ${conn.quote("lockUuid")} = ?
+            """
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, lockUuid)
             stmt.executeUpdate()
         }
     }
 
     /** Deletes a row by its fingerprint (id and createdAt). */
-    fun deleteRowByFingerprint(connection: Connection, row: DBTableRowWithId): Boolean {
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    fun deleteRowByFingerprint(conn: SafeConnection, row: DBTableRowWithId): Boolean {
         val sql =
             """
-            DELETE FROM $tableName
-            WHERE id = ? AND scheduledAtInitially = ? AND createdAt = ?
+            DELETE FROM ${conn.quote(tableName)}
+            WHERE 
+                ${conn.quote("id")} = ? 
+                AND ${conn.quote("scheduledAtInitially")} = ? 
+                AND ${conn.quote("createdAt")} = ?
             """
-
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setLong(1, row.id)
             stmt.setEpochMillis(2, row.data.scheduledAtInitially)
             stmt.setEpochMillis(3, row.data.createdAt)
@@ -210,9 +262,14 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     }
 
     /** Deletes all rows with a specific kind (used for cleanup in tests). */
-    fun dropAllMessages(connection: Connection, kind: String): Int {
-        val sql = "DELETE FROM $tableName WHERE pKind = ?"
-        return connection.prepareStatement(sql).use { stmt ->
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    fun dropAllMessages(onnn: SafeConnection, kind: String): Int {
+        val sql =
+            """
+            DELETE FROM ${onnn.quote(tableName)} 
+            WHERE ${onnn.quote("pKind")} = ?
+            """
+        return onnn.prepareStatement(sql) { stmt ->
             stmt.setString(1, kind)
             stmt.executeUpdate()
         }
@@ -222,14 +279,21 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Deletes cron messages matching a specific config hash and key prefix. Used by uninstallTick
      * to remove the current cron configuration.
      */
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     fun deleteCurrentCron(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         keyPrefix: String,
         configHash: String,
     ): Int {
-        val sql = "DELETE FROM $tableName WHERE pKind = ? AND pKey LIKE ?"
-        return connection.prepareStatement(sql).use { stmt ->
+        val sql =
+            """
+            DELETE FROM ${conn.quote(tableName)} 
+            WHERE 
+                ${conn.quote("pKind")} = ? 
+                AND ${conn.quote("pKey")} LIKE ?
+            """
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, kind)
             stmt.setString(2, "$keyPrefix/$configHash%")
             stmt.executeUpdate()
@@ -240,9 +304,15 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Deletes ALL cron messages with a given prefix (ignoring config hash). This is used as a
      * fallback or for complete cleanup of a prefix.
      */
-    fun deleteAllForPrefix(connection: Connection, kind: String, keyPrefix: String): Int {
-        val sql = "DELETE FROM $tableName WHERE pKind = ? AND pKey LIKE ?"
-        return connection.prepareStatement(sql).use { stmt ->
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    fun deleteAllForPrefix(conn: SafeConnection, kind: String, keyPrefix: String): Int {
+        val sql =
+            """
+            DELETE FROM ${conn.quote(tableName)} 
+            WHERE ${conn.quote("pKind")} = ? 
+                AND ${conn.quote("pKey")} LIKE ?
+            """
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, kind)
             stmt.setString(2, "$keyPrefix/%")
             stmt.executeUpdate()
@@ -254,20 +324,21 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * installTick to remove outdated configurations while preserving the current one. This avoids
      * wasteful deletions when the configuration hasn't changed.
      */
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     fun deleteOldCron(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         keyPrefix: String,
         configHash: String,
     ): Int {
         val sql =
             """
-            DELETE FROM $tableName
-            WHERE pKind = ?
-              AND pKey LIKE ?
-              AND pKey NOT LIKE ?
+            DELETE FROM ${conn.quote(tableName)}
+            WHERE ${conn.quote("pKind")} = ?
+              AND ${conn.quote("pKey")} LIKE ?
+              AND ${conn.quote("pKey")} NOT LIKE ?
             """
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, kind)
             stmt.setString(2, "$keyPrefix/%")
             stmt.setString(3, "$keyPrefix/$configHash%")
@@ -279,8 +350,9 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Acquires many messages optimistically by updating them with a lock. Returns the number of
      * messages acquired.
      */
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     abstract fun acquireManyOptimistically(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         limit: Int,
         lockUuid: String,
@@ -289,30 +361,40 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     ): Int
 
     /** Selects the first available message for processing (with locking if supported). */
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     abstract fun selectFirstAvailableWithLock(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         now: Instant,
     ): DBTableRowWithId?
 
     /** Selects all messages with a specific lock UUID. */
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     open fun selectAllAvailableWithLock(
-        connection: Connection,
+        conn: SafeConnection,
         lockUuid: String,
         count: Int,
         offsetId: Long?,
     ): List<DBTableRowWithId> {
-        val offsetClause = offsetId?.let { "AND id > ?" } ?: ""
+        val offsetClause = offsetId?.let { "AND ${conn.quote("id")} > ?" } ?: ""
         val sql =
             """
-            SELECT id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
-            FROM $tableName
-            WHERE lockUuid = ? $offsetClause
-            ORDER BY id
+            SELECT 
+                ${conn.quote("id")},
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("lockUuid")}, 
+                ${conn.quote("createdAt")}
+            FROM ${conn.quote(tableName)}
+            WHERE ${conn.quote("lockUuid")} = ? $offsetClause
+            ORDER BY ${conn.quote("id")}
             LIMIT $count
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, lockUuid)
             offsetId?.let { stmt.setLong(2, it) }
             stmt.executeQuery().use { rs ->
@@ -330,8 +412,9 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * successfully acquired.
      */
     /** Acquires a row by updating its scheduledAt and lockUuid. */
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     fun acquireRowByUpdate(
-        connection: Connection,
+        conn: SafeConnection,
         row: DBTableRow,
         lockUuid: String,
         timeout: Duration,
@@ -340,15 +423,15 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
         val expireAt = now.plus(timeout)
         val sql =
             """
-            UPDATE $tableName
-            SET scheduledAt = ?,
-                lockUuid = ?
-            WHERE pKey = ?
-              AND pKind = ?
-              AND scheduledAt = ?
+            UPDATE ${conn.quote(tableName)}
+            SET ${conn.quote("scheduledAt")} = ?,
+                ${conn.quote("lockUuid")} = ?
+            WHERE ${conn.quote("pKey")} = ?
+              AND ${conn.quote("pKind")} = ?
+              AND ${conn.quote("scheduledAt")} = ?
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setEpochMillis(1, expireAt)
             stmt.setString(2, lockUuid)
             stmt.setString(3, row.pKey)

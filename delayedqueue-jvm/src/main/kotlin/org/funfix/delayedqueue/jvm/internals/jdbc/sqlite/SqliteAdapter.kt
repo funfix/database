@@ -1,13 +1,17 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc.sqlite
 
-import java.sql.Connection
+import java.sql.SQLException
 import java.time.Duration
 import java.time.Instant
 import org.funfix.delayedqueue.jvm.JdbcDriver
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRow
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRowWithId
 import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
+import org.funfix.delayedqueue.jvm.internals.jdbc.SafeConnection
+import org.funfix.delayedqueue.jvm.internals.jdbc.prepareStatement
+import org.funfix.delayedqueue.jvm.internals.jdbc.quote
 import org.funfix.delayedqueue.jvm.internals.jdbc.toDBTableRowWithId
+import org.funfix.delayedqueue.jvm.internals.utils.Raise
 
 /**
  * SQLite-specific adapter.
@@ -21,25 +25,34 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.toDBTableRowWithId
 internal class SqliteAdapter(driver: JdbcDriver, tableName: String) :
     SQLVendorAdapter(driver, tableName) {
 
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun selectForUpdateOneRow(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         key: String,
     ): DBTableRowWithId? {
         // SQLite has no row-level locking; fall back to plain SELECT like HSQLDB.
-        return selectByKey(connection, kind, key)
+        return selectByKey(conn, kind, key)
     }
 
-    override fun insertOneRow(connection: Connection, row: DBTableRow): Boolean {
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    override fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean {
         // INSERT OR IGNORE is the idiomatic SQLite way to skip duplicate key inserts.
         val sql =
             """
-            INSERT OR IGNORE INTO $tableName
-            (pKey, pKind, payload, scheduledAt, scheduledAtInitially, createdAt)
+            INSERT OR IGNORE INTO ${conn.quote(tableName)}
+            (
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("createdAt")}
+            )
             VALUES (?, ?, ?, ?, ?, ?)
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, row.pKey)
             stmt.setString(2, row.pKind)
             stmt.setBytes(3, row.payload)
@@ -50,21 +63,30 @@ internal class SqliteAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun selectFirstAvailableWithLock(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         now: Instant,
     ): DBTableRowWithId? {
         val sql =
             """
-            SELECT id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
-            FROM $tableName
-            WHERE pKind = ? AND scheduledAt <= ?
-            ORDER BY scheduledAt
+            SELECT 
+                ${conn.quote("id")}, 
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("lockUuid")}, 
+                ${conn.quote("createdAt")}
+            FROM ${conn.quote(tableName)}
+            WHERE ${conn.quote("pKind")} = ? AND ${conn.quote("scheduledAt")} <= ?
+            ORDER BY ${conn.quote("scheduledAt")}
             LIMIT 1
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, kind)
             stmt.setEpochMillis(2, now)
             stmt.executeQuery().use { rs ->
@@ -77,8 +99,9 @@ internal class SqliteAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun acquireManyOptimistically(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         limit: Int,
         lockUuid: String,
@@ -90,19 +113,20 @@ internal class SqliteAdapter(driver: JdbcDriver, tableName: String) :
 
         val sql =
             """
-            UPDATE $tableName
-            SET lockUuid = ?,
-                scheduledAt = ?
-            WHERE id IN (
-                SELECT id
-                FROM $tableName
-                WHERE pKind = ? AND scheduledAt <= ?
-                ORDER BY scheduledAt
+            UPDATE ${conn.quote(tableName)}
+            SET 
+                ${conn.quote("lockUuid")} = ?,
+                ${conn.quote("scheduledAt")} = ?
+            WHERE ${conn.quote("id")} IN (
+                SELECT ${conn.quote("id")}
+                FROM ${conn.quote(tableName)}
+                WHERE ${conn.quote("pKind")} = ? AND ${conn.quote("scheduledAt")} <= ?
+                ORDER BY ${conn.quote("scheduledAt")}
                 LIMIT $limit
             )
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, lockUuid)
             stmt.setEpochMillis(2, expireAt)
             stmt.setString(3, kind)

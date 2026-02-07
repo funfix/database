@@ -1,28 +1,42 @@
 package org.funfix.delayedqueue.jvm.internals.jdbc.postgres
 
-import java.sql.Connection
+import java.sql.SQLException
 import java.time.Duration
 import java.time.Instant
 import org.funfix.delayedqueue.jvm.JdbcDriver
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRow
 import org.funfix.delayedqueue.jvm.internals.jdbc.DBTableRowWithId
 import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
+import org.funfix.delayedqueue.jvm.internals.jdbc.SafeConnection
+import org.funfix.delayedqueue.jvm.internals.jdbc.prepareStatement
+import org.funfix.delayedqueue.jvm.internals.jdbc.quote
 import org.funfix.delayedqueue.jvm.internals.jdbc.toDBTableRowWithId
+import org.funfix.delayedqueue.jvm.internals.utils.Raise
 
 /** PostgreSQL-specific adapter. */
 internal class PostgreSQLAdapter(driver: JdbcDriver, tableName: String) :
     SQLVendorAdapter(driver, tableName) {
 
-    override fun insertOneRow(connection: Connection, row: DBTableRow): Boolean {
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    override fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean {
         val sql =
             """
-            INSERT INTO $tableName
-            (pKey, pKind, payload, scheduledAt, scheduledAtInitially, createdAt)
+            INSERT INTO ${conn.quote(tableName)}
+            (
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("createdAt")}
+            )
             VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT (pKey, pKind) DO NOTHING
+            ON CONFLICT 
+                (${conn.quote("pKey")}, ${conn.quote("pKind")}) 
+                DO NOTHING
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, row.pKey)
             stmt.setString(2, row.pKind)
             stmt.setBytes(3, row.payload)
@@ -33,21 +47,30 @@ internal class PostgreSQLAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun selectForUpdateOneRow(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         key: String,
     ): DBTableRowWithId? {
         val sql =
             """
-            SELECT id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
-            FROM $tableName
-            WHERE pKey = ? AND pKind = ?
+            SELECT 
+                ${conn.quote("id")}, 
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("lockUuid")}, 
+                ${conn.quote("createdAt")}
+            FROM ${conn.quote(tableName)}
+            WHERE ${conn.quote("pKey")} = ? AND ${conn.quote("pKind")} = ?
             LIMIT 1
             FOR UPDATE
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, key)
             stmt.setString(2, kind)
             stmt.executeQuery().use { rs ->
@@ -60,22 +83,31 @@ internal class PostgreSQLAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun selectFirstAvailableWithLock(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         now: Instant,
     ): DBTableRowWithId? {
         val sql =
             """
-            SELECT id, pKey, pKind, payload, scheduledAt, scheduledAtInitially, lockUuid, createdAt
-            FROM $tableName
-            WHERE pKind = ? AND scheduledAt <= ?
-            ORDER BY scheduledAt
+            SELECT 
+                ${conn.quote("id")}, 
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("lockUuid")}, 
+                ${conn.quote("createdAt")}
+            FROM ${conn.quote(tableName)}
+            WHERE ${conn.quote("pKind")} = ? AND ${conn.quote("scheduledAt")} <= ?
+            ORDER BY ${conn.quote("scheduledAt")}
             LIMIT 1
             FOR UPDATE SKIP LOCKED
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, kind)
             stmt.setEpochMillis(2, now)
             stmt.executeQuery().use { rs ->
@@ -88,8 +120,9 @@ internal class PostgreSQLAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
+    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun acquireManyOptimistically(
-        connection: Connection,
+        conn: SafeConnection,
         kind: String,
         limit: Int,
         lockUuid: String,
@@ -101,20 +134,23 @@ internal class PostgreSQLAdapter(driver: JdbcDriver, tableName: String) :
 
         val sql =
             """
-            UPDATE $tableName
-            SET lockUuid = ?,
-                scheduledAt = ?
-            WHERE id IN (
-                SELECT id
-                FROM $tableName
-                WHERE pKind = ? AND scheduledAt <= ?
-                ORDER BY scheduledAt
+            UPDATE ${conn.quote(tableName)}
+            SET 
+                ${conn.quote("lockUuid")} = ?,
+                ${conn.quote("scheduledAt")} = ?
+            WHERE ${conn.quote("id")} IN (
+                SELECT ${conn.quote("id")}
+                FROM ${conn.quote(tableName)}
+                WHERE 
+                    ${conn.quote("pKind")} = ? AND 
+                    ${conn.quote("scheduledAt")} <= ?
+                ORDER BY ${conn.quote("scheduledAt")}
                 LIMIT $limit
                 FOR UPDATE SKIP LOCKED
             )
             """
 
-        return connection.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql) { stmt ->
             stmt.setString(1, lockUuid)
             stmt.setEpochMillis(2, expireAt)
             stmt.setString(3, kind)

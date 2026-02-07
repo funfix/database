@@ -35,8 +35,7 @@ internal object SqliteMigrations {
 
                     CREATE INDEX ${tableName}__LockUuidPlusIdIndex
                     ON $tableName (lockUuid, id);
-                    """
-                        .trimIndent(),
+                    """,
             )
         )
 }
