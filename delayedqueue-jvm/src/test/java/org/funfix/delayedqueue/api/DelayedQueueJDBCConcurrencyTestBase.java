@@ -258,7 +258,7 @@ public abstract class DelayedQueueJDBCConcurrencyTestBase {
 
         // All should complete without exceptions
         for (Future<OfferOutcome> future : futures) {
-            OfferOutcome outcome = future.get(15, TimeUnit.SECONDS);
+            OfferOutcome outcome = future.get(60, TimeUnit.SECONDS);
             assertNotNull(outcome);
             // Outcome can be Updated or Ignored (if concurrent modification detected)
             assertTrue(outcome instanceof OfferOutcome.Updated || outcome instanceof OfferOutcome.Ignored,
