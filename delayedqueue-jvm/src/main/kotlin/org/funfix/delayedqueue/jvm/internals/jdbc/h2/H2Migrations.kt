@@ -47,7 +47,7 @@ internal object H2Migrations {
                     ON "$tableName" ("pKind", "pKey");
 
                     CREATE INDEX "${tableName}__KindPlusScheduledAtIndex"
-                    ON "$tableName" ("pKind", "scheduledAt");
+                    ON "$tableName" ("pKind", "scheduledAt", "id");
 
                     CREATE INDEX "${tableName}__LockUuidPlusIdIndex"
                     ON "$tableName" ("lockUuid", "id");
