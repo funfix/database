@@ -12,8 +12,7 @@ The public API should be idiomatic Scala, leveraging Scala 3 features where appr
 
 ## API design principles
 - Use immutable data structures by default (from `scala.collection.immutable`).
-- For error handling, use `Either` or `Option` for pure functions, and use Cats-MTL for error handling in effectful functions (returning `IO` or `F[_]`). Avoid `EitherT[IO, E, A]` or `IO[Either[E, A]]`.
-  - Use skill: `cats-mtl-typed-errors`
+- For error handling, use `Either` or `Option` for pure functions. For effectful functions (returning `IO`), handle errors within the effect using `IO[Either[E, A]]` or by raising exceptions within `IO`. Avoid `EitherT[IO, E, A]` and avoid throwing exceptions outside of `IO` contexts.
 - Design for composition: small, focused functions/methods.
 - Make illegal states unrepresentable with types.
 
@@ -59,4 +58,3 @@ The public API should be idiomatic Scala, leveraging Scala 3 features where appr
 - Skills:
   - `.agents/skills/cats-effect-io`
   - `.agents/skills/cats-effect-resource`
-  - `.agents/skills/cats-mtl-typed-errors`

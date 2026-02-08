@@ -74,7 +74,6 @@ lazy val delayedqueue = crossProject(JVMPlatform)
     libraryDependencies ++= Seq(
       "org.funfix" % "delayedqueue-jvm" % version.value,
       "org.typelevel" %% "cats-effect" % "3.6.3",
-      "org.typelevel" %% "cats-mtl" % "1.4.0",
       // Testing
       "org.scalameta" %% "munit" % "1.0.4" % Test,
       "org.typelevel" %% "munit-cats-effect" % "2.1.0" % Test,

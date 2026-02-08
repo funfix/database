@@ -18,7 +18,6 @@ package org.funfix.delayedqueue.scala
 
 import cats.effect.IO
 import cats.effect.Resource
-import cats.mtl.Raise
 import java.time.Duration
 import java.time.Instant
 
@@ -52,7 +51,7 @@ trait CronService[A] {
       configHash: CronConfigHash,
       keyPrefix: String,
       messages: List[CronMessage[A]]
-  )(using Raise[IO, ResourceUnavailableException]): IO[Unit]
+  ): IO[Unit]
 
   /** Uninstalls all future messages for a specific cron configuration.
     *
@@ -63,9 +62,7 @@ trait CronService[A] {
     * @param keyPrefix
     *   prefix for message keys to remove
     */
-  def uninstallTick(configHash: CronConfigHash, keyPrefix: String)(using
-      Raise[IO, ResourceUnavailableException]
-  ): IO[Unit]
+  def uninstallTick(configHash: CronConfigHash, keyPrefix: String): IO[Unit]
 
   /** Installs a cron-like schedule where messages are generated at intervals.
     *
