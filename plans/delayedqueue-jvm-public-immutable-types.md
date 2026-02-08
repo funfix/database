@@ -1,6 +1,6 @@
 # Initial Scala data structures
 
-The following data types from the `delayedqueue-jvm` subproject should be mirrored in Scala.
+The following data types from the `delayedqueue-jvm` subproject should be mirrored in Scala, in subproject `delayedqueue-scala`.
 
 Requirements:
 - They need to be somewhat adapted to Scala idioms, although there isn't much to do (since the original inspiration was Scala code and these data structures are pretty much compatible with Scala)
