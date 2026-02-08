@@ -26,6 +26,7 @@ The public API should be idiomatic Scala, leveraging Scala 3 features where appr
 - Prefer `enum` for ADTs over sealed traits when appropriate.
 
 ## Code style / best practices
+- Functional programming, pure functions, **required skill**: `cats-effect-io`
 - Use 2-space indentation (Scala standard).
 - Prefer val over var; minimize mutable state.
 - Use meaningful names; avoid abbreviations unless standard (e.g., `acc` for accumulator).
