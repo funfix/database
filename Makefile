@@ -22,5 +22,26 @@ dependency-updates:
 update-gradle:
 	./gradlew wrapper --gradle-version latest
 
-test-watch:
-	./gradlew -t check
+format-scala:
+	./sbt scalafmtAll
+
+format-kotlin:
+	./gradlew ktfmtFormat
+
+test-scala:
+	./sbt "testQuick"
+
+test-scala-watch:
+	./sbt "~testQuick"
+
+test-kotlin:
+	./gradlew test
+
+test-kotlin-watch:
+	./gradlew -t test
+
+test:
+	./gradlew test && ./sbt testQuick
+
+check-all:
+	./gradlew check && ./sbt check
