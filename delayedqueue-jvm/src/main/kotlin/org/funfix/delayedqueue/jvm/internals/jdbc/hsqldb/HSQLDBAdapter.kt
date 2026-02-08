@@ -16,7 +16,6 @@
 
 package org.funfix.delayedqueue.jvm.internals.jdbc.hsqldb
 
-import java.sql.SQLException
 import java.time.Duration
 import java.time.Instant
 import org.funfix.delayedqueue.jvm.JdbcDriver
@@ -26,13 +25,11 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.SafeConnection
 import org.funfix.delayedqueue.jvm.internals.jdbc.prepareStatement
 import org.funfix.delayedqueue.jvm.internals.jdbc.toDBTableRowWithId
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
 
 /** HSQLDB-specific adapter. */
 internal class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
     SQLVendorAdapter(driver, tableName) {
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun selectForUpdateOneRow(
         conn: SafeConnection,
         kind: String,
@@ -43,7 +40,6 @@ internal class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
         return selectByKey(conn, kind, key)
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean {
         // NOTE: it's fine if this INSERT fails with a duplicate key error,
         // since the call-site is supposed to handle it by catching the SQLException
@@ -71,7 +67,6 @@ internal class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun selectFirstAvailableWithLock(
         conn: SafeConnection,
         kind: String,
@@ -107,7 +102,6 @@ internal class HSQLDBAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     override fun acquireManyOptimistically(
         conn: SafeConnection,
         kind: String,

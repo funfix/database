@@ -50,14 +50,14 @@ class DatabaseTests {
     }
 
     @Test
-    fun `buildHikariConfig sets correct values`() = sneakyRunDB {
+    fun `buildHikariConfig sets correct values`() {
         val hikariConfig = ConnectionPool.buildHikariConfig(config)
         assertEquals(config.url, hikariConfig.jdbcUrl)
         assertEquals(config.driver.className, hikariConfig.driverClassName)
     }
 
     @Test
-    fun `createDataSource returns working DataSource`() = sneakyRunDB {
+    fun `createDataSource returns working DataSource`() {
         dataSource.connection.use { conn ->
             assertFalse(conn.isClosed)
             assertTrue(conn.metaData.driverName.contains("SQLite", ignoreCase = true))
@@ -65,7 +65,7 @@ class DatabaseTests {
     }
 
     @Test
-    fun `Database withConnection executes block and closes connection`() = sneakyRunDB {
+    fun `Database withConnection executes block and closes connection`() {
         var connectionClosedAfter: Boolean
         var connectionRef: SafeConnection? = null
         val result =
@@ -81,7 +81,7 @@ class DatabaseTests {
     }
 
     @Test
-    fun `Database withTransaction commits on success`() = sneakyRunDB {
+    fun `Database withTransaction commits on success`() {
         database.withConnection { safeConn ->
             safeConn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
         }
@@ -99,18 +99,16 @@ class DatabaseTests {
     }
 
     @Test
-    fun `Database withTransaction rolls back on exception`() = sneakyRunDB {
+    fun `Database withTransaction rolls back on exception`() {
         database.withConnection { safeConn ->
             safeConn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
         }
         assertThrows(SQLException::class.java) {
-            sneakyRunDB {
-                database.withTransaction { safeConn ->
-                    safeConn.execute("INSERT INTO test (name) VALUES ('foo')")
-                    // This will fail (duplicate primary key)
-                    safeConn.execute("INSERT INTO test (id, name) VALUES (1, 'bar')")
-                    safeConn.execute("INSERT INTO test (id, name) VALUES (1, 'baz')")
-                }
+            database.withTransaction { safeConn ->
+                safeConn.execute("INSERT INTO test (name) VALUES ('foo')")
+                // This will fail (duplicate primary key)
+                safeConn.execute("INSERT INTO test (id, name) VALUES (1, 'bar')")
+                safeConn.execute("INSERT INTO test (id, name) VALUES (1, 'baz')")
             }
         }
         val count =
@@ -124,7 +122,7 @@ class DatabaseTests {
     }
 
     @Test
-    fun `Statement query executes block and returns result`() = sneakyRunDB {
+    fun `Statement query executes block and returns result`() {
         database.withConnection { safeConn ->
             safeConn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
             safeConn.execute("INSERT INTO test (name) VALUES ('foo')")

@@ -33,9 +33,6 @@ import org.funfix.delayedqueue.jvm.CronPayloadGenerator
 import org.funfix.delayedqueue.jvm.CronService
 import org.funfix.delayedqueue.jvm.DelayedQueue
 import org.funfix.delayedqueue.jvm.ResourceUnavailableException
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
-import org.funfix.delayedqueue.jvm.internals.utils.runAndRecoverRaised
-import org.funfix.delayedqueue.jvm.internals.utils.unsafeSneakyRaises
 import org.funfix.delayedqueue.jvm.internals.utils.withTimeout
 import org.slf4j.LoggerFactory
 
@@ -45,9 +42,7 @@ import org.slf4j.LoggerFactory
  * Used by CronServiceImpl to delegate database operations to the DelayedQueue implementation while
  * maintaining proper exception flow tracking via Raise context.
  */
-internal typealias CronDeleteOperation =
-    context(Raise<ResourceUnavailableException>, Raise<InterruptedException>)
-    (CronConfigHash, String) -> Unit
+internal typealias CronDeleteOperation = (CronConfigHash, String) -> Unit
 
 /**
  * Base implementation of CronService that can be used by both in-memory and JDBC implementations.
@@ -66,19 +61,17 @@ internal class CronServiceImpl<A>(
         keyPrefix: String,
         messages: List<CronMessage<A>>,
     ) {
-        unsafeSneakyRaises {
-            installTick0(
-                configHash = configHash,
-                keyPrefix = keyPrefix,
-                messages = messages,
-                canUpdate = false,
-            )
-        }
+        installTick0(
+            configHash = configHash,
+            keyPrefix = keyPrefix,
+            messages = messages,
+            canUpdate = false,
+        )
     }
 
     @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun uninstallTick(configHash: CronConfigHash, keyPrefix: String) {
-        unsafeSneakyRaises { deleteCurrentCron(configHash, keyPrefix) }
+        deleteCurrentCron(configHash, keyPrefix)
     }
 
     @Throws(ResourceUnavailableException::class, InterruptedException::class)
@@ -157,7 +150,6 @@ internal class CronServiceImpl<A>(
      * @param canUpdate whether to update existing messages (false for installTick, varies for
      *   install)
      */
-    context(_: Raise<ResourceUnavailableException>, _: Raise<InterruptedException>)
     private fun installTick0(
         configHash: CronConfigHash,
         keyPrefix: String,
@@ -208,21 +200,17 @@ internal class CronServiceImpl<A>(
 
         val task = Runnable {
             try {
-                runAndRecoverRaised({
-                    withTimeout(scheduleInterval) {
-                        val now = clock.instant()
-                        val firstRun = isFirst.getAndSet(false)
-                        val messages = generateMany(now)
+                withTimeout(scheduleInterval) {
+                    val now = clock.instant()
+                    val firstRun = isFirst.getAndSet(false)
+                    val messages = generateMany(now)
 
-                        installTick0(
-                            configHash = configHash,
-                            keyPrefix = keyPrefix,
-                            messages = messages,
-                            canUpdate = firstRun,
-                        )
-                    }
-                }) { timeout ->
-                    throw timeout
+                    installTick0(
+                        configHash = configHash,
+                        keyPrefix = keyPrefix,
+                        messages = messages,
+                        canUpdate = firstRun,
+                    )
                 }
             } catch (e: Exception) {
                 logger.error("Error in cron task for $keyPrefix", e)

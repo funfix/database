@@ -19,9 +19,7 @@ package org.funfix.delayedqueue.jvm.internals.jdbc
 import java.sql.SQLException
 import org.funfix.delayedqueue.jvm.ResourceUnavailableException
 import org.funfix.delayedqueue.jvm.RetryConfig
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
 import org.funfix.delayedqueue.jvm.internals.utils.RetryOutcome
-import org.funfix.delayedqueue.jvm.internals.utils.raise
 import org.funfix.delayedqueue.jvm.internals.utils.withRetries
 
 /**
@@ -41,14 +39,11 @@ import org.funfix.delayedqueue.jvm.internals.utils.withRetries
  * @throws ResourceUnavailableException if retries are exhausted or timeout occurs
  * @throws InterruptedException if the operation is interrupted
  */
-context(_: Raise<ResourceUnavailableException>, _: Raise<InterruptedException>)
 internal fun <T> withDbRetries(
     config: RetryConfig,
     clock: java.time.Clock,
     filters: RdbmsExceptionFilters,
-    block:
-        context(Raise<SQLException>, Raise<InterruptedException>)
-        () -> T,
+    block: () -> T,
 ): T =
     try {
         withRetries(
@@ -70,8 +65,8 @@ internal fun <T> withDbRetries(
                     }
                 }
             },
-            block = { block(Raise._PRIVATE_AND_UNSAFE, Raise._PRIVATE_AND_UNSAFE) },
+            block = { block() },
         )
     } catch (e: java.util.concurrent.TimeoutException) {
-        raise(ResourceUnavailableException("Database operation timed out after retries", e))
+        throw ResourceUnavailableException("Database operation timed out after retries", e)
     }
