@@ -17,7 +17,6 @@
 package org.funfix.delayedqueue.scala
 
 import java.security.MessageDigest
-import java.time.Duration
 import org.funfix.delayedqueue.jvm
 
 /** Hash of a cron configuration, used to detect configuration changes.
@@ -41,21 +40,23 @@ object CronConfigHash {
 
   /** Creates a ConfigHash from a daily cron schedule configuration. */
   def fromDailyCron(config: CronDailySchedule): CronConfigHash = {
-    val text = s"""
-                  |daily-cron:
-                  |  zone: ${config.zoneId}
-                  |  hours: ${config.hoursOfDay.mkString(", ")}
-                  |""".stripMargin
-    CronConfigHash(md5(text))
+    // Port from Kotlin: buildString { appendLine(); appendLine("daily-cron:"); ... }
+    val text = new StringBuilder()
+    text.append('\n') // Leading newline to match Kotlin
+    text.append("daily-cron:\n")
+    text.append(s"  zone: ${config.zoneId}\n")
+    text.append(s"  hours: ${config.hoursOfDay.mkString(", ")}\n")
+    CronConfigHash(md5(text.toString))
   }
 
   /** Creates a ConfigHash from a periodic tick configuration. */
-  def fromPeriodicTick(period: Duration): CronConfigHash = {
-    val text = s"""
-                  |periodic-tick:
-                  |  period-ms: ${period.toMillis}
-                  |""".stripMargin
-    CronConfigHash(md5(text))
+  def fromPeriodicTick(period: java.time.Duration): CronConfigHash = {
+    // Port from Kotlin: buildString { appendLine(); appendLine("periodic-tick:"); ... }
+    val text = new StringBuilder()
+    text.append('\n') // Leading newline to match Kotlin
+    text.append("periodic-tick:\n")
+    text.append(s"  period-ms: ${period.toMillis}\n")
+    CronConfigHash(md5(text.toString))
   }
 
   /** Creates a ConfigHash from an arbitrary string. */

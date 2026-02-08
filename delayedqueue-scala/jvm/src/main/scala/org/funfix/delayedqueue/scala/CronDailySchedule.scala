@@ -60,39 +60,50 @@ final case class CronDailySchedule(
     *   list of future instants when messages should be scheduled (never empty)
     */
   def getNextTimes(now: Instant): List[Instant] = {
+    // Port from Kotlin implementation to match behavior exactly
     val until = now.plus(scheduleInAdvance)
     val sortedHours = hoursOfDay.sortBy(identity)
+    val result = scala.collection.mutable.ArrayBuffer[Instant]()
 
-    def getNextTime(currentTime: Instant): Instant = {
-      val zonedDateTime = currentTime.atZone(zoneId)
-      val localNow = zonedDateTime.toLocalTime
+    var currentTime = now
+    var nextTime = getNextTime(currentTime, sortedHours)
 
-      // Find the next hour today
-      val nextHourToday = sortedHours.find(_.isAfter(localNow))
+    // Always add the first nextTime (matches NonEmptyList behavior from Scala)
+    result += nextTime
 
-      nextHourToday match {
-        case Some(nextHour) =>
-          // Schedule for today
-          nextHour.atDate(zonedDateTime.toLocalDate).atZone(zoneId).toInstant
-        case None =>
-          // Schedule for tomorrow (first hour of the day)
-          sortedHours.head
-            .atDate(zonedDateTime.toLocalDate.plusDays(1))
-            .atZone(zoneId)
-            .toInstant
-      }
-    }
-
-    def loop(currentTime: Instant, acc: List[Instant]): List[Instant] = {
-      val nextTime = getNextTime(currentTime)
-      if acc.nonEmpty && nextTime.isAfter(until) then {
-        acc.reverse
+    // Then add more if they're within the window
+    var continue = true
+    while continue do {
+      currentTime = nextTime
+      nextTime = getNextTime(currentTime, sortedHours)
+      if nextTime.isAfter(until) then {
+        continue = false
       } else {
-        loop(nextTime, nextTime :: acc)
+        result += nextTime
       }
     }
 
-    loop(now, Nil)
+    result.toList
+  }
+
+  private def getNextTime(now: Instant, sortedHours: List[LocalTime]): Instant = {
+    val zonedDateTime = now.atZone(zoneId)
+    val localNow = zonedDateTime.toLocalTime
+
+    // Find the next hour today
+    val nextHourToday = sortedHours.find(_.isAfter(localNow))
+
+    nextHourToday match {
+      case Some(nextHour) =>
+        // Schedule for today
+        nextHour.atDate(zonedDateTime.toLocalDate).atZone(zoneId).toInstant
+      case None =>
+        // Schedule for tomorrow (first hour of the day)
+        sortedHours.head
+          .atDate(zonedDateTime.toLocalDate.plusDays(1))
+          .atZone(zoneId)
+          .toInstant
+    }
   }
 
   /** Converts this Scala CronDailySchedule to a JVM CronDailySchedule. */

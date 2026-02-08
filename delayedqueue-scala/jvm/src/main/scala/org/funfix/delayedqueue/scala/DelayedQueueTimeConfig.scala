@@ -16,7 +16,7 @@
 
 package org.funfix.delayedqueue.scala
 
-import java.time.Duration
+import scala.concurrent.duration.FiniteDuration
 import org.funfix.delayedqueue.jvm
 
 /** Time configuration for delayed queue operations.
@@ -27,13 +27,16 @@ import org.funfix.delayedqueue.jvm
   *   interval between poll attempts when no messages are available
   */
 final case class DelayedQueueTimeConfig(
-    acquireTimeout: Duration,
-    pollPeriod: Duration
+    acquireTimeout: FiniteDuration,
+    pollPeriod: FiniteDuration
 ) {
 
   /** Converts this Scala DelayedQueueTimeConfig to a JVM DelayedQueueTimeConfig. */
   def asJava: jvm.DelayedQueueTimeConfig =
-    new jvm.DelayedQueueTimeConfig(acquireTimeout, pollPeriod)
+    new jvm.DelayedQueueTimeConfig(
+      java.time.Duration.ofMillis(acquireTimeout.toMillis),
+      java.time.Duration.ofMillis(pollPeriod.toMillis)
+    )
 }
 
 object DelayedQueueTimeConfig {
@@ -41,8 +44,8 @@ object DelayedQueueTimeConfig {
   /** Default configuration for DelayedQueueInMemory. */
   val DEFAULT_IN_MEMORY: DelayedQueueTimeConfig =
     DelayedQueueTimeConfig(
-      acquireTimeout = Duration.ofMinutes(5),
-      pollPeriod = Duration.ofMillis(500)
+      acquireTimeout = FiniteDuration(5, scala.concurrent.duration.MINUTES),
+      pollPeriod = FiniteDuration(500, scala.concurrent.duration.MILLISECONDS)
     )
 
   /** Default configuration for JDBC-based implementations, with longer acquire timeouts and poll
@@ -50,16 +53,16 @@ object DelayedQueueTimeConfig {
     */
   val DEFAULT_JDBC: DelayedQueueTimeConfig =
     DelayedQueueTimeConfig(
-      acquireTimeout = Duration.ofMinutes(5),
-      pollPeriod = Duration.ofSeconds(3)
+      acquireTimeout = FiniteDuration(5, scala.concurrent.duration.MINUTES),
+      pollPeriod = FiniteDuration(3, scala.concurrent.duration.SECONDS)
     )
 
   /** Default configuration for testing, with shorter timeouts and poll periods to speed up tests.
     */
   val DEFAULT_TESTING: DelayedQueueTimeConfig =
     DelayedQueueTimeConfig(
-      acquireTimeout = Duration.ofSeconds(30),
-      pollPeriod = Duration.ofMillis(100)
+      acquireTimeout = FiniteDuration(30, scala.concurrent.duration.SECONDS),
+      pollPeriod = FiniteDuration(100, scala.concurrent.duration.MILLISECONDS)
     )
 
   /** Conversion extension for JVM DelayedQueueTimeConfig. */
@@ -68,8 +71,13 @@ object DelayedQueueTimeConfig {
     /** Converts a JVM DelayedQueueTimeConfig to a Scala DelayedQueueTimeConfig. */
     def asScala: DelayedQueueTimeConfig =
       DelayedQueueTimeConfig(
-        acquireTimeout = javaConfig.acquireTimeout,
-        pollPeriod = javaConfig.pollPeriod
+        acquireTimeout =
+          FiniteDuration(
+            javaConfig.acquireTimeout.toMillis,
+            scala.concurrent.duration.MILLISECONDS
+          ),
+        pollPeriod =
+          FiniteDuration(javaConfig.pollPeriod.toMillis, scala.concurrent.duration.MILLISECONDS)
       )
   }
 }

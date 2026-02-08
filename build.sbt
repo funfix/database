@@ -78,6 +78,8 @@ lazy val delayedqueue = crossProject(JVMPlatform)
       // Testing
       "org.scalameta" %% "munit" % "1.0.4" % Test,
       "org.typelevel" %% "munit-cats-effect" % "2.1.0" % Test,
+      "org.scalacheck" %% "scalacheck" % "1.19.0" % Test,
+      "org.scalameta" %% "munit-scalacheck" % "1.2.0" % Test,
     )
   )
 

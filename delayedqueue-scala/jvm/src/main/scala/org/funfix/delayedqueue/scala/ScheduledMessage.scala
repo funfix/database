@@ -74,7 +74,7 @@ object ScheduledMessage {
   * @param message
   *   the scheduled message
   */
-final case class BatchedMessage[In, A](
+final case class BatchedMessage[+In, +A](
     input: In,
     message: ScheduledMessage[A]
 ) {
@@ -84,8 +84,8 @@ final case class BatchedMessage[In, A](
     BatchedReply(input, message, outcome)
 
   /** Converts this Scala BatchedMessage to a JVM BatchedMessage. */
-  def asJava: jvm.BatchedMessage[In, A] =
-    new jvm.BatchedMessage[In, A](input, message.asJava)
+  def asJava[In1 >: In, A1 >: A]: jvm.BatchedMessage[In1, A1] =
+    new jvm.BatchedMessage[In1, A1](input, message.asJava)
 }
 
 object BatchedMessage {
@@ -115,15 +115,15 @@ object BatchedMessage {
   * @param outcome
   *   the result of offering this message
   */
-final case class BatchedReply[In, A](
+final case class BatchedReply[+In, +A](
     input: In,
     message: ScheduledMessage[A],
     outcome: OfferOutcome
 ) {
 
   /** Converts this Scala BatchedReply to a JVM BatchedReply. */
-  def asJava: jvm.BatchedReply[In, A] =
-    new jvm.BatchedReply[In, A](input, message.asJava, outcome.asJava)
+  def asJava[In1 >: In, A1 >: A]: jvm.BatchedReply[In1, A1] =
+    new jvm.BatchedReply[In1, A1](input, message.asJava, outcome.asJava)
 }
 
 object BatchedReply {

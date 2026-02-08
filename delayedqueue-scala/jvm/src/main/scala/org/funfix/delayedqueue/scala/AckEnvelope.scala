@@ -79,20 +79,24 @@ object AckEnvelope {
   }
 }
 
-/** Unique identifier for a message.
-  *
-  * @param value
-  *   the string representation of the message ID
-  */
-final case class MessageId(value: String) {
-  override def toString: String = value
-
-  /** Converts this Scala MessageId to a JVM MessageId. */
-  def asJava: jvm.MessageId =
-    new jvm.MessageId(value)
-}
+/** Unique identifier for a message. */
+opaque type MessageId = String
 
 object MessageId {
+
+  /** Creates a MessageId from a String value. */
+  def apply(value: String): MessageId = value
+
+  /** Conversion extension for String to MessageId. */
+  extension (id: MessageId) {
+
+    /** Gets the string value of the MessageId. */
+    def value: String = id
+
+    /** Converts this Scala MessageId to a JVM MessageId. */
+    def asJava: jvm.MessageId =
+      new jvm.MessageId(id)
+  }
 
   /** Conversion extension for JVM MessageId. */
   extension (javaId: jvm.MessageId) {

@@ -52,10 +52,9 @@ object OfferOutcome {
 
     /** Converts a JVM OfferOutcome to a Scala OfferOutcome. */
     def asScala: OfferOutcome = javaOutcome match {
-      case jvm.OfferOutcome.Created.INSTANCE => OfferOutcome.Created
-      case jvm.OfferOutcome.Updated.INSTANCE => OfferOutcome.Updated
-      case jvm.OfferOutcome.Ignored.INSTANCE => OfferOutcome.Ignored
-      case _ => throw new IllegalArgumentException(s"Unknown OfferOutcome: $javaOutcome")
+      case _: jvm.OfferOutcome.Created => OfferOutcome.Created
+      case _: jvm.OfferOutcome.Updated => OfferOutcome.Updated
+      case _: jvm.OfferOutcome.Ignored => OfferOutcome.Ignored
     }
   }
 }
