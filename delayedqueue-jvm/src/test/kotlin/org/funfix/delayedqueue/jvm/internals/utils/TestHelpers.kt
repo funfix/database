@@ -19,12 +19,9 @@ package org.funfix.delayedqueue.jvm.internals.utils
 import java.sql.SQLException
 
 /**
- * Test helper to call database APIs that declare context receivers for checked exceptions. It
- * supplies unsafe Raise contexts for InterruptedException and SQLException so tests can call
- * internal methods without changing production code.
+ * Test helper for running database tests that may throw InterruptedException or SQLException.
+ *
+ * In tests, these exceptions can be thrown directly without special handling.
  */
-internal fun <T> sneakyRunDB(
-    block:
-        context(Raise<InterruptedException>, Raise<SQLException>)
-        () -> T
-): T = block(Raise._PRIVATE_AND_UNSAFE, Raise._PRIVATE_AND_UNSAFE)
+@Throws(InterruptedException::class, SQLException::class)
+internal fun <T> sneakyRunDB(block: () -> T): T = block()

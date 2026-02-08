@@ -24,13 +24,13 @@ import org.opentest4j.AssertionFailedError
 
 class ExecutionTests {
     @Test
-    fun `runBlockingIO returns result`() = unsafeSneakyRaises {
+    fun `runBlockingIO returns result`() = {
         val result = runBlockingIO { 42 }
         assertEquals(42, result)
     }
 
     @Test
-    fun `runBlockingIO propagates ExecutionException`() = unsafeSneakyRaises {
+    fun `runBlockingIO propagates ExecutionException`() = {
         val ex = ExecutionException("fail", null)
         val thrown = assertThrows(ExecutionException::class.java) { runBlockingIO { throw ex } }
         assertEquals(ex, thrown)
@@ -43,7 +43,7 @@ class ExecutionTests {
     }
 
     @Test
-    fun `runBlockingIO runs on shared executor`() = unsafeSneakyRaises {
+    fun `runBlockingIO runs on shared executor`() = {
         val threadName = runBlockingIO { Thread.currentThread().name }
         assertTrue(threadName.contains("virtual"))
     }
@@ -56,13 +56,13 @@ class ExecutionTests {
     }
 
     @Test
-    fun `runBlockingIOUninterruptible returns result`() = unsafeSneakyRaises {
+    fun `runBlockingIOUninterruptible returns result`() = {
         val result = runBlockingIOUninterruptible { 99 }
         assertEquals(99, result)
     }
 
     @Test
-    fun `runBlockingIOUninterruptible propagates ExecutionException`() = unsafeSneakyRaises {
+    fun `runBlockingIOUninterruptible propagates ExecutionException`() = {
         val ex = ExecutionException("fail", null)
         val thrown =
             assertThrows(ExecutionException::class.java) {
@@ -73,7 +73,7 @@ class ExecutionTests {
 
     @Test
     fun `runBlockingIOUninterruptible propagates InterruptedException as TaskCancellationException`() =
-        unsafeSneakyRaises {
+        {
             val interrupted = InterruptedException("interrupted")
             // Should not throw InterruptedException, but wrap it
             assertThrows(TaskCancellationException::class.java) {

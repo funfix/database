@@ -178,18 +178,16 @@ class RetryTests {
                     initialDelay = Duration.ofMillis(1),
                     maxDelay = Duration.ofMillis(10),
                     backoffFactor = 2.0,
-                )
+                ) {
+                    val result =
+                        withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
+                            counter.incrementAndGet()
+                            "success"
+                        }
 
-            unsafeSneakyRaises {
-                val result =
-                    withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
-                        counter.incrementAndGet()
-                        "success"
-                    }
-
-                assertEquals("success", result)
-                assertEquals(1, counter.get())
-            }
+                    assertEquals("success", result)
+                    assertEquals(1, counter.get())
+                }
         }
 
         @Test
@@ -203,21 +201,19 @@ class RetryTests {
                     initialDelay = Duration.ofMillis(1),
                     maxDelay = Duration.ofMillis(10),
                     backoffFactor = 2.0,
-                )
-
-            unsafeSneakyRaises {
-                val result =
-                    withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
-                        val count = counter.incrementAndGet()
-                        if (count < 3) {
-                            throw RuntimeException("transient failure")
+                ) {
+                    val result =
+                        withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
+                            val count = counter.incrementAndGet()
+                            if (count < 3) {
+                                throw RuntimeException("transient failure")
+                            }
+                            "success"
                         }
-                        "success"
-                    }
 
-                assertEquals("success", result)
-                assertEquals(3, counter.get())
-            }
+                    assertEquals("success", result)
+                    assertEquals(3, counter.get())
+                }
         }
 
         @Test
@@ -231,22 +227,24 @@ class RetryTests {
                     initialDelay = Duration.ofMillis(1),
                     maxDelay = Duration.ofMillis(10),
                     backoffFactor = 2.0,
-                )
-
-            unsafeSneakyRaises {
-                val exception =
-                    assertThrows(ResourceUnavailableException::class.java) {
-                        withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RAISE }) {
-                            counter.incrementAndGet()
-                            throw RuntimeException("permanent failure")
+                ) {
+                    val exception =
+                        assertThrows(ResourceUnavailableException::class.java) {
+                            withRetries(
+                                config,
+                                java.time.Clock.systemUTC(),
+                                { RetryOutcome.RAISE },
+                            ) {
+                                counter.incrementAndGet()
+                                throw RuntimeException("permanent failure")
+                            }
                         }
-                    }
 
-                assertEquals(1, counter.get())
-                assertTrue(exception.message!!.contains("Giving up after 0 retries"))
-                assertInstanceOf(RuntimeException::class.java, exception.cause)
-                assertEquals("permanent failure", exception.cause?.message)
-            }
+                    assertEquals(1, counter.get())
+                    assertTrue(exception.message!!.contains("Giving up after 0 retries"))
+                    assertInstanceOf(RuntimeException::class.java, exception.cause)
+                    assertEquals("permanent failure", exception.cause?.message)
+                }
         }
 
         @Test
@@ -260,22 +258,24 @@ class RetryTests {
                     initialDelay = Duration.ofMillis(1),
                     maxDelay = Duration.ofMillis(10),
                     backoffFactor = 2.0,
-                )
-
-            unsafeSneakyRaises {
-                val exception =
-                    assertThrows(ResourceUnavailableException::class.java) {
-                        withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
-                            val attempt = counter.incrementAndGet()
-                            throw RuntimeException("attempt $attempt failed")
+                ) {
+                    val exception =
+                        assertThrows(ResourceUnavailableException::class.java) {
+                            withRetries(
+                                config,
+                                java.time.Clock.systemUTC(),
+                                { RetryOutcome.RETRY },
+                            ) {
+                                val attempt = counter.incrementAndGet()
+                                throw RuntimeException("attempt $attempt failed")
+                            }
                         }
-                    }
 
-                assertEquals(4, counter.get()) // initial + 3 retries
-                assertTrue(exception.message!!.contains("Giving up after 3 retries"))
-                assertInstanceOf(RuntimeException::class.java, exception.cause)
-                assertEquals(3, exception.cause?.suppressed?.size)
-            }
+                    assertEquals(4, counter.get()) // initial + 3 retries
+                    assertTrue(exception.message!!.contains("Giving up after 3 retries"))
+                    assertInstanceOf(RuntimeException::class.java, exception.cause)
+                    assertEquals(3, exception.cause?.suppressed?.size)
+                }
         }
 
         @Test
@@ -290,31 +290,29 @@ class RetryTests {
                     initialDelay = Duration.ofMillis(50),
                     maxDelay = Duration.ofMillis(200),
                     backoffFactor = 2.0,
-                )
-
-            unsafeSneakyRaises {
-                assertThrows(ResourceUnavailableException::class.java) {
-                    withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
-                        timestamps.add(System.currentTimeMillis())
-                        counter.incrementAndGet()
-                        throw RuntimeException("always fails")
+                ) {
+                    assertThrows(ResourceUnavailableException::class.java) {
+                        withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
+                            timestamps.add(System.currentTimeMillis())
+                            counter.incrementAndGet()
+                            throw RuntimeException("always fails")
+                        }
                     }
+
+                    assertEquals(4, timestamps.size)
+                    val delay1 = timestamps[1] - timestamps[0]
+                    val delay2 = timestamps[2] - timestamps[1]
+                    val delay3 = timestamps[3] - timestamps[2]
+
+                    assertTrue(delay1 >= 40L) // ~50ms with some tolerance
+                    assertTrue(delay1 < 150L)
+
+                    assertTrue(delay2 >= 90L) // ~100ms
+                    assertTrue(delay2 < 250L)
+
+                    assertTrue(delay3 >= 190L) // ~200ms (capped)
+                    assertTrue(delay3 < 350L)
                 }
-
-                assertEquals(4, timestamps.size)
-                val delay1 = timestamps[1] - timestamps[0]
-                val delay2 = timestamps[2] - timestamps[1]
-                val delay3 = timestamps[3] - timestamps[2]
-
-                assertTrue(delay1 >= 40L) // ~50ms with some tolerance
-                assertTrue(delay1 < 150L)
-
-                assertTrue(delay2 >= 90L) // ~100ms
-                assertTrue(delay2 < 250L)
-
-                assertTrue(delay3 >= 190L) // ~200ms (capped)
-                assertTrue(delay3 < 350L)
-            }
         }
 
         @Test
@@ -328,20 +326,22 @@ class RetryTests {
                     initialDelay = Duration.ofMillis(1),
                     maxDelay = Duration.ofMillis(10),
                     backoffFactor = 2.0,
-                )
-
-            unsafeSneakyRaises {
-                val exception =
-                    assertThrows(java.util.concurrent.TimeoutException::class.java) {
-                        withRetries(config, java.time.Clock.systemUTC(), { RetryOutcome.RETRY }) {
-                            counter.incrementAndGet()
-                            Thread.sleep(500)
+                ) {
+                    val exception =
+                        assertThrows(java.util.concurrent.TimeoutException::class.java) {
+                            withRetries(
+                                config,
+                                java.time.Clock.systemUTC(),
+                                { RetryOutcome.RETRY },
+                            ) {
+                                counter.incrementAndGet()
+                                Thread.sleep(500)
+                            }
                         }
-                    }
 
-                assertTrue(counter.get() >= 1)
-                assertTrue(exception.message!!.contains("Giving up"))
-            }
+                    assertTrue(counter.get() >= 1)
+                    assertTrue(exception.message!!.contains("Giving up"))
+                }
         }
     }
 }
