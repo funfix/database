@@ -81,7 +81,6 @@ internal class CronServiceImpl<A>(
         unsafeSneakyRaises { deleteCurrentCron(configHash, keyPrefix) }
     }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun install(
         configHash: CronConfigHash,
         keyPrefix: String,
@@ -95,7 +94,6 @@ internal class CronServiceImpl<A>(
             generateMany = generateMany,
         )
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun installDailySchedule(
         keyPrefix: String,
         schedule: CronDailySchedule,
@@ -110,7 +108,6 @@ internal class CronServiceImpl<A>(
             },
         )
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     override fun installPeriodicTick(
         keyPrefix: String,
         period: Duration,

@@ -17,9 +17,6 @@
 package org.funfix.delayedqueue.scala
 
 import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import org.funfix.delayedqueue.jvm
 
 /** Represents a message for periodic (cron-like) scheduling.

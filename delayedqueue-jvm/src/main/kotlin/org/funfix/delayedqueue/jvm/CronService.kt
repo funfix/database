@@ -73,15 +73,16 @@ public interface CronService<A> {
      * When the configuration changes (detected by hash comparison), old messages are automatically
      * removed and new ones are scheduled.
      *
+     * NOTE: This doesn't raise any `ResourceUnavailableException` or `InterruptedException` because
+     * it's a background process that keeps on running in a loop (hence the `AutoCloseable`), so
+     * exceptions get logged.
+     *
      * @param configHash hash of the configuration (for detecting changes)
      * @param keyPrefix unique prefix for generated message keys
      * @param scheduleInterval how often to regenerate/update the schedule
      * @param generateMany function that generates messages based on current time
      * @return an AutoCloseable resource that should be closed to stop scheduling
-     * @throws ResourceUnavailableException if database operation fails after retries
-     * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     public fun install(
         configHash: CronConfigHash,
         keyPrefix: String,
@@ -95,14 +96,15 @@ public interface CronService<A> {
      * This method starts a background process that schedules messages for specific hours each day.
      * The schedule configuration determines when messages are generated.
      *
+     * NOTE: This doesn't raise any `ResourceUnavailableException` or `InterruptedException` because
+     * it's a background process that keeps on running in a loop (hence the `AutoCloseable`), so
+     * exceptions get logged.
+     *
      * @param keyPrefix unique prefix for generated message keys
      * @param schedule daily schedule configuration (hours, timezone, advance scheduling)
      * @param generator function that creates a message for a given future instant
      * @return an AutoCloseable resource that should be closed to stop scheduling
-     * @throws ResourceUnavailableException if database operation fails after retries
-     * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     public fun installDailySchedule(
         keyPrefix: String,
         schedule: CronDailySchedule,
@@ -122,7 +124,6 @@ public interface CronService<A> {
      * @throws ResourceUnavailableException if database operation fails after retries
      * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
     public fun installPeriodicTick(
         keyPrefix: String,
         period: Duration,

@@ -661,20 +661,17 @@ private constructor(
          *   policy)
          * @param clock optional clock for time operations (uses system UTC if not provided)
          * @return a new DelayedQueueJDBC instance
-         * @throws ResourceUnavailableException if database initialization fails
-         * @throws InterruptedException if interrupted during initialization
          */
         @JvmStatic
         @JvmOverloads
-        @Throws(ResourceUnavailableException::class, InterruptedException::class)
         public fun <A> create(
             serializer: MessageSerializer<A>,
             config: DelayedQueueJDBCConfig,
             clock: Clock = Clock.systemUTC(),
-        ): DelayedQueueJDBC<A> = unsafeSneakyRaises {
+        ): DelayedQueueJDBC<A> {
             val database = Database(config.db)
             val adapter = SQLVendorAdapter.create(config.db.driver, config.tableName)
-            DelayedQueueJDBC(
+            return DelayedQueueJDBC(
                 database = database,
                 adapter = adapter,
                 serializer = serializer,
