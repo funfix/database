@@ -39,7 +39,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun offerOrUpdate(key: String, payload: A, scheduleAt: Instant): OfferOutcome
 
     /**
@@ -48,7 +48,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun offerIfNotExists(key: String, payload: A, scheduleAt: Instant): OfferOutcome
 
     /**
@@ -59,7 +59,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun <In> offerBatch(messages: List<BatchedMessage<In, A>>): List<BatchedReply<In, A>>
 
     /**
@@ -72,7 +72,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun tryPoll(): AckEnvelope<A>?
 
     /**
@@ -88,7 +88,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun tryPollMany(batchMaxSize: Int): AckEnvelope<List<A>>
 
     /**
@@ -98,7 +98,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted while waiting
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun poll(): AckEnvelope<A>
 
     /**
@@ -115,7 +115,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun read(key: String): AckEnvelope<A>?
 
     /**
@@ -124,7 +124,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun dropMessage(key: String): Boolean
 
     /**
@@ -135,7 +135,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun containsMessage(key: String): Boolean
 
     /**
@@ -152,11 +152,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(
-        IllegalArgumentException::class,
-        ResourceUnavailableException::class,
-        InterruptedException::class,
-    )
+    @Throws(IllegalArgumentException::class, InterruptedException::class)
     public fun dropAllMessages(confirm: String): Int
 
     /** Utilities for installing cron-like schedules. */

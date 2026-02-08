@@ -17,10 +17,19 @@
 package org.funfix.delayedqueue.jvm
 
 /**
- * Checked exception thrown in case of exceptions happening that are not recoverable, rendering
+ * Runtime exception thrown in case of exceptions happening that are not recoverable, rendering
  * DelayedQueue inaccessible.
  *
- * Example: issues with the RDBMS (bugs, or connection unavailable, failing after multiple retries)
+ * This exception can be thrown by all DelayedQueue operations when:
+ * - Issues with the RDBMS occur (bugs, or connection unavailable, failing after multiple retries)
+ * - Database operations fail after exhausting all configured retry attempts
+ * - Unrecoverable errors prevent the queue from functioning properly
+ *
+ * Example scenarios:
+ * - Database connection pool exhausted
+ * - Database server unreachable
+ * - Transaction deadlocks that persist after retries
+ * - Database schema inconsistencies
  */
 public class ResourceUnavailableException(message: String?, cause: Throwable?) :
-    Exception(message, cause)
+    RuntimeException(message, cause)

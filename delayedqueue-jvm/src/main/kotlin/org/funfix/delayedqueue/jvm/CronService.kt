@@ -44,7 +44,7 @@ public interface CronService<A> {
      * @throws ResourceUnavailableException if database operation fails after retries
      * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun installTick(
         configHash: CronConfigHash,
         keyPrefix: String,
@@ -61,7 +61,7 @@ public interface CronService<A> {
      * @throws ResourceUnavailableException if database operation fails after retries
      * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun uninstallTick(configHash: CronConfigHash, keyPrefix: String)
 
     /**
@@ -81,7 +81,7 @@ public interface CronService<A> {
      * @throws ResourceUnavailableException if database operation fails after retries
      * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun install(
         configHash: CronConfigHash,
         keyPrefix: String,
@@ -102,7 +102,7 @@ public interface CronService<A> {
      * @throws ResourceUnavailableException if database operation fails after retries
      * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun installDailySchedule(
         keyPrefix: String,
         schedule: CronDailySchedule,
@@ -122,7 +122,7 @@ public interface CronService<A> {
      * @throws ResourceUnavailableException if database operation fails after retries
      * @throws InterruptedException if the operation is interrupted
      */
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     public fun installPeriodicTick(
         keyPrefix: String,
         period: Duration,
