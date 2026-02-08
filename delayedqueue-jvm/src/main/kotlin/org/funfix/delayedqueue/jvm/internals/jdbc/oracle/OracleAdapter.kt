@@ -26,13 +26,12 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.SafeConnection
 import org.funfix.delayedqueue.jvm.internals.jdbc.prepareStatement
 import org.funfix.delayedqueue.jvm.internals.jdbc.toDBTableRowWithId
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
 
 /** Oracle-specific adapter. */
 internal class OracleAdapter(driver: JdbcDriver, tableName: String) :
     SQLVendorAdapter(driver, tableName) {
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean {
         // NOTE: this query can still throw an SQLException under concurrency,
         // because the NOT EXISTS check is not atomic. But this is still fine,
@@ -70,7 +69,7 @@ internal class OracleAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun selectForUpdateOneRow(
         conn: SafeConnection,
         kind: String,
@@ -105,7 +104,7 @@ internal class OracleAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun selectByKey(conn: SafeConnection, kind: String, key: String): DBTableRowWithId? {
         val sql =
             """
@@ -135,7 +134,7 @@ internal class OracleAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun selectFirstAvailableWithLock(
         conn: SafeConnection,
         kind: String,
@@ -176,7 +175,7 @@ internal class OracleAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun acquireManyOptimistically(
         conn: SafeConnection,
         kind: String,
@@ -235,7 +234,7 @@ internal class OracleAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun selectAllAvailableWithLock(
         conn: SafeConnection,
         lockUuid: String,

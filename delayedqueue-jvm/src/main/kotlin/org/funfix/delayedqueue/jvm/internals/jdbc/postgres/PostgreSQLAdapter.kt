@@ -26,13 +26,12 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.SafeConnection
 import org.funfix.delayedqueue.jvm.internals.jdbc.prepareStatement
 import org.funfix.delayedqueue.jvm.internals.jdbc.toDBTableRowWithId
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
 
 /** PostgreSQL-specific adapter. */
 internal class PostgreSQLAdapter(driver: JdbcDriver, tableName: String) :
     SQLVendorAdapter(driver, tableName) {
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean {
         val sql =
             """
@@ -60,7 +59,7 @@ internal class PostgreSQLAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun selectForUpdateOneRow(
         conn: SafeConnection,
         kind: String,
@@ -96,7 +95,7 @@ internal class PostgreSQLAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun selectFirstAvailableWithLock(
         conn: SafeConnection,
         kind: String,
@@ -133,7 +132,7 @@ internal class PostgreSQLAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun acquireManyOptimistically(
         conn: SafeConnection,
         kind: String,

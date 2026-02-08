@@ -5,7 +5,6 @@ import java.time.Duration
 import java.time.Instant
 import org.funfix.delayedqueue.jvm.JdbcDriver
 import org.funfix.delayedqueue.jvm.internals.jdbc.*
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
 
 /**
  * Adapter for MySQL-compatible databases (MySQL and MariaDB).
@@ -16,7 +15,7 @@ import org.funfix.delayedqueue.jvm.internals.utils.Raise
 internal open class MySQLCompatibleAdapter(driver: JdbcDriver, tableName: String) :
     SQLVendorAdapter(driver, tableName) {
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean {
         val sql =
             """
@@ -43,7 +42,7 @@ internal open class MySQLCompatibleAdapter(driver: JdbcDriver, tableName: String
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun selectForUpdateOneRow(
         conn: SafeConnection,
         kind: String,
@@ -79,7 +78,7 @@ internal open class MySQLCompatibleAdapter(driver: JdbcDriver, tableName: String
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun selectFirstAvailableWithLock(
         conn: SafeConnection,
         kind: String,
@@ -116,7 +115,7 @@ internal open class MySQLCompatibleAdapter(driver: JdbcDriver, tableName: String
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun acquireManyOptimistically(
         conn: SafeConnection,
         kind: String,

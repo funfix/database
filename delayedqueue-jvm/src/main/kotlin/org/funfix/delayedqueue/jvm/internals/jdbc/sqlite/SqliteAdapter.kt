@@ -26,7 +26,6 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.SQLVendorAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.SafeConnection
 import org.funfix.delayedqueue.jvm.internals.jdbc.prepareStatement
 import org.funfix.delayedqueue.jvm.internals.jdbc.toDBTableRowWithId
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
 
 /**
  * SQLite-specific adapter.
@@ -40,7 +39,7 @@ import org.funfix.delayedqueue.jvm.internals.utils.Raise
 internal class SqliteAdapter(driver: JdbcDriver, tableName: String) :
     SQLVendorAdapter(driver, tableName) {
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun selectForUpdateOneRow(
         conn: SafeConnection,
         kind: String,
@@ -50,7 +49,7 @@ internal class SqliteAdapter(driver: JdbcDriver, tableName: String) :
         return selectByKey(conn, kind, key)
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean {
         // INSERT OR IGNORE is the idiomatic SQLite way to skip duplicate key inserts.
         val sql =
@@ -78,7 +77,7 @@ internal class SqliteAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun selectFirstAvailableWithLock(
         conn: SafeConnection,
         kind: String,
@@ -114,7 +113,7 @@ internal class SqliteAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     override fun acquireManyOptimistically(
         conn: SafeConnection,
         kind: String,

@@ -45,8 +45,6 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SqliteMigrations
 import org.funfix.delayedqueue.jvm.internals.jdbc.withConnection
 import org.funfix.delayedqueue.jvm.internals.jdbc.withDbRetries
 import org.funfix.delayedqueue.jvm.internals.jdbc.withTransaction
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
-import org.funfix.delayedqueue.jvm.internals.utils.unsafeSneakyRaises
 import org.slf4j.LoggerFactory
 
 /**

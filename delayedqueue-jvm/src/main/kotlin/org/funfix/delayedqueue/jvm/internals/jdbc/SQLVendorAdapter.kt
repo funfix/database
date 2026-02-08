@@ -31,7 +31,6 @@ import org.funfix.delayedqueue.jvm.internals.jdbc.mysql.MySQLAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.oracle.OracleAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.postgres.PostgreSQLAdapter
 import org.funfix.delayedqueue.jvm.internals.jdbc.sqlite.SqliteAdapter
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
 
 /**
  * Describes actual SQL queries executed — can be overridden to provide driver-specific queries.
@@ -44,7 +43,7 @@ import org.funfix.delayedqueue.jvm.internals.utils.Raise
  */
 internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val tableName: String) {
     /** Checks if a key exists in the database. */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun checkIfKeyExists(conn: SafeConnection, key: String, kind: String): Boolean {
         val sql =
             """
@@ -62,13 +61,13 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Inserts a single row into the database. Returns true if inserted, false if key already
      * exists.
      */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     abstract fun insertOneRow(conn: SafeConnection, row: DBTableRow): Boolean
 
     /**
      * Inserts multiple rows in a batch. Returns the list of keys that were successfully inserted.
      */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun insertBatch(conn: SafeConnection, rows: List<DBTableRow>): List<String> {
         if (rows.isEmpty()) return emptyList()
 
@@ -130,7 +129,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Updates an existing row with optimistic locking (compare-and-swap). Only updates if the
      * current row matches what's in the database.
      */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun guardedUpdate(
         conn: SafeConnection,
         currentRow: DBTableRow,
@@ -167,7 +166,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     }
 
     /** Selects one row by its key. */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     open fun selectByKey(conn: SafeConnection, kind: String, key: String): DBTableRowWithId? {
         val sql =
             """
@@ -206,7 +205,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * - MS-SQL: WITH (UPDLOCK)
      * - HSQLDB: Falls back to plain SELECT (limited row-level locking support)
      */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     abstract fun selectForUpdateOneRow(
         conn: SafeConnection,
         kind: String,
@@ -219,7 +218,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Returns the subset of keys that already exist in the database. This is used by batch
      * operations to avoid N+1 queries.
      */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun searchAvailableKeys(conn: SafeConnection, kind: String, keys: List<String>): Set<String> {
         if (keys.isEmpty()) return emptySet()
 
@@ -248,7 +247,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     }
 
     /** Deletes one row by key and kind. */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun deleteOneRow(conn: SafeConnection, key: String, kind: String): Boolean {
         val sql =
             """
@@ -265,7 +264,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     }
 
     /** Deletes rows with a specific lock UUID. */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun deleteRowsWithLock(conn: SafeConnection, lockUuid: String): Int {
         val sql =
             """
@@ -279,7 +278,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     }
 
     /** Deletes a row by its fingerprint (id and createdAt). */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun deleteRowByFingerprint(conn: SafeConnection, row: DBTableRowWithId): Boolean {
         val sql =
             """
@@ -298,7 +297,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     }
 
     /** Deletes all rows with a specific kind (used for cleanup in tests). */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun dropAllMessages(onnn: SafeConnection, kind: String): Int {
         val sql =
             """
@@ -315,7 +314,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Deletes cron messages matching a specific config hash and key prefix. Used by uninstallTick
      * to remove the current cron configuration.
      */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun deleteCurrentCron(
         conn: SafeConnection,
         kind: String,
@@ -340,7 +339,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Deletes ALL cron messages with a given prefix (ignoring config hash). This is used as a
      * fallback or for complete cleanup of a prefix.
      */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun deleteAllForPrefix(conn: SafeConnection, kind: String, keyPrefix: String): Int {
         val sql =
             """
@@ -360,7 +359,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * installTick to remove outdated configurations while preserving the current one. This avoids
      * wasteful deletions when the configuration hasn't changed.
      */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun deleteOldCron(
         conn: SafeConnection,
         kind: String,
@@ -386,7 +385,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * Acquires many messages optimistically by updating them with a lock. Returns the number of
      * messages acquired.
      */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     abstract fun acquireManyOptimistically(
         conn: SafeConnection,
         kind: String,
@@ -397,7 +396,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     ): Int
 
     /** Selects the first available message for processing (with locking if supported). */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     abstract fun selectFirstAvailableWithLock(
         conn: SafeConnection,
         kind: String,
@@ -405,7 +404,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
     ): DBTableRowWithId?
 
     /** Selects all messages with a specific lock UUID. */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     open fun selectAllAvailableWithLock(
         conn: SafeConnection,
         lockUuid: String,
@@ -448,7 +447,7 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
      * successfully acquired.
      */
     /** Acquires a row by updating its scheduledAt and lockUuid. */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     fun acquireRowByUpdate(
         conn: SafeConnection,
         row: DBTableRow,

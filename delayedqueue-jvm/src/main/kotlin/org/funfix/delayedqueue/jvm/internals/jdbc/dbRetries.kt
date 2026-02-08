@@ -19,9 +19,7 @@ package org.funfix.delayedqueue.jvm.internals.jdbc
 import java.sql.SQLException
 import org.funfix.delayedqueue.jvm.ResourceUnavailableException
 import org.funfix.delayedqueue.jvm.RetryConfig
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
 import org.funfix.delayedqueue.jvm.internals.utils.RetryOutcome
-import org.funfix.delayedqueue.jvm.internals.utils.raise
 import org.funfix.delayedqueue.jvm.internals.utils.withRetries
 
 /**

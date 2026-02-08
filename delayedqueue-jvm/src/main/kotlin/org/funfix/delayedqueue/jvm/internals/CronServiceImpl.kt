@@ -33,9 +33,6 @@ import org.funfix.delayedqueue.jvm.CronPayloadGenerator
 import org.funfix.delayedqueue.jvm.CronService
 import org.funfix.delayedqueue.jvm.DelayedQueue
 import org.funfix.delayedqueue.jvm.ResourceUnavailableException
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
-import org.funfix.delayedqueue.jvm.internals.utils.runAndRecoverRaised
-import org.funfix.delayedqueue.jvm.internals.utils.unsafeSneakyRaises
 import org.funfix.delayedqueue.jvm.internals.utils.withTimeout
 import org.slf4j.LoggerFactory
 
@@ -206,7 +203,7 @@ internal class CronServiceImpl<A>(
 
         val task = Runnable {
             try {
-                runAndRecoverRaised({
+                try {
                     withTimeout(scheduleInterval) {
                         val now = clock.instant()
                         val firstRun = isFirst.getAndSet(false)
@@ -219,7 +216,7 @@ internal class CronServiceImpl<A>(
                             canUpdate = firstRun,
                         )
                     }
-                }) { timeout ->
+                } catch (timeout: TimeoutException) {
                     throw timeout
                 }
             } catch (e: Exception) {

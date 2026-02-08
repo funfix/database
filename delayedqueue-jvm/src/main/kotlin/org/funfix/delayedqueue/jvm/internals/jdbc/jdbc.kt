@@ -27,7 +27,6 @@ import java.util.concurrent.ExecutionException
 import javax.sql.DataSource
 import org.funfix.delayedqueue.jvm.JdbcConnectionConfig
 import org.funfix.delayedqueue.jvm.JdbcDriver
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
 import org.funfix.delayedqueue.jvm.internals.utils.runBlockingIO
 import org.funfix.tasks.jvm.Task
 import org.funfix.tasks.jvm.TaskCancellationException
@@ -58,7 +57,7 @@ internal data class SafeConnection(val underlying: Connection, val driver: JdbcD
 context(_: Raise<SQLException>)
 internal inline fun <T> runSQLOperation(block: () -> T): T = block()
 
-context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+@Throws(InterruptedException::class, SQLException::class)
 internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T = runBlockingIO {
     runSQLOperation {
         source.connection.let {
@@ -75,7 +74,7 @@ internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T = runB
     }
 }
 
-context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+@Throws(InterruptedException::class, SQLException::class)
 internal fun <T> Database.withTransaction(block: (SafeConnection) -> T) =
     withConnection { connection ->
         val autoCommit = connection.underlying.autoCommit
@@ -96,25 +95,25 @@ internal fun <T> Database.withTransaction(block: (SafeConnection) -> T) =
         }
     }
 
-context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+@Throws(InterruptedException::class, SQLException::class)
 internal fun SafeConnection.execute(sql: String): Boolean =
     withStatement({ it.createStatement() }) { statement -> statement.execute(sql) }
 
-context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+@Throws(InterruptedException::class, SQLException::class)
 internal fun <T> SafeConnection.createStatement(block: (Statement) -> T): T =
     withStatement({ it.createStatement() }, block)
 
-context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+@Throws(InterruptedException::class, SQLException::class)
 internal fun <T> SafeConnection.prepareStatement(sql: String, block: (PreparedStatement) -> T): T =
     withStatement({ it.prepareStatement(sql.trimIndent()) }, block)
 
-context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+@Throws(InterruptedException::class, SQLException::class)
 internal fun <T> SafeConnection.query(sql: String, block: (ResultSet) -> T): T =
     withStatement({ it.prepareStatement(sql) }) { statement ->
         statement.executeQuery().use { resultSet -> block(resultSet) }
     }
 
-context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+@Throws(InterruptedException::class, SQLException::class)
 internal fun <Stm : Statement, T> SafeConnection.withStatement(
     createStatement: (Connection) -> Stm,
     block: (Stm) -> T,
