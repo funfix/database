@@ -11,10 +11,9 @@ The public API should be idiomatic Scala, leveraging Scala 3 features where appr
 - Maintain binary compatibility for published versions.
 
 ## API design principles
-- Use immutable data structures by default (List, Vector, Map, Set from scala.collection.immutable).
-- Prefer `Option[T]` over nullable references.
-- Use `Either[Error, Result]` for error handling in pure functional code.
-- Use `Try[T]` for exception-prone operations when wrapping Java APIs.
+- Use immutable data structures by default (from `scala.collection.immutable`).
+- For error handling, use `Either` or `Option` for pure functions, and use Cats-MTL for error handling in effectful functions (returning `IO` or `F[_]`). Avoid `EitherT[IO, E, A]` or `IO[Either[E, A]]`.
+  - Use skill: `cats-mtl-typed-errors`
 - Design for composition: small, focused functions/methods.
 - Make illegal states unrepresentable with types.
 
@@ -32,21 +31,14 @@ The public API should be idiomatic Scala, leveraging Scala 3 features where appr
 - Use meaningful names; avoid abbreviations unless standard (e.g., `acc` for accumulator).
 - Keep functions small and focused; extract helpers when needed.
 - Use for-comprehensions for sequential operations with flatMap/map.
-- Avoid catching `Throwable`; catch specific exception types.
-- Use resource management (Using, AutoCloseable) for IO operations.
+- Avoid catching `Throwable`; catch `NonFatal(e)` and do something meaningful.
+- Use resource management via Cats-Effect `Resource` (required), see skill: `cats-effect-resource`
 
 ## Testing
 - Practice TDD: write tests before the implementation.
 - Strive for full test coverage; tests should be clean and readable.
-- Use ScalaTest or MUnit (check project setup for which framework is configured).
+- Use MUnit
 - Test files mirror source structure: `src/main/scala/X.scala` → `src/test/scala/XSpec.scala`.
-- Use property-based testing (ScalaCheck) for algorithmic correctness when appropriate.
-
-## Database integration
-- Exception handling must be PRECISE - only catch what you intend to handle.
-- Use typed error handling (Either, Try) over exceptions in business logic.
-- Let unexpected exceptions propagate to retry logic.
-- Database-specific behavior should be explicit, not hidden in default parameters.
 
 ## Review checklist
 - API uses idiomatic Scala types and patterns.
