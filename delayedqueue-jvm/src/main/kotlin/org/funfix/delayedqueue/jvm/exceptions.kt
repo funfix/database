@@ -16,6 +16,8 @@
 
 package org.funfix.delayedqueue.jvm
 
+import java.io.IOException
+
 /**
  * Checked exception thrown in case of exceptions happening that are not recoverable, rendering
  * DelayedQueue inaccessible.
@@ -23,4 +25,4 @@ package org.funfix.delayedqueue.jvm
  * Example: issues with the RDBMS (bugs, or connection unavailable, failing after multiple retries)
  */
 public class ResourceUnavailableException(message: String?, cause: Throwable?) :
-    Exception(message, cause)
+    IOException(message, cause)
