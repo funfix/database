@@ -138,7 +138,10 @@ class DataStructuresPropertySpec extends ScalaCheckSuite {
           RetryConfig(
             initialDelay = java.time.Duration.ofMillis(100),
             maxDelay = java.time.Duration.ofMillis(1000),
-            backoffFactor = backoffFactor
+            backoffFactor = backoffFactor,
+            maxRetries = None,
+            totalSoftTimeout = None,
+            perTryHardTimeout = None
           )
         }
         ()
@@ -146,9 +149,12 @@ class DataStructuresPropertySpec extends ScalaCheckSuite {
         val config = RetryConfig(
           initialDelay = java.time.Duration.ofMillis(100),
           maxDelay = java.time.Duration.ofMillis(1000),
-          backoffFactor = backoffFactor
+          backoffFactor = backoffFactor,
+          maxRetries = None,
+          totalSoftTimeout = None,
+          perTryHardTimeout = None
         )
-        assert(config.backoffFactor >= 1.0)
+        assertEquals(config.backoffFactor >= 1.0, true)
       }
     }
   }

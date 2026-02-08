@@ -63,8 +63,8 @@ final case class DelayedQueueJDBCConfig(
     tableName: String,
     time: DelayedQueueTimeConfig,
     queueName: String,
-    ackEnvSource: String = "",
-    retryPolicy: Option[RetryConfig] = None
+    ackEnvSource: String,
+    retryPolicy: Option[RetryConfig]
 ) {
   require(tableName.nonEmpty, "tableName must not be blank")
   require(queueName.nonEmpty, "queueName must not be blank")

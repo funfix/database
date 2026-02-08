@@ -53,10 +53,10 @@ import org.funfix.delayedqueue.jvm
 final case class RetryConfig(
     initialDelay: Duration,
     maxDelay: Duration,
-    backoffFactor: Double = 2.0,
-    maxRetries: Option[Long] = None,
-    totalSoftTimeout: Option[Duration] = None,
-    perTryHardTimeout: Option[Duration] = None
+    backoffFactor: Double,
+    maxRetries: Option[Long],
+    totalSoftTimeout: Option[Duration],
+    perTryHardTimeout: Option[Duration]
 ) {
   require(backoffFactor >= 1.0, s"backoffFactor must be >= 1.0, got $backoffFactor")
   require(!initialDelay.isNegative, s"initialDelay must not be negative, got $initialDelay")
@@ -94,25 +94,11 @@ object RetryConfig {
     *   - 2.0 backoff factor (exponential doubling)
     */
   val DEFAULT: RetryConfig =
-    RetryConfig(
-      maxRetries = Some(5),
-      totalSoftTimeout = Some(Duration.ofSeconds(30)),
-      perTryHardTimeout = Some(Duration.ofSeconds(10)),
-      initialDelay = Duration.ofMillis(100),
-      maxDelay = Duration.ofSeconds(5),
-      backoffFactor = 2.0
-    )
+    jvm.RetryConfig.DEFAULT.asScala
 
   /** No retries - operations fail immediately on first error. */
   val NO_RETRIES: RetryConfig =
-    RetryConfig(
-      maxRetries = Some(0),
-      totalSoftTimeout = None,
-      perTryHardTimeout = None,
-      initialDelay = Duration.ZERO,
-      maxDelay = Duration.ZERO,
-      backoffFactor = 1.0
-    )
+    jvm.RetryConfig.NO_RETRIES.asScala
 
   /** Conversion extension for JVM RetryConfig. */
   extension (javaConfig: jvm.RetryConfig) {

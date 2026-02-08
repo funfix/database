@@ -55,7 +55,10 @@ class RetryConfigSpec extends munit.FunSuite {
       RetryConfig(
         initialDelay = Duration.ofMillis(100),
         maxDelay = Duration.ofSeconds(5),
-        backoffFactor = 0.5
+        backoffFactor = 0.5,
+        maxRetries = None,
+        totalSoftTimeout = None,
+        perTryHardTimeout = None
       )
     }
   }
@@ -64,7 +67,11 @@ class RetryConfigSpec extends munit.FunSuite {
     intercept[IllegalArgumentException] {
       RetryConfig(
         initialDelay = Duration.ofMillis(-100),
-        maxDelay = Duration.ofSeconds(5)
+        maxDelay = Duration.ofSeconds(5),
+        backoffFactor = 2.0,
+        maxRetries = None,
+        totalSoftTimeout = None,
+        perTryHardTimeout = None
       )
     }
   }
