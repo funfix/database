@@ -12,7 +12,8 @@ inThisBuild(
     organization := "org.funfix",
     scalaVersion := "3.8.1",
     scalacOptions ++= Seq(
-      "-no-indent"
+      "-no-indent",
+      "-Yexplicit-nulls",
     ),
     // ---
     // Settings for dealing with the local Gradle-assembled artifacts
