@@ -23,33 +23,40 @@ import org.funfix.delayedqueue.jvm
   * @param className
   *   the JDBC driver class name
   */
-final case class JdbcDriver(className: String) {
+final case class JdbcDriver private (className: String) {
 
   /** Converts this Scala JdbcDriver to a JVM JdbcDriver. */
-  def asJava: jvm.JdbcDriver = {
-    // Find the corresponding JVM driver by class name
-    import scala.jdk.CollectionConverters.*
-    val jvmEntries = jvm.JdbcDriver.getEntries.asScala
-    jvmEntries
-      .find(d => d.getClassName() == className)
-      .getOrElse {
-        throw new IllegalArgumentException(s"Unknown JDBC driver class name: $className")
-      }
-  }
+  def asJava: jvm.JdbcDriver =
+    JdbcDriver.jvmEntries.getOrElse(
+      this,
+      throw new IllegalArgumentException(s"Unknown JDBC driver: $className")
+    )
 }
 
 object JdbcDriver {
-  val HSQLDB: JdbcDriver = JdbcDriver("org.hsqldb.jdbc.JDBCDriver")
-  val H2: JdbcDriver = JdbcDriver("org.h2.Driver")
-  val MsSqlServer: JdbcDriver = JdbcDriver("com.microsoft.sqlserver.jdbc.SQLServerDriver")
-  val Sqlite: JdbcDriver = JdbcDriver("org.sqlite.JDBC")
-  val MariaDB: JdbcDriver = JdbcDriver("org.mariadb.jdbc.Driver")
-  val MySQL: JdbcDriver = JdbcDriver("com.mysql.cj.jdbc.Driver")
-  val PostgreSQL: JdbcDriver = JdbcDriver("org.postgresql.Driver")
-  val Oracle: JdbcDriver = JdbcDriver("oracle.jdbc.OracleDriver")
+
+  val HSQLDB: JdbcDriver = jvm.JdbcDriver.HSQLDB.asScala
+  val H2: JdbcDriver = jvm.JdbcDriver.H2.asScala
+  val MsSqlServer: JdbcDriver = jvm.JdbcDriver.MsSqlServer.asScala
+  val Sqlite: JdbcDriver = jvm.JdbcDriver.Sqlite.asScala
+  val MariaDB: JdbcDriver = jvm.JdbcDriver.MariaDB.asScala
+  val MySQL: JdbcDriver = jvm.JdbcDriver.MySQL.asScala
+  val PostgreSQL: JdbcDriver = jvm.JdbcDriver.PostgreSQL.asScala
+  val Oracle: JdbcDriver = jvm.JdbcDriver.Oracle.asScala
 
   val entries: List[JdbcDriver] =
     List(H2, HSQLDB, MariaDB, MsSqlServer, MySQL, PostgreSQL, Sqlite, Oracle)
+
+  private val jvmEntries: Map[JdbcDriver, jvm.JdbcDriver] = Map(
+    H2 -> jvm.JdbcDriver.H2,
+    HSQLDB -> jvm.JdbcDriver.HSQLDB,
+    MariaDB -> jvm.JdbcDriver.MariaDB,
+    MsSqlServer -> jvm.JdbcDriver.MsSqlServer,
+    MySQL -> jvm.JdbcDriver.MySQL,
+    PostgreSQL -> jvm.JdbcDriver.PostgreSQL,
+    Sqlite -> jvm.JdbcDriver.Sqlite,
+    Oracle -> jvm.JdbcDriver.Oracle
+  )
 
   /** Attempt to find a JdbcDriver by its class name.
     *

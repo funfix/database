@@ -70,14 +70,6 @@ final case class CronMessage[+A](
 }
 
 object CronMessage {
-  private val CRON_DATE_TIME_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(ZoneOffset.UTC)
-  private val NANOS_WIDTH = 9
-
-  private def formatTimestamp(scheduleAt: Instant): String = {
-    val nanos = String.format(Locale.ROOT, s"%0${NANOS_WIDTH}d", scheduleAt.getNano: Integer)
-    s"${CRON_DATE_TIME_FORMATTER.format(scheduleAt)}.$nanos"
-  }
 
   /** Generates a unique key for a cron message.
     *
@@ -91,7 +83,7 @@ object CronMessage {
     *   a unique key string
     */
   def key(configHash: CronConfigHash, keyPrefix: String, scheduleAt: Instant): String =
-    s"$keyPrefix/${configHash.value}/${formatTimestamp(scheduleAt)}"
+    jvm.CronMessage.key(configHash.asJava, keyPrefix, scheduleAt)
 
   /** Creates a factory function that produces CronMessages with a static payload.
     *
@@ -100,8 +92,10 @@ object CronMessage {
     * @return
     *   a function that creates CronMessages for any given instant
     */
-  def staticPayload[A](payload: A): CronMessageGenerator[A] =
-    (scheduleAt: Instant) => CronMessage(payload, scheduleAt)
+  def staticPayload[A](payload: A): CronMessageGenerator[A] = {
+    val jvmGenerator = jvm.CronMessage.staticPayload(payload)
+    (scheduleAt: Instant) => jvmGenerator.invoke(scheduleAt).asScala
+  }
 
   /** Conversion extension for JVM CronMessage. */
   extension [A](javaMsg: jvm.CronMessage[A]) {

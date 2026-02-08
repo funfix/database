@@ -16,7 +16,6 @@
 
 package org.funfix.delayedqueue.scala
 
-import java.security.MessageDigest
 import org.funfix.delayedqueue.jvm
 
 /** Hash of a cron configuration, used to detect configuration changes.
@@ -24,49 +23,36 @@ import org.funfix.delayedqueue.jvm
   * When a cron schedule is installed, this hash is used to identify messages belonging to that
   * configuration. If the configuration changes, the hash will differ, allowing the system to clean
   * up old scheduled messages.
-  *
-  * @param value
-  *   the MD5 hash string
   */
-final case class CronConfigHash(value: String) {
-  override def toString: String = value
-
-  /** Converts this Scala CronConfigHash to a JVM CronConfigHash. */
-  def asJava: jvm.CronConfigHash =
-    new jvm.CronConfigHash(value)
-}
+opaque type CronConfigHash = String
 
 object CronConfigHash {
 
-  /** Creates a ConfigHash from a daily cron schedule configuration. */
-  def fromDailyCron(config: CronDailySchedule): CronConfigHash = {
-    // Port from Kotlin: buildString { appendLine(); appendLine("daily-cron:"); ... }
-    val text = new StringBuilder()
-    text.append('\n') // Leading newline to match Kotlin
-    text.append("daily-cron:\n")
-    text.append(s"  zone: ${config.zoneId}\n")
-    text.append(s"  hours: ${config.hoursOfDay.mkString(", ")}\n")
-    CronConfigHash(md5(text.toString))
+  /** Creates a CronConfigHash from a String value. */
+  def apply(value: String): CronConfigHash = value
+
+  /** Conversion extension for CronConfigHash. */
+  extension (hash: CronConfigHash) {
+
+    /** Gets the string value of the CronConfigHash. */
+    def value: String = hash
+
+    /** Converts this Scala CronConfigHash to a JVM CronConfigHash. */
+    def asJava: jvm.CronConfigHash =
+      new jvm.CronConfigHash(hash)
   }
+
+  /** Creates a ConfigHash from a daily cron schedule configuration. */
+  def fromDailyCron(config: CronDailySchedule): CronConfigHash =
+    jvm.CronConfigHash.fromDailyCron(config.asJava).asScala
 
   /** Creates a ConfigHash from a periodic tick configuration. */
-  def fromPeriodicTick(period: java.time.Duration): CronConfigHash = {
-    // Port from Kotlin: buildString { appendLine(); appendLine("periodic-tick:"); ... }
-    val text = new StringBuilder()
-    text.append('\n') // Leading newline to match Kotlin
-    text.append("periodic-tick:\n")
-    text.append(s"  period-ms: ${period.toMillis}\n")
-    CronConfigHash(md5(text.toString))
-  }
+  def fromPeriodicTick(period: java.time.Duration): CronConfigHash =
+    jvm.CronConfigHash.fromPeriodicTick(period).asScala
 
   /** Creates a ConfigHash from an arbitrary string. */
-  def fromString(text: String): CronConfigHash = CronConfigHash(md5(text))
-
-  private def md5(input: String): String = {
-    val md = MessageDigest.getInstance("MD5")
-    val digest = md.digest(input.getBytes)
-    digest.map("%02x".format(_)).mkString
-  }
+  def fromString(text: String): CronConfigHash =
+    jvm.CronConfigHash.fromString(text).asScala
 
   /** Conversion extension for JVM CronConfigHash. */
   extension (javaHash: jvm.CronConfigHash) {

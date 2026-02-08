@@ -46,12 +46,6 @@ class JdbcDriverSpec extends munit.FunSuite {
     assertEquals(JdbcDriver.entries.toSet, allDrivers)
   }
 
-  test("fromClassName should find drivers case-insensitively") {
-    assertEquals(JdbcDriver.fromClassName("org.h2.Driver"), Some(JdbcDriver.H2))
-    assertEquals(JdbcDriver.fromClassName("ORG.H2.DRIVER"), Some(JdbcDriver.H2))
-    assertEquals(JdbcDriver.fromClassName("unknown"), None)
-  }
-
   test("asJava and asScala should be symmetric") {
     JdbcDriver.entries.foreach { driver =>
       val roundtripped = driver.asJava.asScala

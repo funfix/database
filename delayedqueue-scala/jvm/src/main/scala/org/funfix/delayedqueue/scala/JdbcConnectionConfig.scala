@@ -34,9 +34,9 @@ import org.funfix.delayedqueue.jvm
 final case class JdbcConnectionConfig(
     url: String,
     driver: JdbcDriver,
-    username: String | Null = null,
-    password: String | Null = null,
-    pool: JdbcDatabasePoolConfig | Null = null
+    username: Option[String] = None,
+    password: Option[String] = None,
+    pool: Option[JdbcDatabasePoolConfig] = None
 ) {
 
   /** Converts this Scala JdbcConnectionConfig to a JVM JdbcConnectionConfig. */
@@ -44,9 +44,9 @@ final case class JdbcConnectionConfig(
     new jvm.JdbcConnectionConfig(
       url,
       driver.asJava,
-      username,
-      password,
-      if pool == null then null else pool.asJava
+      username.getOrElse(null),
+      password.getOrElse(null),
+      pool.map(_.asJava).getOrElse(null)
     )
 }
 
@@ -60,11 +60,9 @@ object JdbcConnectionConfig {
       JdbcConnectionConfig(
         url = javaConfig.url,
         driver = JdbcDriver.asScala(javaConfig.driver),
-        username = javaConfig.username,
-        password = javaConfig.password,
-        pool =
-          if javaConfig.pool == null then null
-          else JdbcDatabasePoolConfig.asScala(javaConfig.pool)
+        username = Option(javaConfig.username),
+        password = Option(javaConfig.password),
+        pool = Option(javaConfig.pool).map(JdbcDatabasePoolConfig.asScala)
       )
   }
 }

@@ -18,36 +18,16 @@ package org.funfix.delayedqueue.scala
 
 import munit.ScalaCheckSuite
 import org.scalacheck.Prop.*
-import org.scalacheck.{Arbitrary, Gen}
-import scala.concurrent.duration.*
+import org.scalacheck.Gen
+import scala.concurrent.duration.FiniteDuration
 import java.time.{Instant, LocalTime, ZoneId}
 import org.funfix.delayedqueue.scala.ScheduledMessage.asScala as scheduledAsScala
 import org.funfix.delayedqueue.scala.DelayedQueueTimeConfig.asScala as timeConfigAsScala
 import org.funfix.delayedqueue.scala.MessageId.asScala as messageIdAsScala
 import org.funfix.delayedqueue.scala.OfferOutcome.asScala as offerOutcomeAsScala
+import org.funfix.delayedqueue.scala.Generators.{given, *}
 
 class DataStructuresPropertySpec extends ScalaCheckSuite {
-
-  // Generators for our data types
-  implicit val arbFiniteDuration: Arbitrary[FiniteDuration] = Arbitrary(
-    Gen.choose(0L, 1000000L).map(millis => FiniteDuration(millis, MILLISECONDS))
-  )
-
-  implicit val arbInstant: Arbitrary[Instant] = Arbitrary(
-    Gen.choose(0L, System.currentTimeMillis() * 2).map(Instant.ofEpochMilli)
-  )
-
-  implicit val arbLocalTime: Arbitrary[LocalTime] = Arbitrary(
-    for {
-      hour <- Gen.choose(0, 23)
-      minute <- Gen.choose(0, 59)
-    } yield LocalTime.of(hour, minute)
-  )
-
-  implicit val arbZoneId: Arbitrary[ZoneId] = Arbitrary(
-    Gen.oneOf(ZoneId.of("UTC"), ZoneId.of("America/New_York"), ZoneId.of("Europe/London"))
-  )
-
   property("ScheduledMessage asJava/asScala roundtrip preserves data") {
     forAll { (key: String, payload: String, instant: Instant, canUpdate: Boolean) =>
       val original = ScheduledMessage(key, payload, instant, canUpdate)
@@ -144,7 +124,7 @@ class DataStructuresPropertySpec extends ScalaCheckSuite {
 
   property("DeliveryType asJava/asScala roundtrip") {
     import org.funfix.delayedqueue.scala.DeliveryType.asScala
-    forAll(Gen.oneOf(DeliveryType.FIRST_DELIVERY, DeliveryType.REDELIVERY)) { deliveryType =>
+    forAll(Gen.oneOf(DeliveryType.FirstDelivery, DeliveryType.Redelivery)) { deliveryType =>
       val roundtripped = deliveryType.asJava.asScala
       assertEquals(roundtripped, deliveryType)
     }

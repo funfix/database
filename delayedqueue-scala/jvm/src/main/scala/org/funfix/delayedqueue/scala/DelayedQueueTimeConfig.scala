@@ -43,27 +43,18 @@ object DelayedQueueTimeConfig {
 
   /** Default configuration for DelayedQueueInMemory. */
   val DEFAULT_IN_MEMORY: DelayedQueueTimeConfig =
-    DelayedQueueTimeConfig(
-      acquireTimeout = FiniteDuration(5, scala.concurrent.duration.MINUTES),
-      pollPeriod = FiniteDuration(500, scala.concurrent.duration.MILLISECONDS)
-    )
+    jvm.DelayedQueueTimeConfig.DEFAULT_IN_MEMORY.asScala
 
   /** Default configuration for JDBC-based implementations, with longer acquire timeouts and poll
     * periods to reduce database load in production environments.
     */
   val DEFAULT_JDBC: DelayedQueueTimeConfig =
-    DelayedQueueTimeConfig(
-      acquireTimeout = FiniteDuration(5, scala.concurrent.duration.MINUTES),
-      pollPeriod = FiniteDuration(3, scala.concurrent.duration.SECONDS)
-    )
+    jvm.DelayedQueueTimeConfig.DEFAULT_JDBC.asScala
 
   /** Default configuration for testing, with shorter timeouts and poll periods to speed up tests.
     */
   val DEFAULT_TESTING: DelayedQueueTimeConfig =
-    DelayedQueueTimeConfig(
-      acquireTimeout = FiniteDuration(30, scala.concurrent.duration.SECONDS),
-      pollPeriod = FiniteDuration(100, scala.concurrent.duration.MILLISECONDS)
-    )
+    jvm.DelayedQueueTimeConfig.DEFAULT_TESTING.asScala
 
   /** Conversion extension for JVM DelayedQueueTimeConfig. */
   extension (javaConfig: jvm.DelayedQueueTimeConfig) {

@@ -111,15 +111,15 @@ object MessageId {
 enum DeliveryType {
 
   /** Message is being delivered for the first time. */
-  case FIRST_DELIVERY
+  case FirstDelivery
 
   /** Message is being redelivered (was scheduled again after initial delivery). */
-  case REDELIVERY
+  case Redelivery
 
   /** Converts this Scala DeliveryType to a JVM DeliveryType. */
   def asJava: jvm.DeliveryType = this match {
-    case FIRST_DELIVERY => jvm.DeliveryType.FIRST_DELIVERY
-    case REDELIVERY     => jvm.DeliveryType.REDELIVERY
+    case FirstDelivery => jvm.DeliveryType.FIRST_DELIVERY
+    case Redelivery    => jvm.DeliveryType.REDELIVERY
   }
 }
 
@@ -130,8 +130,8 @@ object DeliveryType {
 
     /** Converts a JVM DeliveryType to a Scala DeliveryType. */
     def asScala: DeliveryType = javaType match {
-      case jvm.DeliveryType.FIRST_DELIVERY => DeliveryType.FIRST_DELIVERY
-      case jvm.DeliveryType.REDELIVERY     => DeliveryType.REDELIVERY
+      case jvm.DeliveryType.FIRST_DELIVERY => DeliveryType.FirstDelivery
+      case jvm.DeliveryType.REDELIVERY     => DeliveryType.Redelivery
     }
   }
 }
