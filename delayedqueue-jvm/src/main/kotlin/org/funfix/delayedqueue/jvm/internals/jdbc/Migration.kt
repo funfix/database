@@ -16,9 +16,6 @@
 
 package org.funfix.delayedqueue.jvm.internals.jdbc
 
-import java.sql.SQLException
-import org.funfix.delayedqueue.jvm.internals.utils.Raise
-
 /**
  * Represents a database migration with SQL and a test to check if it needs to run.
  *
@@ -91,7 +88,6 @@ internal object MigrationRunner {
      * @param migrations List of migrations to run
      * @return Number of migrations executed
      */
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
     fun runMigrations(conn: SafeConnection, migrations: List<Migration>): Int {
         var executed = 0
         for (migration in migrations) {
