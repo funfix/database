@@ -39,9 +39,7 @@ class ExecutionTests {
     @Test
     fun `runBlockingIO propagates InterruptedException as TaskCancellationException`() {
         val interrupted = InterruptedException("interrupted")
-        assertThrows(TaskCancellationException::class.java) {
-            unsafeSneakyRaises { runBlockingIO { throw interrupted } }
-        }
+        assertThrows(TaskCancellationException::class.java) { runBlockingIO { throw interrupted } }
     }
 
     @Test
@@ -53,7 +51,7 @@ class ExecutionTests {
     @Test
     fun `runBlockingIO hangs when block throws AssertionFailedError`() {
         assertThrows(AssertionFailedError::class.java) {
-            unsafeSneakyRaises { runBlockingIO { throw AssertionFailedError("boom") } }
+            runBlockingIO { throw AssertionFailedError("boom") }
         }
     }
 

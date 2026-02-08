@@ -129,11 +129,15 @@ private constructor(
 
     @Throws(InterruptedException::class)
     override fun offerOrUpdate(key: String, payload: A, scheduleAt: Instant): OfferOutcome =
-        withRetries { offer(key, payload, scheduleAt, canUpdate = true) }
+        withRetries {
+            offer(key, payload, scheduleAt, canUpdate = true)
+        }
 
     @Throws(InterruptedException::class)
     override fun offerIfNotExists(key: String, payload: A, scheduleAt: Instant): OfferOutcome =
-        withRetries { offer(key, payload, scheduleAt, canUpdate = false) }
+        withRetries {
+            offer(key, payload, scheduleAt, canUpdate = false)
+        }
 
     @Throws(InterruptedException::class, SQLException::class)
     private fun offer(
@@ -219,7 +223,9 @@ private constructor(
 
     @Throws(InterruptedException::class)
     override fun <In> offerBatch(messages: List<BatchedMessage<In, A>>): List<BatchedReply<In, A>> =
-        withRetries { offerBatchImpl(messages) }
+        withRetries {
+            offerBatchImpl(messages)
+        }
 
     @Throws(InterruptedException::class, SQLException::class)
     private fun <In> offerBatchImpl(
@@ -403,8 +409,9 @@ private constructor(
     }
 
     @Throws(InterruptedException::class)
-    override fun tryPollMany(batchMaxSize: Int): AckEnvelope<List<A>> =
-        withRetries { tryPollManyImpl(batchMaxSize) }
+    override fun tryPollMany(batchMaxSize: Int): AckEnvelope<List<A>> = withRetries {
+        tryPollManyImpl(batchMaxSize)
+    }
 
     @Throws(InterruptedException::class, SQLException::class)
     private fun tryPollManyImpl(batchMaxSize: Int): AckEnvelope<List<A>> {
@@ -488,8 +495,7 @@ private constructor(
     }
 
     @Throws(InterruptedException::class)
-    override fun read(key: String): AckEnvelope<A>? =
-        withRetries { readImpl(key) }
+    override fun read(key: String): AckEnvelope<A>? = withRetries { readImpl(key) }
 
     @Throws(InterruptedException::class, SQLException::class)
     private fun readImpl(key: String): AckEnvelope<A>? {
@@ -518,18 +524,14 @@ private constructor(
     }
 
     @Throws(InterruptedException::class)
-    override fun dropMessage(key: String): Boolean =
-        withRetries {
-            database.withTransaction { connection -> adapter.deleteOneRow(connection, key, pKind) }
-        }
+    override fun dropMessage(key: String): Boolean = withRetries {
+        database.withTransaction { connection -> adapter.deleteOneRow(connection, key, pKind) }
+    }
 
     @Throws(InterruptedException::class)
-    override fun containsMessage(key: String): Boolean =
-        withRetries {
-            database.withConnection { connection ->
-                adapter.checkIfKeyExists(connection, key, pKind)
-            }
-        }
+    override fun containsMessage(key: String): Boolean = withRetries {
+        database.withConnection { connection -> adapter.checkIfKeyExists(connection, key, pKind) }
+    }
 
     @Throws(IllegalArgumentException::class, InterruptedException::class)
     override fun dropAllMessages(confirm: String): Int {
@@ -538,9 +540,7 @@ private constructor(
         }
 
         return withRetries {
-            database.withTransaction { connection ->
-                adapter.dropAllMessages(connection, pKind)
-            }
+            database.withTransaction { connection -> adapter.dropAllMessages(connection, pKind) }
         }
     }
 

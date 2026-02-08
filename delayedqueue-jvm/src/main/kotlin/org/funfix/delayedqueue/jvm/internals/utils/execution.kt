@@ -22,7 +22,7 @@ import org.funfix.tasks.jvm.TaskExecutors
 
 internal val DB_EXECUTOR by lazy { TaskExecutors.sharedBlockingIO() }
 
-context(_: Raise<InterruptedException>)
+@Throws(InterruptedException::class)
 internal fun <T> runBlockingIO(block: () -> T): T {
     val fiber = Task.fromBlockingIO { block() }.ensureRunningOnExecutor(DB_EXECUTOR).runFiber()
     try {
@@ -36,7 +36,7 @@ internal fun <T> runBlockingIO(block: () -> T): T {
     }
 }
 
-context(_: Raise<InterruptedException>)
+@Throws(InterruptedException::class)
 internal fun <T> runBlockingIOUninterruptible(block: () -> T): T {
     val fiber = Task.fromBlockingIO { block() }.ensureRunningOnExecutor(DB_EXECUTOR).runFiber()
 

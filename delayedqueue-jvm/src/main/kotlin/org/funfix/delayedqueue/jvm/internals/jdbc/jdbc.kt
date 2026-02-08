@@ -54,8 +54,7 @@ internal class Database(
 
 internal data class SafeConnection(val underlying: Connection, val driver: JdbcDriver)
 
-context(_: Raise<SQLException>)
-internal inline fun <T> runSQLOperation(block: () -> T): T = block()
+@Throws(SQLException::class) internal inline fun <T> runSQLOperation(block: () -> T): T = block()
 
 @Throws(InterruptedException::class, SQLException::class)
 internal fun <T> Database.withConnection(block: (SafeConnection) -> T): T = runBlockingIO {

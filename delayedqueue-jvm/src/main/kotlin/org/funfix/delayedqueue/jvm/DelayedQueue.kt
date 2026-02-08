@@ -72,8 +72,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(InterruptedException::class)
-    public fun tryPoll(): AckEnvelope<A>?
+    @Throws(InterruptedException::class) public fun tryPoll(): AckEnvelope<A>?
 
     /**
      * Pulls a batch of messages to process from the queue (FIFO), returning an empty list in case
@@ -98,8 +97,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted while waiting
      */
-    @Throws(InterruptedException::class)
-    public fun poll(): AckEnvelope<A>
+    @Throws(InterruptedException::class) public fun poll(): AckEnvelope<A>
 
     /**
      * Reads a message from the queue, corresponding to the given `key`, without locking it for
@@ -115,8 +113,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(InterruptedException::class)
-    public fun read(key: String): AckEnvelope<A>?
+    @Throws(InterruptedException::class) public fun read(key: String): AckEnvelope<A>?
 
     /**
      * Deletes a message from the queue that's associated with the given `key`.
@@ -124,8 +121,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(InterruptedException::class)
-    public fun dropMessage(key: String): Boolean
+    @Throws(InterruptedException::class) public fun dropMessage(key: String): Boolean
 
     /**
      * Checks that a message exists in the queue.
@@ -135,8 +131,7 @@ public interface DelayedQueue<A> {
      * @throws ResourceUnavailableException if the operation fails after retries
      * @throws InterruptedException if the current thread is interrupted
      */
-    @Throws(InterruptedException::class)
-    public fun containsMessage(key: String): Boolean
+    @Throws(InterruptedException::class) public fun containsMessage(key: String): Boolean
 
     /**
      * Drops all existing enqueued messages.

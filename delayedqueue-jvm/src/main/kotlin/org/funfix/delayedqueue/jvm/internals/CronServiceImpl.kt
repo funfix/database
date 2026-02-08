@@ -22,6 +22,7 @@ import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 import org.funfix.delayedqueue.jvm.BatchedMessage
 import org.funfix.delayedqueue.jvm.CronConfigHash
@@ -32,19 +33,15 @@ import org.funfix.delayedqueue.jvm.CronMessageGenerator
 import org.funfix.delayedqueue.jvm.CronPayloadGenerator
 import org.funfix.delayedqueue.jvm.CronService
 import org.funfix.delayedqueue.jvm.DelayedQueue
-import org.funfix.delayedqueue.jvm.ResourceUnavailableException
 import org.funfix.delayedqueue.jvm.internals.utils.withTimeout
 import org.slf4j.LoggerFactory
 
 /**
- * Type alias for cron deletion operations that can raise SQLException and InterruptedException.
+ * Type alias for operations that delete cron messages from the queue.
  *
- * Used by CronServiceImpl to delegate database operations to the DelayedQueue implementation while
- * maintaining proper exception flow tracking via Raise context.
+ * Used by CronServiceImpl to delegate database operations to the DelayedQueue implementation.
  */
-internal typealias CronDeleteOperation =
-    context(Raise<ResourceUnavailableException>, Raise<InterruptedException>)
-    (CronConfigHash, String) -> Unit
+internal typealias CronDeleteOperation = (CronConfigHash, String) -> Unit
 
 /**
  * Base implementation of CronService that can be used by both in-memory and JDBC implementations.
