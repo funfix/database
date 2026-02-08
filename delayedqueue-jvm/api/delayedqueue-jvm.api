@@ -399,7 +399,7 @@ public final class org/funfix/delayedqueue/jvm/OfferOutcome$Updated : org/funfix
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class org/funfix/delayedqueue/jvm/ResourceUnavailableException : java/lang/Exception {
+public final class org/funfix/delayedqueue/jvm/ResourceUnavailableException : java/io/IOException {
 	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
 }
 
