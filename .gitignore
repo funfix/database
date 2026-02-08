@@ -1,8 +1,23 @@
+# Gradle / Java / Gradle
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+
+### Kotlin ###
+.kotlin
+
+### Scala ###
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.bsp/
+.metals/
+.bloop/
+project/project/
+project/metals.sbt
 
 ### IntelliJ IDEA ###
 .idea
@@ -13,9 +28,6 @@ build/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
-
-### Kotlin ###
-.kotlin
 
 ### Eclipse ###
 .apt_generated
