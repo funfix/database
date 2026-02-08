@@ -60,28 +60,26 @@ internal class CronServiceImpl<A>(
 ) : CronService<A> {
     private val logger = LoggerFactory.getLogger(CronServiceImpl::class.java)
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     override fun installTick(
         configHash: CronConfigHash,
         keyPrefix: String,
         messages: List<CronMessage<A>>,
     ) {
-        unsafeSneakyRaises {
-            installTick0(
-                configHash = configHash,
-                keyPrefix = keyPrefix,
-                messages = messages,
-                canUpdate = false,
-            )
-        }
+        installTick0(
+            configHash = configHash,
+            keyPrefix = keyPrefix,
+            messages = messages,
+            canUpdate = false,
+        )
     }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     override fun uninstallTick(configHash: CronConfigHash, keyPrefix: String) {
-        unsafeSneakyRaises { deleteCurrentCron(configHash, keyPrefix) }
+        deleteCurrentCron(configHash, keyPrefix)
     }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     override fun install(
         configHash: CronConfigHash,
         keyPrefix: String,
@@ -95,7 +93,7 @@ internal class CronServiceImpl<A>(
             generateMany = generateMany,
         )
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     override fun installDailySchedule(
         keyPrefix: String,
         schedule: CronDailySchedule,
@@ -110,7 +108,7 @@ internal class CronServiceImpl<A>(
             },
         )
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     override fun installPeriodicTick(
         keyPrefix: String,
         period: Duration,
@@ -157,7 +155,7 @@ internal class CronServiceImpl<A>(
      * @param canUpdate whether to update existing messages (false for installTick, varies for
      *   install)
      */
-    context(_: Raise<ResourceUnavailableException>, _: Raise<InterruptedException>)
+    @Throws(InterruptedException::class)
     private fun installTick0(
         configHash: CronConfigHash,
         keyPrefix: String,

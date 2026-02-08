@@ -114,18 +114,11 @@ private constructor(
      *
      * If retryPolicy is null, executes the block directly. Otherwise, applies retry logic with
      * database-specific exception filtering.
-     *
-     * This method has Raise context for ResourceUnavailableException and InterruptedException,
-     * which matches what the public API declares via @Throws.
      */
-    context(_: Raise<ResourceUnavailableException>, _: Raise<InterruptedException>)
-    private fun <T> withRetries(
-        block:
-            context(Raise<SQLException>, Raise<InterruptedException>)
-            () -> T
-    ): T {
+    @Throws(ResourceUnavailableException::class, InterruptedException::class, SQLException::class)
+    private fun <T> withRetries(block: () -> T): T {
         return if (config.retryPolicy == null) {
-            block(Raise._PRIVATE_AND_UNSAFE, Raise._PRIVATE_AND_UNSAFE)
+            block()
         } else {
             withDbRetries(
                 config = config.retryPolicy,
@@ -136,19 +129,15 @@ private constructor(
         }
     }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     override fun offerOrUpdate(key: String, payload: A, scheduleAt: Instant): OfferOutcome =
-        unsafeSneakyRaises {
-            withRetries { offer(key, payload, scheduleAt, canUpdate = true) }
-        }
+        withRetries { offer(key, payload, scheduleAt, canUpdate = true) }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     override fun offerIfNotExists(key: String, payload: A, scheduleAt: Instant): OfferOutcome =
-        unsafeSneakyRaises {
-            withRetries { offer(key, payload, scheduleAt, canUpdate = false) }
-        }
+        withRetries { offer(key, payload, scheduleAt, canUpdate = false) }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     private fun offer(
         key: String,
         payload: A,
@@ -230,13 +219,11 @@ private constructor(
         }
     }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     override fun <In> offerBatch(messages: List<BatchedMessage<In, A>>): List<BatchedReply<In, A>> =
-        unsafeSneakyRaises {
-            withRetries { offerBatchImpl(messages) }
-        }
+        withRetries { offerBatchImpl(messages) }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     private fun <In> offerBatchImpl(
         messages: List<BatchedMessage<In, A>>
     ): List<BatchedReply<In, A>> {
@@ -343,26 +330,22 @@ private constructor(
         }
     }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
-    override fun tryPoll(): AckEnvelope<A>? = unsafeSneakyRaises { withRetries { tryPollImpl() } }
+    @Throws(InterruptedException::class)
+    override fun tryPoll(): AckEnvelope<A>? = withRetries { tryPollImpl() }
 
     private fun acknowledgeByLockUuid(lockUuid: String): AcknowledgeFun = {
-        unsafeSneakyRaises {
-            withRetries {
-                database.withTransaction { conn -> adapter.deleteRowsWithLock(conn, lockUuid) }
-            }
+        withRetries {
+            database.withTransaction { conn -> adapter.deleteRowsWithLock(conn, lockUuid) }
         }
     }
 
     private fun acknowledgeByFingerprint(row: DBTableRowWithId): AcknowledgeFun = {
-        unsafeSneakyRaises {
-            withRetries {
-                database.withTransaction { conn -> adapter.deleteRowByFingerprint(conn, row) }
-            }
+        withRetries {
+            database.withTransaction { conn -> adapter.deleteRowByFingerprint(conn, row) }
         }
     }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     private fun tryPollImpl(): AckEnvelope<A>? {
         // Retry loop to handle failed acquires (concurrent modifications)
         // This matches the original Scala implementation which retries if acquire fails
@@ -421,12 +404,11 @@ private constructor(
         }
     }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
-    override fun tryPollMany(batchMaxSize: Int): AckEnvelope<List<A>> = unsafeSneakyRaises {
+    @Throws(InterruptedException::class)
+    override fun tryPollMany(batchMaxSize: Int): AckEnvelope<List<A>> =
         withRetries { tryPollManyImpl(batchMaxSize) }
-    }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     private fun tryPollManyImpl(batchMaxSize: Int): AckEnvelope<List<A>> {
         // Handle edge case: non-positive batch size
         if (batchMaxSize <= 0) {
@@ -492,7 +474,7 @@ private constructor(
         }
     }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    @Throws(InterruptedException::class)
     override fun poll(): AckEnvelope<A> {
         while (true) {
             val result = tryPoll()
@@ -507,12 +489,11 @@ private constructor(
         }
     }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
-    override fun read(key: String): AckEnvelope<A>? = unsafeSneakyRaises {
+    @Throws(InterruptedException::class)
+    override fun read(key: String): AckEnvelope<A>? =
         withRetries { readImpl(key) }
-    }
 
-    context(_: Raise<InterruptedException>, _: Raise<SQLException>)
+    @Throws(InterruptedException::class, SQLException::class)
     private fun readImpl(key: String): AckEnvelope<A>? {
         return database.withConnection { connection ->
             val row = adapter.selectByKey(connection, pKind, key) ?: return@withConnection null
@@ -538,37 +519,29 @@ private constructor(
         }
     }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
-    override fun dropMessage(key: String): Boolean = unsafeSneakyRaises {
+    @Throws(InterruptedException::class)
+    override fun dropMessage(key: String): Boolean =
         withRetries {
             database.withTransaction { connection -> adapter.deleteOneRow(connection, key, pKind) }
         }
-    }
 
-    @Throws(ResourceUnavailableException::class, InterruptedException::class)
-    override fun containsMessage(key: String): Boolean = unsafeSneakyRaises {
+    @Throws(InterruptedException::class)
+    override fun containsMessage(key: String): Boolean =
         withRetries {
             database.withConnection { connection ->
                 adapter.checkIfKeyExists(connection, key, pKind)
             }
         }
-    }
 
-    @Throws(
-        IllegalArgumentException::class,
-        ResourceUnavailableException::class,
-        InterruptedException::class,
-    )
+    @Throws(IllegalArgumentException::class, InterruptedException::class)
     override fun dropAllMessages(confirm: String): Int {
         require(confirm == "Yes, please, I know what I'm doing!") {
             "To drop all messages, you must provide the exact confirmation string"
         }
 
-        return unsafeSneakyRaises {
-            withRetries {
-                database.withTransaction { connection ->
-                    adapter.dropAllMessages(connection, pKind)
-                }
+        return withRetries {
+            database.withTransaction { connection ->
+                adapter.dropAllMessages(connection, pKind)
             }
         }
     }
@@ -618,8 +591,8 @@ private constructor(
          * @throws InterruptedException if interrupted during migration
          */
         @JvmStatic
-        @Throws(ResourceUnavailableException::class, InterruptedException::class)
-        public fun runMigrations(config: DelayedQueueJDBCConfig): Unit = unsafeSneakyRaises {
+        @Throws(InterruptedException::class)
+        public fun runMigrations(config: DelayedQueueJDBCConfig) {
             val database = Database(config.db)
             database.use {
                 database.withConnection { connection ->
@@ -666,15 +639,15 @@ private constructor(
          */
         @JvmStatic
         @JvmOverloads
-        @Throws(ResourceUnavailableException::class, InterruptedException::class)
+        @Throws(InterruptedException::class)
         public fun <A> create(
             serializer: MessageSerializer<A>,
             config: DelayedQueueJDBCConfig,
             clock: Clock = Clock.systemUTC(),
-        ): DelayedQueueJDBC<A> = unsafeSneakyRaises {
+        ): DelayedQueueJDBC<A> {
             val database = Database(config.db)
             val adapter = SQLVendorAdapter.create(config.db.driver, config.tableName)
-            DelayedQueueJDBC(
+            return DelayedQueueJDBC(
                 database = database,
                 adapter = adapter,
                 serializer = serializer,

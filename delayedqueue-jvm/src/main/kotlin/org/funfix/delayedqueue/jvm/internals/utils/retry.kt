@@ -102,7 +102,7 @@ internal enum class RetryOutcome {
     RAISE,
 }
 
-context(_: Raise<InterruptedException>, _: Raise<ResourceUnavailableException>)
+@Throws(InterruptedException::class, ResourceUnavailableException::class)
 internal fun <T> withRetries(
     config: RetryConfig,
     clock: Clock,
@@ -114,9 +114,7 @@ internal fun <T> withRetries(
     while (true) {
         try {
             return if (config.perTryHardTimeout != null) {
-                // Acceptable use of unsafeSneakyRaises, as it's being
-                // caught below and wrapped into ResourceUnavailableException
-                unsafeSneakyRaises { withTimeout(config.perTryHardTimeout) { block() } }
+                withTimeout(config.perTryHardTimeout) { block() }
             } else {
                 block()
             }
@@ -164,7 +162,7 @@ private fun createFinalException(state: Evolution, e: Exception, now: Instant): 
     }
 }
 
-context(_: Raise<InterruptedException>, _: Raise<TimeoutException>)
+@Throws(InterruptedException::class, TimeoutException::class)
 internal fun <T> withTimeout(timeout: Duration, block: () -> T): T {
     val task = org.funfix.tasks.jvm.Task.fromBlockingIO { block() }
     val fiber = task.ensureRunningOnExecutor(DB_EXECUTOR).runFiber()
@@ -174,7 +172,7 @@ internal fun <T> withTimeout(timeout: Duration, block: () -> T): T {
     } catch (e: TimeoutException) {
         fiber.cancel()
         fiber.joinBlockingUninterruptible()
-        raise(e)
+        throw e
     } catch (e: ExecutionException) {
         val cause = e.cause
         when {
@@ -184,6 +182,6 @@ internal fun <T> withTimeout(timeout: Duration, block: () -> T): T {
     } catch (e: InterruptedException) {
         fiber.cancel()
         fiber.joinBlockingUninterruptible()
-        raise(e)
+        throw e
     }
 }
