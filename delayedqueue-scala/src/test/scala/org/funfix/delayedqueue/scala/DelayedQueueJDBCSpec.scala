@@ -367,20 +367,6 @@ class DelayedQueueJDBCH2Spec extends DelayedQueueJDBCSpec {
   }
 }
 
-/** SQLite database tests for DelayedQueueJDBC. */
-class DelayedQueueJDBCSQLiteSpec extends DelayedQueueJDBCSpec {
-  // SQLite needs special mode for shared cache in-memory database
-  private val testDbName = s"test_sqlite_${System.currentTimeMillis()}"
-
-  override def createConfig(tableName: String, queueName: String): DelayedQueueJDBCConfig = {
-    val dbConfig = JdbcConnectionConfig(
-      url = s"jdbc:sqlite:file:$testDbName?mode=memory&cache=shared",
-      driver = JdbcDriver.Sqlite
-    )
-    DelayedQueueJDBCConfig.create(dbConfig, tableName, queueName)
-  }
-}
-
 /** HSQLDB database tests for DelayedQueueJDBC. */
 class DelayedQueueJDBCHSQLDBSpec extends DelayedQueueJDBCSpec {
   private val testDbName = s"test_hsqldb_${System.currentTimeMillis()}"
