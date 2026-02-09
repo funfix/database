@@ -16,6 +16,7 @@
 
 package org.funfix.delayedqueue.scala
 
+import cats.syntax.all.*
 import cats.effect.IO
 import java.time.Instant
 import munit.CatsEffectSuite
@@ -283,5 +284,73 @@ class DelayedQueueInMemorySpec extends CatsEffectSuite {
         }
       } yield ()
     }
+  }
+
+  test("concurrency") {
+    val producers = 4
+    val consumers = 4
+    val messageCount = 10000
+    val now = Instant.now()
+
+    assert(messageCount % producers == 0, "messageCount should be divisible by number of producers")
+    assert(messageCount % consumers == 0, "messageCount should be divisible by number of producers")
+
+    def producer(queue: DelayedQueue[String], id: Int, count: Int): IO[Int] =
+      (1 to count).toList.traverse { i =>
+        val key = s"producer-$id-message-$i"
+        val payload = s"payload-$key"
+        queue.offerOrUpdate(key, payload, now).map { outcome =>
+          assertEquals(outcome, OfferOutcome.Created)
+          1
+        }
+      }.map {
+        _.sum
+      }
+
+    def allProducers(queue: DelayedQueue[String]): IO[Int] = (1 to producers).toList.parTraverse {
+      id =>
+        producer(queue, id, messageCount / producers)
+    }.map {
+      _.sum
+    }
+
+    def consumer(queue: DelayedQueue[String], count: Int): IO[Int] = (1 to count).toList.traverse {
+      _ =>
+        queue.poll.map { envelope =>
+          assert(
+            envelope.payload.startsWith("payload-"),
+            "payload should have correct format"
+          )
+          1
+        }
+    }.map {
+      _.sum
+    }
+
+    def allConsumers(queue: DelayedQueue[String]): IO[Int] = (1 to consumers).toList.parTraverse {
+      _ =>
+        consumer(queue, messageCount / consumers)
+    }.map {
+      _.sum
+    }
+
+    val res =
+      for {
+        queue <- DelayedQueueInMemory[String]()
+        prodFiber <- allProducers(queue).background
+        conFiber <- allConsumers(queue).background
+      } yield (prodFiber, conFiber)
+
+    res.use { case (prodFiber, conFiber) =>
+      for {
+        p <- prodFiber
+        p <- p.embedNever
+        c <- conFiber
+        c <- c.embedNever
+      } yield {
+        assertEquals(p, messageCount)
+        assertEquals(c, messageCount)
+      }
+    }.timeout(30.seconds)
   }
 }
