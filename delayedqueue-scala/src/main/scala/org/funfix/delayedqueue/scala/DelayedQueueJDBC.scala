@@ -16,8 +16,7 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.effect.{IO, Resource, Clock}
-import cats.syntax.functor.*
+import cats.effect.{IO, Resource}
 import cats.effect.std.Dispatcher
 import org.funfix.delayedqueue.jvm
 
@@ -86,7 +85,7 @@ object DelayedQueueJDBC {
           config.asJava,
           javaClock
         )
-      }).map(jvmQueue => new internal.DelayedQueueWrapper(jvmQueue))
+      }).map(jvmQueue => new DelayedQueueWrapper(jvmQueue))
     }
 
   /** Runs database migrations for the queue.

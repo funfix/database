@@ -17,14 +17,8 @@
 package org.funfix.delayedqueue.scala
 
 import cats.effect.{IO, Resource, Clock}
-import cats.syntax.functor.*
 import java.time.{Clock as JavaClock, Instant}
 import org.funfix.delayedqueue.jvm
-import org.funfix.delayedqueue.scala.AckEnvelope.asScala
-import org.funfix.delayedqueue.scala.OfferOutcome.asScala
-import org.funfix.delayedqueue.scala.BatchedReply.asScala
-import org.funfix.delayedqueue.scala.DelayedQueueTimeConfig.asScala
-import scala.jdk.CollectionConverters.*
 import cats.effect.std.Dispatcher
 
 /** In-memory implementation of [[DelayedQueue]] using concurrent data structures.
@@ -92,7 +86,7 @@ object DelayedQueueInMemory {
           ackEnvSource,
           javaClock
         )
-        new internal.DelayedQueueWrapper(jvmQueue)
+        new DelayedQueueWrapper(jvmQueue)
       }
     }
 }
