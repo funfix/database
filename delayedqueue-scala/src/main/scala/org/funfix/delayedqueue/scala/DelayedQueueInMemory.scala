@@ -16,7 +16,7 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.effect.{Sync, Async, Clock, Resource}
+import cats.effect.{IO, Resource, Clock}
 import cats.syntax.functor.*
 import java.time.{Clock as JavaClock, Instant}
 import org.funfix.delayedqueue.jvm
@@ -80,13 +80,13 @@ object DelayedQueueInMemory {
     * @return
     *   a new DelayedQueue instance
     */
-  def apply[F[_], A](
+  def apply[A](
       timeConfig: DelayedQueueTimeConfig = DelayedQueueTimeConfig.DEFAULT_IN_MEMORY,
       ackEnvSource: String = "delayed-queue-inmemory"
-  )(using Async[F], Clock[F]): Resource[F, DelayedQueue[F, A]] =
-    Dispatcher.sequential[F].evalMap { dispatcher =>
-      Sync[F].delay {
-        val javaClock = CatsClockToJavaClock[F](dispatcher)
+  ): Resource[IO, DelayedQueue[A]] =
+    Dispatcher.sequential[IO].evalMap { dispatcher =>
+      IO {
+        val javaClock = CatsClockToJavaClock(dispatcher)
         val jvmQueue = jvm.DelayedQueueInMemory.create[A](
           timeConfig.asJava,
           ackEnvSource,
@@ -98,35 +98,35 @@ object DelayedQueueInMemory {
 
   /** Wrapper that implements the Scala DelayedQueue trait by delegating to the JVM implementation.
     */
-  private class DelayedQueueInMemoryWrapper[F[_], A](
+  private class DelayedQueueInMemoryWrapper[A](
       underlying: jvm.DelayedQueueInMemory[A]
-  )(using Sync[F]) extends DelayedQueue[F, A] {
+  ) extends DelayedQueue[A] {
 
-    override def getTimeConfig: F[DelayedQueueTimeConfig] =
-      Sync[F].delay(underlying.getTimeConfig.asScala)
+    override def getTimeConfig: IO[DelayedQueueTimeConfig] =
+      IO(underlying.getTimeConfig.asScala)
 
-    override def offerOrUpdate(key: String, payload: A, scheduleAt: Instant): F[OfferOutcome] =
-      Sync[F].delay(underlying.offerOrUpdate(key, payload, scheduleAt).asScala)
+    override def offerOrUpdate(key: String, payload: A, scheduleAt: Instant): IO[OfferOutcome] =
+      IO(underlying.offerOrUpdate(key, payload, scheduleAt).asScala)
 
-    override def offerIfNotExists(key: String, payload: A, scheduleAt: Instant): F[OfferOutcome] =
-      Sync[F].delay(underlying.offerIfNotExists(key, payload, scheduleAt).asScala)
+    override def offerIfNotExists(key: String, payload: A, scheduleAt: Instant): IO[OfferOutcome] =
+      IO(underlying.offerIfNotExists(key, payload, scheduleAt).asScala)
 
     override def offerBatch[In](
         messages: List[BatchedMessage[In, A]]
-    ): F[List[BatchedReply[In, A]]] =
-      Sync[F].delay {
+    ): IO[List[BatchedReply[In, A]]] =
+      IO {
         val javaMessages = messages.map(_.asJava).asJava
         val javaReplies = underlying.offerBatch(javaMessages)
         javaReplies.asScala.toList.map(_.asScala)
       }
 
-    override def tryPoll: F[Option[AckEnvelope[F, A]]] =
-      Sync[F].delay {
+    override def tryPoll: IO[Option[AckEnvelope[A]]] =
+      IO {
         Option(underlying.tryPoll()).map(_.asScala)
       }
 
-    override def tryPollMany(batchMaxSize: Int): F[AckEnvelope[F, List[A]]] =
-      Sync[F].delay {
+    override def tryPollMany(batchMaxSize: Int): IO[AckEnvelope[List[A]]] =
+      IO {
         val javaEnvelope = underlying.tryPollMany(batchMaxSize)
         AckEnvelope(
           payload = javaEnvelope.payload.asScala.toList,
@@ -134,50 +134,48 @@ object DelayedQueueInMemory {
           timestamp = javaEnvelope.timestamp,
           source = javaEnvelope.source,
           deliveryType = DeliveryType.asScala(javaEnvelope.deliveryType),
-          acknowledge = Sync[F].blocking(javaEnvelope.acknowledge())
+          acknowledge = IO.blocking(javaEnvelope.acknowledge())
         )
       }
 
-    override def poll: F[AckEnvelope[F, A]] =
-      Sync[F].interruptible {
-        underlying.poll().asScala
-      }
+    override def poll: IO[AckEnvelope[A]] =
+      IO.interruptible(underlying.poll().asScala)
 
-    override def read(key: String): F[Option[AckEnvelope[F, A]]] =
-      Sync[F].delay {
+    override def read(key: String): IO[Option[AckEnvelope[A]]] =
+      IO {
         Option(underlying.read(key)).map(_.asScala)
       }
 
-    override def dropMessage(key: String): F[Boolean] =
-      Sync[F].delay(underlying.dropMessage(key))
+    override def dropMessage(key: String): IO[Boolean] =
+      IO(underlying.dropMessage(key))
 
-    override def containsMessage(key: String): F[Boolean] =
-      Sync[F].delay(underlying.containsMessage(key))
+    override def containsMessage(key: String): IO[Boolean] =
+      IO(underlying.containsMessage(key))
 
-    override def dropAllMessages(confirm: String): F[Int] =
-      Sync[F].delay(underlying.dropAllMessages(confirm))
+    override def dropAllMessages(confirm: String): IO[Int] =
+      IO(underlying.dropAllMessages(confirm))
 
-    override def cron: F[CronService[F, A]] =
-      Sync[F].delay(new CronServiceWrapper(underlying.getCron))
+    override def cron: IO[CronService[A]] =
+      IO(new CronServiceWrapper(underlying.getCron))
   }
 
   /** Wrapper for CronService that delegates to the JVM implementation. */
-  private class CronServiceWrapper[F[_], A](
+  private class CronServiceWrapper[A](
       underlying: jvm.CronService[A]
-  )(using Sync[F]) extends CronService[F, A] {
+  ) extends CronService[A] {
 
     override def installTick(
         configHash: CronConfigHash,
         keyPrefix: String,
         messages: List[CronMessage[A]]
-    ): F[Unit] =
-      Sync[F].delay {
+    ): IO[Unit] =
+      IO {
         val javaMessages = messages.map(_.asJava).asJava
         underlying.installTick(configHash.asJava, keyPrefix, javaMessages)
       }
 
-    override def uninstallTick(configHash: CronConfigHash, keyPrefix: String): F[Unit] =
-      Sync[F].delay {
+    override def uninstallTick(configHash: CronConfigHash, keyPrefix: String): IO[Unit] =
+      IO {
         underlying.uninstallTick(configHash.asJava, keyPrefix)
       }
 
@@ -186,10 +184,8 @@ object DelayedQueueInMemory {
         keyPrefix: String,
         scheduleInterval: java.time.Duration,
         generateMany: (Instant) => List[CronMessage[A]]
-    ): Resource[F, Unit] = {
-      import cats.effect.Resource
-
-      Resource.fromAutoCloseable(Sync[F].delay {
+    ): Resource[IO, Unit] =
+      Resource.fromAutoCloseable(IO {
         underlying.install(
           configHash.asJava,
           keyPrefix,
@@ -197,14 +193,13 @@ object DelayedQueueInMemory {
           now => generateMany(now).map(_.asJava).asJava
         )
       }).void
-    }
 
     override def installDailySchedule(
         keyPrefix: String,
         schedule: CronDailySchedule,
         generator: (Instant) => CronMessage[A]
-    ): Resource[F, Unit] =
-      Resource.fromAutoCloseable(Sync[F].delay {
+    ): Resource[IO, Unit] =
+      Resource.fromAutoCloseable(IO {
         underlying.installDailySchedule(
           keyPrefix,
           schedule.asJava,
@@ -216,8 +211,8 @@ object DelayedQueueInMemory {
         keyPrefix: String,
         period: java.time.Duration,
         generator: (Instant) => A
-    ): cats.effect.Resource[F, Unit] =
-      Resource.fromAutoCloseable(Sync[F].delay {
+    ): Resource[IO, Unit] =
+      Resource.fromAutoCloseable(IO {
         underlying.installPeriodicTick(
           keyPrefix,
           period,
@@ -227,10 +222,10 @@ object DelayedQueueInMemory {
   }
 }
 
-private final class CatsClockToJavaClock[+F[_]: Sync: Clock](
-    dispatcher: Dispatcher[F],
-    zone: java.time.ZoneId = JavaClock.systemUTC().getZone
-) extends JavaClock {
+private final class CatsClockToJavaClock(
+    dispatcher: Dispatcher[IO],
+    zone: java.time.ZoneId = java.time.ZoneId.systemDefault()
+)(using Clock[IO]) extends JavaClock {
   override def getZone: java.time.ZoneId =
     zone
 
@@ -239,8 +234,6 @@ private final class CatsClockToJavaClock[+F[_]: Sync: Clock](
 
   override def instant(): Instant =
     dispatcher.unsafeRunSync(
-      Clock[F]
-        .realTime
-        .map(it => Instant.ofEpochMilli(it.toMillis).nn)
+      Clock[IO].realTime.map(it => Instant.ofEpochMilli(it.toMillis))
     )
 }

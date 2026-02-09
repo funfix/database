@@ -16,6 +16,7 @@
 
 package org.funfix.delayedqueue.scala
 
+import cats.effect.IO
 import java.time.Instant
 
 /** A delayed queue for scheduled message processing with FIFO semantics.
@@ -23,10 +24,10 @@ import java.time.Instant
   * @tparam A
   *   the type of message payloads stored in the queue
   */
-trait DelayedQueue[F[_], A] {
+trait DelayedQueue[A] {
 
   /** Returns the [DelayedQueueTimeConfig] with which this instance was initialized. */
-  def getTimeConfig: F[DelayedQueueTimeConfig]
+  def getTimeConfig: IO[DelayedQueueTimeConfig]
 
   /** Offers a message for processing, at a specific timestamp.
     *
@@ -40,10 +41,10 @@ trait DelayedQueue[F[_], A] {
     * @param scheduleAt
     *   specifies when the message will become available for `poll` and processing
     */
-  def offerOrUpdate(key: String, payload: A, scheduleAt: Instant): F[OfferOutcome]
+  def offerOrUpdate(key: String, payload: A, scheduleAt: Instant): IO[OfferOutcome]
 
   /** Version of [offerOrUpdate] that only creates new entries and does not allow updates. */
-  def offerIfNotExists(key: String, payload: A, scheduleAt: Instant): F[OfferOutcome]
+  def offerIfNotExists(key: String, payload: A, scheduleAt: Instant): IO[OfferOutcome]
 
   /** Batched version of offer operations.
     *
@@ -51,7 +52,7 @@ trait DelayedQueue[F[_], A] {
     *   is the type of the input message, corresponding to each [ScheduledMessage]. This helps in
     *   streaming the original input messages after processing the batch.
     */
-  def offerBatch[In](messages: List[BatchedMessage[In, A]]): F[List[BatchedReply[In, A]]]
+  def offerBatch[In](messages: List[BatchedMessage[In, A]]): IO[List[BatchedReply[In, A]]]
 
   /** Pulls the first message to process from the queue (FIFO), returning `None` in case no such
     * message is available.
@@ -59,7 +60,7 @@ trait DelayedQueue[F[_], A] {
     * This method locks the message for processing, making it invisible for other consumers (until
     * the configured timeout happens).
     */
-  def tryPoll: F[Option[AckEnvelope[F, A]]]
+  def tryPoll: IO[Option[AckEnvelope[A]]]
 
   /** Pulls a batch of messages to process from the queue (FIFO), returning an empty list in case no
     * such messages are available.
@@ -72,12 +73,12 @@ trait DelayedQueue[F[_], A] {
     *   of returned messages can be smaller than this value, depending on how many messages are
     *   available at the time of polling
     */
-  def tryPollMany(batchMaxSize: Int): F[AckEnvelope[F, List[A]]]
+  def tryPollMany(batchMaxSize: Int): IO[AckEnvelope[List[A]]]
 
   /** Extracts the next event from the delayed-queue, or waits until there's such an event
     * available.
     */
-  def poll: F[AckEnvelope[F, A]]
+  def poll: IO[AckEnvelope[A]]
 
   /** Reads a message from the queue, corresponding to the given `key`, without locking it for
     * processing.
@@ -89,10 +90,10 @@ trait DelayedQueue[F[_], A] {
     * WARNING: this operation invalidates the model of the queue. DO NOT USE! This is because
     * multiple consumers can process the same message, leading to potential issues.
     */
-  def read(key: String): F[Option[AckEnvelope[F, A]]]
+  def read(key: String): IO[Option[AckEnvelope[A]]]
 
   /** Deletes a message from the queue that's associated with the given `key`. */
-  def dropMessage(key: String): F[Boolean]
+  def dropMessage(key: String): IO[Boolean]
 
   /** Checks that a message exists in the queue.
     *
@@ -101,7 +102,7 @@ trait DelayedQueue[F[_], A] {
     * @return
     *   `true` in case a message with the given `key` exists in the queue, `false` otherwise
     */
-  def containsMessage(key: String): F[Boolean]
+  def containsMessage(key: String): IO[Boolean]
 
   /** Drops all existing enqueued messages.
     *
@@ -115,8 +116,8 @@ trait DelayedQueue[F[_], A] {
     * @return
     *   the number of messages deleted
     */
-  def dropAllMessages(confirm: String): F[Int]
+  def dropAllMessages(confirm: String): IO[Int]
 
   /** Utilities for installing cron-like schedules. */
-  def cron: F[CronService[F, A]]
+  def cron: IO[CronService[A]]
 }

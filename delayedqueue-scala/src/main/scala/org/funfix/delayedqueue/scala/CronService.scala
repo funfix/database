@@ -16,7 +16,7 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.effect.Resource
+import cats.effect.{Resource, IO}
 import java.time.Duration
 import java.time.Instant
 
@@ -29,7 +29,7 @@ import java.time.Instant
   * @tparam A
   *   the type of message payload
   */
-trait CronService[F[_], A] {
+trait CronService[A] {
 
   /** Installs a one-time set of future scheduled messages.
     *
@@ -46,11 +46,11 @@ trait CronService[F[_], A] {
     * @param messages
     *   list of messages to schedule
     */
-  def installTick(
+    def installTick(
       configHash: CronConfigHash,
       keyPrefix: String,
       messages: List[CronMessage[A]]
-  ): F[Unit]
+    ): IO[Unit]
 
   /** Uninstalls all future messages for a specific cron configuration.
     *
@@ -61,7 +61,7 @@ trait CronService[F[_], A] {
     * @param keyPrefix
     *   prefix for message keys to remove
     */
-  def uninstallTick(configHash: CronConfigHash, keyPrefix: String): F[Unit]
+  def uninstallTick(configHash: CronConfigHash, keyPrefix: String): IO[Unit]
 
   /** Installs a cron-like schedule where messages are generated at intervals.
     *
@@ -82,12 +82,12 @@ trait CronService[F[_], A] {
     * @return
     *   a Resource that manages the lifecycle of the background scheduling process
     */
-  def install(
+    def install(
       configHash: CronConfigHash,
       keyPrefix: String,
       scheduleInterval: Duration,
       generateMany: (Instant) => List[CronMessage[A]]
-  ): Resource[F, Unit]
+    ): Resource[IO, Unit]
 
   /** Installs a daily schedule with timezone-aware execution times.
     *
@@ -103,11 +103,11 @@ trait CronService[F[_], A] {
     * @return
     *   a Resource that manages the lifecycle of the background scheduling process
     */
-  def installDailySchedule(
+    def installDailySchedule(
       keyPrefix: String,
       schedule: CronDailySchedule,
       generator: (Instant) => CronMessage[A]
-  ): Resource[F, Unit]
+    ): Resource[IO, Unit]
 
   /** Installs a periodic tick that generates messages at fixed intervals.
     *
@@ -123,11 +123,11 @@ trait CronService[F[_], A] {
     * @return
     *   a Resource that manages the lifecycle of the background scheduling process
     */
-  def installPeriodicTick(
+    def installPeriodicTick(
       keyPrefix: String,
       period: Duration,
       generator: (Instant) => A
-  ): Resource[F, Unit]
+    ): Resource[IO, Unit]
 }
 
 // /** Generates a batch of cron messages based on the current instant. */
