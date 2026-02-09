@@ -17,189 +17,219 @@
 package org.funfix.delayedqueue.scala
 
 import cats.effect.IO
-import cats.effect.unsafe.implicits.global
 import java.time.Instant
+import munit.CatsEffectSuite
 import scala.concurrent.duration.*
 
-class DelayedQueueInMemorySpec extends munit.FunSuite {
+class DelayedQueueInMemorySpec extends CatsEffectSuite {
 
-  test("create should return a working queue") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val result = queue.getTimeConfig.unsafeRunSync()
-    assertEquals(result, DelayedQueueTimeConfig.DEFAULT_IN_MEMORY)
+  test("apply should return a working queue") {
+    DelayedQueueInMemory[String]().use { queue =>
+      queue.getTimeConfig.assertEquals(DelayedQueueTimeConfig.DEFAULT_IN_MEMORY)
+    }
   }
 
   test("offerOrUpdate should create a new message") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().plusSeconds(10)
-    val result = queue.offerOrUpdate("key1", "payload1", scheduleAt).unsafeRunSync()
-    assertEquals(result, OfferOutcome.Created)
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().plusSeconds(10))
+        result <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+      } yield assertEquals(result, OfferOutcome.Created)
+    }
   }
 
   test("offerOrUpdate should update an existing message") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().plusSeconds(10)
-
-    queue.offerOrUpdate("key1", "payload1", scheduleAt).unsafeRunSync()
-    val result = queue.offerOrUpdate("key1", "payload2", scheduleAt.plusSeconds(5)).unsafeRunSync()
-
-    assertEquals(result, OfferOutcome.Updated)
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().plusSeconds(10))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        result <- queue.offerOrUpdate("key1", "payload2", scheduleAt.plusSeconds(5))
+      } yield assertEquals(result, OfferOutcome.Updated)
+    }
   }
 
   test("offerIfNotExists should create a new message") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().plusSeconds(10)
-    val result = queue.offerIfNotExists("key1", "payload1", scheduleAt).unsafeRunSync()
-    assertEquals(result, OfferOutcome.Created)
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().plusSeconds(10))
+        result <- queue.offerIfNotExists("key1", "payload1", scheduleAt)
+      } yield assertEquals(result, OfferOutcome.Created)
+    }
   }
 
   test("offerIfNotExists should ignore existing message") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().plusSeconds(10)
-
-    queue.offerIfNotExists("key1", "payload1", scheduleAt).unsafeRunSync()
-    val result =
-      queue.offerIfNotExists("key1", "payload2", scheduleAt.plusSeconds(5)).unsafeRunSync()
-
-    assertEquals(result, OfferOutcome.Ignored)
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().plusSeconds(10))
+        _ <- queue.offerIfNotExists("key1", "payload1", scheduleAt)
+        result <- queue.offerIfNotExists("key1", "payload2", scheduleAt.plusSeconds(5))
+      } yield assertEquals(result, OfferOutcome.Ignored)
+    }
   }
 
   test("tryPoll should return None when no messages are available") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val result = queue.tryPoll.unsafeRunSync()
-    assertEquals(result, None)
+    DelayedQueueInMemory[String]().use { queue =>
+      queue.tryPoll.assertEquals(None)
+    }
   }
 
   test("tryPoll should return a message when scheduled time has passed") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().minusSeconds(1)
-
-    queue.offerOrUpdate("key1", "payload1", scheduleAt).unsafeRunSync()
-    val envelope = queue.tryPoll.unsafeRunSync()
-
-    assert(envelope.isDefined)
-    assertEquals(envelope.get.payload, "payload1")
-    assertEquals(envelope.get.messageId.value, "key1")
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().minusSeconds(1))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        envelope <- queue.tryPoll
+        _ <- IO {
+          assert(envelope.isDefined)
+          assertEquals(envelope.get.payload, "payload1")
+          assertEquals(envelope.get.messageId.value, "key1")
+        }
+      } yield ()
+    }
   }
 
   test("tryPollMany should return empty list when no messages are available") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val envelope = queue.tryPollMany(10).unsafeRunSync()
-    assertEquals(envelope.payload, List.empty[String])
+    DelayedQueueInMemory[String]().use { queue =>
+      queue.tryPollMany(10).map { envelope =>
+        assertEquals(envelope.payload, List.empty[String])
+      }
+    }
   }
 
   test("tryPollMany should return multiple messages") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().minusSeconds(1)
-
-    queue.offerOrUpdate("key1", "payload1", scheduleAt).unsafeRunSync()
-    queue.offerOrUpdate("key2", "payload2", scheduleAt).unsafeRunSync()
-    queue.offerOrUpdate("key3", "payload3", scheduleAt).unsafeRunSync()
-
-    val envelope = queue.tryPollMany(5).unsafeRunSync()
-
-    assertEquals(envelope.payload.length, 3)
-    assert(envelope.payload.contains("payload1"))
-    assert(envelope.payload.contains("payload2"))
-    assert(envelope.payload.contains("payload3"))
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().minusSeconds(1))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        _ <- queue.offerOrUpdate("key2", "payload2", scheduleAt)
+        _ <- queue.offerOrUpdate("key3", "payload3", scheduleAt)
+        envelope <- queue.tryPollMany(5)
+        _ <- IO {
+          assertEquals(envelope.payload.length, 3)
+          assertEquals(
+            envelope.payload.toSet,
+            Set("payload1", "payload2", "payload3"),
+            "tryPollMany should return all three messages"
+          )
+        }
+      } yield ()
+    }
   }
 
   test("offerBatch should handle multiple messages") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().plusSeconds(10)
-
-    val messages = List(
-      BatchedMessage("input1", ScheduledMessage("key1", "payload1", scheduleAt, canUpdate = true)),
-      BatchedMessage("input2", ScheduledMessage("key2", "payload2", scheduleAt, canUpdate = true))
-    )
-
-    val replies = queue.offerBatch(messages).unsafeRunSync()
-
-    assertEquals(replies.length, 2)
-    assertEquals(replies(0).outcome, OfferOutcome.Created)
-    assertEquals(replies(1).outcome, OfferOutcome.Created)
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().plusSeconds(10))
+        messages = List(
+          BatchedMessage(
+            "input1",
+            ScheduledMessage("key1", "payload1", scheduleAt, canUpdate = true)
+          ),
+          BatchedMessage(
+            "input2",
+            ScheduledMessage("key2", "payload2", scheduleAt, canUpdate = true)
+          )
+        )
+        replies <- queue.offerBatch(messages)
+        _ <- IO {
+          assertEquals(replies.length, 2)
+          assertEquals(replies(0).outcome, OfferOutcome.Created)
+          assertEquals(replies(1).outcome, OfferOutcome.Created)
+        }
+      } yield ()
+    }
   }
 
   test("read should return a message without locking it") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().plusSeconds(10)
-
-    queue.offerOrUpdate("key1", "payload1", scheduleAt).unsafeRunSync()
-    val envelope = queue.read("key1").unsafeRunSync()
-
-    assert(envelope.isDefined)
-    assertEquals(envelope.get.payload, "payload1")
-
-    // Message should still exist
-    val stillExists = queue.containsMessage("key1").unsafeRunSync()
-    assert(stillExists)
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().plusSeconds(10))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        envelope <- queue.read("key1")
+        stillExists <- queue.containsMessage("key1")
+        _ <- IO {
+          assert(envelope.isDefined, "envelope should be defined")
+          assertEquals(envelope.get.payload, "payload1")
+          assert(stillExists, "message should still exist after read")
+        }
+      } yield ()
+    }
   }
 
   test("dropMessage should remove a message") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().plusSeconds(10)
-
-    queue.offerOrUpdate("key1", "payload1", scheduleAt).unsafeRunSync()
-    val dropped = queue.dropMessage("key1").unsafeRunSync()
-
-    assert(dropped)
-
-    val exists = queue.containsMessage("key1").unsafeRunSync()
-    assert(!exists)
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().plusSeconds(10))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        dropped <- queue.dropMessage("key1")
+        exists <- queue.containsMessage("key1")
+        _ <- IO {
+          assert(dropped, "dropMessage should return true")
+          assert(!exists, "message should not exist after drop")
+        }
+      } yield ()
+    }
   }
 
   test("containsMessage should return true for existing message") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().plusSeconds(10)
-
-    queue.offerOrUpdate("key1", "payload1", scheduleAt).unsafeRunSync()
-    val exists = queue.containsMessage("key1").unsafeRunSync()
-
-    assert(exists)
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().plusSeconds(10))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        exists <- queue.containsMessage("key1")
+        _ <- IO(assert(exists, "message should exist"))
+      } yield ()
+    }
   }
 
   test("containsMessage should return false for non-existing message") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val exists = queue.containsMessage("nonexistent").unsafeRunSync()
-    assert(!exists)
+    DelayedQueueInMemory[String]().use { queue =>
+      queue.containsMessage("nonexistent").map { exists =>
+        assert(!exists, "nonexistent message should not exist")
+      }
+    }
   }
 
   test("dropAllMessages should remove all messages") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().plusSeconds(10)
-
-    queue.offerOrUpdate("key1", "payload1", scheduleAt).unsafeRunSync()
-    queue.offerOrUpdate("key2", "payload2", scheduleAt).unsafeRunSync()
-
-    val count = queue.dropAllMessages("Yes, please, I know what I'm doing!").unsafeRunSync()
-
-    assertEquals(count, 2)
-
-    val exists1 = queue.containsMessage("key1").unsafeRunSync()
-    val exists2 = queue.containsMessage("key2").unsafeRunSync()
-    assert(!exists1)
-    assert(!exists2)
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().plusSeconds(10))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        _ <- queue.offerOrUpdate("key2", "payload2", scheduleAt)
+        count <- queue.dropAllMessages("Yes, please, I know what I'm doing!")
+        exists1 <- queue.containsMessage("key1")
+        exists2 <- queue.containsMessage("key2")
+        _ <- IO {
+          assertEquals(count, 2)
+          assert(!exists1, "key1 should not exist after dropAll")
+          assert(!exists2, "key2 should not exist after dropAll")
+        }
+      } yield ()
+    }
   }
 
   test("acknowledge should delete the message") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val scheduleAt = Instant.now().minusSeconds(1)
-
-    queue.offerOrUpdate("key1", "payload1", scheduleAt).unsafeRunSync()
-    val envelope = queue.tryPoll.unsafeRunSync()
-
-    assert(envelope.isDefined)
-    envelope.get.acknowledge.unsafeRunSync()
-
-    // Message should be deleted after acknowledgment
-    val exists = queue.containsMessage("key1").unsafeRunSync()
-    assert(!exists)
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().minusSeconds(1))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        envelope <- queue.tryPoll
+        _ <- {
+          assert(envelope.isDefined, "envelope should be defined")
+          envelope.get.acknowledge
+        }
+        exists <- queue.containsMessage("key1")
+        _ <- IO(assert(!exists, "message should be deleted after acknowledgment"))
+      } yield ()
+    }
   }
 
-  test("getCron should return a CronService") {
-    val queue = DelayedQueueInMemory.create[String]()
-    val cronService = queue.getCron.unsafeRunSync()
-    assert(cronService != null)
+  test("cron should return a CronService") {
+    DelayedQueueInMemory[String]().use { queue =>
+      queue.cron.map { cronService =>
+        assert(cronService != null, "cronService should not be null")
+      }
+    }
   }
 
   test("custom timeConfig should be used") {
@@ -207,19 +237,51 @@ class DelayedQueueInMemorySpec extends munit.FunSuite {
       acquireTimeout = 60.seconds,
       pollPeriod = 200.milliseconds
     )
-    val queue = DelayedQueueInMemory.create[String](timeConfig = customConfig)
-    val result = queue.getTimeConfig.unsafeRunSync()
-    assertEquals(result, customConfig)
+    DelayedQueueInMemory[String](timeConfig = customConfig).use { queue =>
+      queue.getTimeConfig.assertEquals(customConfig)
+    }
   }
 
   test("custom ackEnvSource should be used") {
-    val queue = DelayedQueueInMemory.create[String](ackEnvSource = "custom-source")
-    val scheduleAt = Instant.now().minusSeconds(1)
+    DelayedQueueInMemory[String](ackEnvSource = "custom-source").use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().minusSeconds(1))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        envelope <- queue.tryPoll
+        _ <- IO {
+          assert(envelope.isDefined, "envelope should be defined")
+          assertEquals(envelope.get.source, "custom-source")
+        }
+      } yield ()
+    }
+  }
 
-    queue.offerOrUpdate("key1", "payload1", scheduleAt).unsafeRunSync()
-    val envelope = queue.tryPoll.unsafeRunSync()
+  test("time passage: offer in future, tryPoll returns None, advance time, tryPoll succeeds") {
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        now <- IO.realTime.map(d => Instant.ofEpochMilli(d.toMillis))
+        futureTime = now.plusMillis(100) // 100ms in the future
+        pastTime = now.minusMillis(100) // 100ms in the past
 
-    assert(envelope.isDefined)
-    assertEquals(envelope.get.source, "custom-source")
+        // Offer a message scheduled for the future
+        _ <- queue.offerOrUpdate("key1", "payload1", futureTime)
+
+        // Try to poll immediately - should get None (not scheduled yet)
+        resultBefore <- queue.tryPoll
+
+        // Offer a message scheduled for the past
+        _ <- queue.offerOrUpdate("key2", "payload2", pastTime)
+
+        // Now tryPoll should succeed on the past-scheduled message
+        resultAfter <- queue.tryPoll
+
+        _ <- IO {
+          assertEquals(resultBefore, None, "tryPoll should return None before scheduled time")
+          assert(resultAfter.isDefined, "tryPoll should return Some for past-scheduled message")
+          assertEquals(resultAfter.get.payload, "payload2")
+          assertEquals(resultAfter.get.messageId.value, "key2")
+        }
+      } yield ()
+    }
   }
 }

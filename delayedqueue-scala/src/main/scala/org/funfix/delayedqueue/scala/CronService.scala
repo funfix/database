@@ -46,11 +46,11 @@ trait CronService[A] {
     * @param messages
     *   list of messages to schedule
     */
-    def installTick(
+  def installTick(
       configHash: CronConfigHash,
       keyPrefix: String,
       messages: List[CronMessage[A]]
-    ): IO[Unit]
+  ): IO[Unit]
 
   /** Uninstalls all future messages for a specific cron configuration.
     *
@@ -82,12 +82,12 @@ trait CronService[A] {
     * @return
     *   a Resource that manages the lifecycle of the background scheduling process
     */
-    def install(
+  def install(
       configHash: CronConfigHash,
       keyPrefix: String,
       scheduleInterval: Duration,
       generateMany: (Instant) => List[CronMessage[A]]
-    ): Resource[IO, Unit]
+  ): Resource[IO, Unit]
 
   /** Installs a daily schedule with timezone-aware execution times.
     *
@@ -103,11 +103,11 @@ trait CronService[A] {
     * @return
     *   a Resource that manages the lifecycle of the background scheduling process
     */
-    def installDailySchedule(
+  def installDailySchedule(
       keyPrefix: String,
       schedule: CronDailySchedule,
       generator: (Instant) => CronMessage[A]
-    ): Resource[IO, Unit]
+  ): Resource[IO, Unit]
 
   /** Installs a periodic tick that generates messages at fixed intervals.
     *
@@ -123,11 +123,11 @@ trait CronService[A] {
     * @return
     *   a Resource that manages the lifecycle of the background scheduling process
     */
-    def installPeriodicTick(
+  def installPeriodicTick(
       keyPrefix: String,
       period: Duration,
       generator: (Instant) => A
-    ): Resource[IO, Unit]
+  ): Resource[IO, Unit]
 }
 
 // /** Generates a batch of cron messages based on the current instant. */
