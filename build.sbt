@@ -14,6 +14,7 @@ inThisBuild(
     scalacOptions ++= Seq(
       "-no-indent",
       "-Yexplicit-nulls",
+      "-Werror",
     ),
     // ---
     // Settings for dealing with the local Gradle-assembled artifacts
