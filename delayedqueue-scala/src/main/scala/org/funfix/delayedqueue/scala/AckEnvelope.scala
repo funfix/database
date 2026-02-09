@@ -16,7 +16,7 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.effect.IO
+import cats.effect.Sync
 import java.time.Instant
 import org.funfix.delayedqueue.jvm
 
@@ -52,13 +52,13 @@ import org.funfix.delayedqueue.jvm
   * @param acknowledge
   *   IO action to call to acknowledge successful processing, and delete the message from the queue
   */
-final case class AckEnvelope[+A](
+final case class AckEnvelope[+F[_], +A](
     payload: A,
     messageId: MessageId,
     timestamp: Instant,
     source: String,
     deliveryType: DeliveryType,
-    acknowledge: IO[Unit]
+    acknowledge: F[Unit]
 )
 
 object AckEnvelope {
@@ -67,14 +67,14 @@ object AckEnvelope {
   extension [A](javaEnv: jvm.AckEnvelope[A]) {
 
     /** Converts a JVM AckEnvelope to a Scala AckEnvelope. */
-    def asScala: AckEnvelope[A] =
+    def asScala[F[_]: Sync]: AckEnvelope[F, A] =
       AckEnvelope(
         payload = javaEnv.payload,
         messageId = MessageId.asScala(javaEnv.messageId),
         timestamp = javaEnv.timestamp,
         source = javaEnv.source,
         deliveryType = DeliveryType.asScala(javaEnv.deliveryType),
-        acknowledge = IO.blocking(javaEnv.acknowledge())
+        acknowledge = Sync[F].blocking(javaEnv.acknowledge())
       )
   }
 }

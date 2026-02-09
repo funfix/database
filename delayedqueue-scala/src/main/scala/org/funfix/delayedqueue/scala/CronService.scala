@@ -16,7 +16,6 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.effect.IO
 import cats.effect.Resource
 import java.time.Duration
 import java.time.Instant
@@ -30,7 +29,7 @@ import java.time.Instant
   * @tparam A
   *   the type of message payload
   */
-trait CronService[A] {
+trait CronService[F[_], A] {
 
   /** Installs a one-time set of future scheduled messages.
     *
@@ -51,7 +50,7 @@ trait CronService[A] {
       configHash: CronConfigHash,
       keyPrefix: String,
       messages: List[CronMessage[A]]
-  ): IO[Unit]
+  ): F[Unit]
 
   /** Uninstalls all future messages for a specific cron configuration.
     *
@@ -62,7 +61,7 @@ trait CronService[A] {
     * @param keyPrefix
     *   prefix for message keys to remove
     */
-  def uninstallTick(configHash: CronConfigHash, keyPrefix: String): IO[Unit]
+  def uninstallTick(configHash: CronConfigHash, keyPrefix: String): F[Unit]
 
   /** Installs a cron-like schedule where messages are generated at intervals.
     *
@@ -87,8 +86,8 @@ trait CronService[A] {
       configHash: CronConfigHash,
       keyPrefix: String,
       scheduleInterval: Duration,
-      generateMany: CronMessageBatchGenerator[A]
-  ): Resource[IO, Unit]
+      generateMany: (Instant) => List[CronMessage[A]]
+  ): Resource[F, Unit]
 
   /** Installs a daily schedule with timezone-aware execution times.
     *
@@ -107,8 +106,8 @@ trait CronService[A] {
   def installDailySchedule(
       keyPrefix: String,
       schedule: CronDailySchedule,
-      generator: CronMessageGenerator[A]
-  ): Resource[IO, Unit]
+      generator: (Instant) => CronMessage[A]
+  ): Resource[F, Unit]
 
   /** Installs a periodic tick that generates messages at fixed intervals.
     *
@@ -127,20 +126,20 @@ trait CronService[A] {
   def installPeriodicTick(
       keyPrefix: String,
       period: Duration,
-      generator: CronPayloadGenerator[A]
-  ): Resource[IO, Unit]
+      generator: (Instant) => A
+  ): Resource[F, Unit]
 }
 
-/** Generates a batch of cron messages based on the current instant. */
-trait CronMessageBatchGenerator[A] {
+// /** Generates a batch of cron messages based on the current instant. */
+// trait CronMessageBatchGenerator[A] {
 
-  /** Creates a batch of cron messages. */
-  def apply(now: Instant): List[CronMessage[A]]
-}
+//   /** Creates a batch of cron messages. */
+//   def apply(now: Instant): List[CronMessage[A]]
+// }
 
-/** Generates a payload for a given instant. */
-trait CronPayloadGenerator[A] {
+// /** Generates a payload for a given instant. */
+// trait CronPayloadGenerator[A] {
 
-  /** Creates a payload for the given instant. */
-  def apply(at: Instant): A
-}
+//   /** Creates a payload for the given instant. */
+//   def apply(at: Instant): A
+// }

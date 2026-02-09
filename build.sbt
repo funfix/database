@@ -64,13 +64,10 @@ lazy val root = project
   )
   .aggregate(delayedqueueJVM)
 
-lazy val delayedqueue = crossProject(JVMPlatform)
-  .crossType(CrossType.Full)
+lazy val delayedqueueJVM = project
   .in(file("delayedqueue-scala"))
   .settings(
-    name := "delayedqueue-scala"
-  )
-  .jvmSettings(
+    name := "delayedqueue-scala",
     libraryDependencies ++= Seq(
       "org.funfix" % "delayedqueue-jvm" % version.value,
       "org.typelevel" %% "cats-effect" % "3.6.3",
@@ -81,5 +78,3 @@ lazy val delayedqueue = crossProject(JVMPlatform)
       "org.scalameta" %% "munit-scalacheck" % "1.2.0" % Test,
     )
   )
-
-lazy val delayedqueueJVM = delayedqueue.jvm
