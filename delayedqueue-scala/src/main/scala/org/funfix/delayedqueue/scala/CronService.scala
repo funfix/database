@@ -129,17 +129,3 @@ trait CronService[A] {
       generator: (Instant) => A
   ): Resource[IO, Unit]
 }
-
-// /** Generates a batch of cron messages based on the current instant. */
-// trait CronMessageBatchGenerator[A] {
-
-//   /** Creates a batch of cron messages. */
-//   def apply(now: Instant): List[CronMessage[A]]
-// }
-
-// /** Generates a payload for a given instant. */
-// trait CronPayloadGenerator[A] {
-
-//   /** Creates a payload for the given instant. */
-//   def apply(at: Instant): A
-// }
