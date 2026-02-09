@@ -16,8 +16,7 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.effect.IO
-import cats.effect.Resource
+import cats.effect.{Resource, IO}
 import java.time.Duration
 import java.time.Instant
 
@@ -87,7 +86,7 @@ trait CronService[A] {
       configHash: CronConfigHash,
       keyPrefix: String,
       scheduleInterval: Duration,
-      generateMany: CronMessageBatchGenerator[A]
+      generateMany: (Instant) => List[CronMessage[A]]
   ): Resource[IO, Unit]
 
   /** Installs a daily schedule with timezone-aware execution times.
@@ -107,7 +106,7 @@ trait CronService[A] {
   def installDailySchedule(
       keyPrefix: String,
       schedule: CronDailySchedule,
-      generator: CronMessageGenerator[A]
+      generator: (Instant) => CronMessage[A]
   ): Resource[IO, Unit]
 
   /** Installs a periodic tick that generates messages at fixed intervals.
@@ -127,20 +126,6 @@ trait CronService[A] {
   def installPeriodicTick(
       keyPrefix: String,
       period: Duration,
-      generator: CronPayloadGenerator[A]
+      generator: (Instant) => A
   ): Resource[IO, Unit]
-}
-
-/** Generates a batch of cron messages based on the current instant. */
-trait CronMessageBatchGenerator[A] {
-
-  /** Creates a batch of cron messages. */
-  def apply(now: Instant): List[CronMessage[A]]
-}
-
-/** Generates a payload for a given instant. */
-trait CronPayloadGenerator[A] {
-
-  /** Creates a payload for the given instant. */
-  def apply(at: Instant): A
 }

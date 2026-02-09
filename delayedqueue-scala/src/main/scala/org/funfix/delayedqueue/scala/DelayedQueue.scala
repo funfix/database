@@ -119,5 +119,5 @@ trait DelayedQueue[A] {
   def dropAllMessages(confirm: String): IO[Int]
 
   /** Utilities for installing cron-like schedules. */
-  def getCron: IO[CronService[A]]
+  def cron: IO[CronService[A]]
 }
