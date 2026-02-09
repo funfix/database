@@ -17,17 +17,18 @@
 package org.funfix.delayedqueue.scala
 
 import org.funfix.delayedqueue.jvm
+import scala.util.control.NonFatal
 
-/** Strategy for serializing and deserializing message payloads to/from binary data.
+/** Type-class for encoding and decoding message payloads to/from binary data.
   *
   * This is used by JDBC implementations to store message payloads in the database.
   *
   * @tparam A
   *   the type of message payloads
   */
-trait MessageSerializer[A] {
+trait PayloadCodec[A] {
 
-  /** Returns the fully-qualified type name of the messages this serializer handles.
+  /** Returns the fully-qualified type name of the messages this codec handles.
     *
     * This is used for queue partitioning and message routing.
     *
@@ -50,38 +51,43 @@ trait MessageSerializer[A] {
     * @param serialized
     *   the serialized bytes
     * @return
-    *   the deserialized payload
-    * @throws IllegalArgumentException
-    *   if the serialized string cannot be parsed
+    *   Either the deserialized payload or an IllegalArgumentException if parsing fails
     */
-  @throws[IllegalArgumentException]
-  def deserialize(serialized: Array[Byte]): A
+  def deserialize(serialized: Array[Byte]): Either[IllegalArgumentException, A]
 
-  /** Converts this Scala MessageSerializer to a JVM MessageSerializer. */
+  /** Converts this Scala PayloadCodec to a JVM MessageSerializer. */
   def asJava: jvm.MessageSerializer[A] =
     new jvm.MessageSerializer[A] {
-      override def getTypeName(): String = MessageSerializer.this.getTypeName
-      override def serialize(payload: A): Array[Byte] = MessageSerializer.this.serialize(payload)
+      override def getTypeName(): String = PayloadCodec.this.getTypeName
+      override def serialize(payload: A): Array[Byte] = PayloadCodec.this.serialize(payload)
       override def deserialize(serialized: Array[Byte]): A =
-        MessageSerializer.this.deserialize(serialized)
+        PayloadCodec.this.deserialize(serialized) match {
+          case Right(value) => value
+          case Left(error)  => throw error
+        }
     }
 }
 
-object MessageSerializer {
+object PayloadCodec {
 
-  /** Creates a serializer for String payloads (UTF-8 encoding). */
-  def forStrings: MessageSerializer[String] =
-    new MessageSerializer[String] {
-      override def getTypeName: String = "java.lang.String"
-      override def serialize(payload: String): Array[Byte] = payload.getBytes("UTF-8")
-      override def deserialize(serialized: Array[Byte]): String = new String(serialized, "UTF-8")
-    }
+  /** Given instance for String payloads using UTF-8 encoding.
+    *
+    * This is based on the JVM MessageSerializer.forStrings implementation.
+    */
+  given forStrings: PayloadCodec[String] =
+    fromJava(jvm.MessageSerializer.forStrings())
 
-  /** Wraps a JVM MessageSerializer to provide a Scala interface. */
-  def fromJava[A](javaSerializer: jvm.MessageSerializer[A]): MessageSerializer[A] =
-    new MessageSerializer[A] {
+  /** Wraps a JVM MessageSerializer to provide a Scala PayloadCodec interface. */
+  def fromJava[A](javaSerializer: jvm.MessageSerializer[A]): PayloadCodec[A] =
+    new PayloadCodec[A] {
       override def getTypeName: String = javaSerializer.getTypeName()
       override def serialize(payload: A): Array[Byte] = javaSerializer.serialize(payload)
-      override def deserialize(serialized: Array[Byte]): A = javaSerializer.deserialize(serialized)
+      override def deserialize(serialized: Array[Byte]): Either[IllegalArgumentException, A] =
+        try {
+          Right(javaSerializer.deserialize(serialized))
+        } catch {
+          case e: IllegalArgumentException => Left(e)
+          case NonFatal(e)                 => Left(new IllegalArgumentException(e.getMessage, e))
+        }
     }
 }

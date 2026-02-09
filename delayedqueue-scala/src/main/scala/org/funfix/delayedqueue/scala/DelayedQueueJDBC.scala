@@ -16,15 +16,10 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.effect.{IO, Resource}
+import cats.effect.{IO, Resource, Clock}
 import cats.syntax.functor.*
-import java.time.Instant
+import cats.effect.std.Dispatcher
 import org.funfix.delayedqueue.jvm
-import org.funfix.delayedqueue.scala.AckEnvelope.asScala
-import org.funfix.delayedqueue.scala.OfferOutcome.asScala
-import org.funfix.delayedqueue.scala.BatchedReply.asScala
-import org.funfix.delayedqueue.scala.DelayedQueueTimeConfig.asScala
-import scala.jdk.CollectionConverters.*
 
 /** JDBC-based implementation of [[DelayedQueue]] with support for multiple database backends.
   *
@@ -53,8 +48,8 @@ import scala.jdk.CollectionConverters.*
   * // Run migrations first (once per database)
   * DelayedQueueJDBC.runMigrations(config).unsafeRunSync()
   *
-  * // Create and use the queue
-  * DelayedQueueJDBC[String](MessageSerializer.forStrings, config).use { queue =>
+  * // Create and use the queue (using implicit PayloadCodec.forStrings)
+  * DelayedQueueJDBC[String](config).use { queue =>
   *   for {
   *     _ <- queue.offerOrUpdate("key1", "Hello", Instant.now().plusSeconds(10))
   *     envelope <- queue.poll
@@ -73,26 +68,26 @@ object DelayedQueueJDBC {
     *
     * @tparam A
     *   the type of message payloads
-    * @param serializer
-    *   serializer for message payloads
     * @param config
     *   JDBC queue configuration
+    * @param codec
+    *   implicit payload codec for serialization (e.g., PayloadCodec.forStrings for String)
     * @return
     *   a Resource that manages the queue lifecycle
     */
   def apply[A](
-      serializer: MessageSerializer[A],
       config: DelayedQueueJDBCConfig
-  ): Resource[IO, DelayedQueue[A]] =
-    Resource.make(
-      IO {
-        val jvmQueue = jvm.DelayedQueueJDBC.create[A](
-          serializer.asJava,
-          config.asJava
+  )(using codec: PayloadCodec[A]): Resource[IO, DelayedQueue[A]] =
+    Dispatcher.sequential[IO].flatMap { dispatcher =>
+      Resource.fromAutoCloseable(IO {
+        val javaClock = CatsClockToJavaClock(dispatcher)
+        jvm.DelayedQueueJDBC.create[A](
+          codec.asJava,
+          config.asJava,
+          javaClock
         )
-        new DelayedQueueJDBCWrapper(jvmQueue)
-      }
-    )(queue => IO(queue.underlying.close()))
+      }).map(jvmQueue => new internal.DelayedQueueWrapper(jvmQueue))
+    }
 
   /** Runs database migrations for the queue.
     *
@@ -106,134 +101,9 @@ object DelayedQueueJDBC {
   def runMigrations(
       config: DelayedQueueJDBCConfig
   ): IO[Unit] =
-    IO {
+    IO.interruptible {
       jvm.DelayedQueueJDBC.runMigrations(
         config.asJava
       )
     }
-
-  /** Wrapper that implements the Scala DelayedQueue trait by delegating to the JVM implementation.
-    */
-  private class DelayedQueueJDBCWrapper[A](
-      val underlying: jvm.DelayedQueueJDBC[A]
-  ) extends DelayedQueue[A] {
-
-    override def getTimeConfig: IO[DelayedQueueTimeConfig] =
-      IO(underlying.getTimeConfig.asScala)
-
-    override def offerOrUpdate(key: String, payload: A, scheduleAt: Instant): IO[OfferOutcome] =
-      IO(underlying.offerOrUpdate(key, payload, scheduleAt).asScala)
-
-    override def offerIfNotExists(key: String, payload: A, scheduleAt: Instant): IO[OfferOutcome] =
-      IO(underlying.offerIfNotExists(key, payload, scheduleAt).asScala)
-
-    override def offerBatch[In](
-        messages: List[BatchedMessage[In, A]]
-    ): IO[List[BatchedReply[In, A]]] =
-      IO {
-        val javaMessages = messages.map(_.asJava).asJava
-        val javaReplies = underlying.offerBatch(javaMessages)
-        javaReplies.asScala.toList.map(_.asScala)
-      }
-
-    override def tryPoll: IO[Option[AckEnvelope[A]]] =
-      IO {
-        Option(underlying.tryPoll()).map(_.asScala)
-      }
-
-    override def tryPollMany(batchMaxSize: Int): IO[AckEnvelope[List[A]]] =
-      IO {
-        val javaEnvelope = underlying.tryPollMany(batchMaxSize)
-        AckEnvelope(
-          payload = javaEnvelope.payload.asScala.toList,
-          messageId = MessageId.asScala(javaEnvelope.messageId),
-          timestamp = javaEnvelope.timestamp,
-          source = javaEnvelope.source,
-          deliveryType = DeliveryType.asScala(javaEnvelope.deliveryType),
-          acknowledge = IO.blocking(javaEnvelope.acknowledge())
-        )
-      }
-
-    override def poll: IO[AckEnvelope[A]] =
-      IO.interruptible(underlying.poll().asScala)
-
-    override def read(key: String): IO[Option[AckEnvelope[A]]] =
-      IO {
-        Option(underlying.read(key)).map(_.asScala)
-      }
-
-    override def dropMessage(key: String): IO[Boolean] =
-      IO(underlying.dropMessage(key))
-
-    override def containsMessage(key: String): IO[Boolean] =
-      IO(underlying.containsMessage(key))
-
-    override def dropAllMessages(confirm: String): IO[Int] =
-      IO(underlying.dropAllMessages(confirm))
-
-    override def cron: IO[CronService[A]] =
-      IO(new CronServiceWrapper(underlying.getCron))
-  }
-
-  /** Wrapper for CronService that delegates to the JVM implementation. */
-  private class CronServiceWrapper[A](
-      underlying: jvm.CronService[A]
-  ) extends CronService[A] {
-
-    override def installTick(
-        configHash: CronConfigHash,
-        keyPrefix: String,
-        messages: List[CronMessage[A]]
-    ): IO[Unit] =
-      IO {
-        val javaMessages = messages.map(_.asJava).asJava
-        underlying.installTick(configHash.asJava, keyPrefix, javaMessages)
-      }
-
-    override def uninstallTick(configHash: CronConfigHash, keyPrefix: String): IO[Unit] =
-      IO {
-        underlying.uninstallTick(configHash.asJava, keyPrefix)
-      }
-
-    override def install(
-        configHash: CronConfigHash,
-        keyPrefix: String,
-        scheduleInterval: java.time.Duration,
-        generateMany: (Instant) => List[CronMessage[A]]
-    ): Resource[IO, Unit] =
-      Resource.fromAutoCloseable(IO {
-        underlying.install(
-          configHash.asJava,
-          keyPrefix,
-          scheduleInterval,
-          now => generateMany(now).map(_.asJava).asJava
-        )
-      }).void
-
-    override def installDailySchedule(
-        keyPrefix: String,
-        schedule: CronDailySchedule,
-        generator: (Instant) => CronMessage[A]
-    ): Resource[IO, Unit] =
-      Resource.fromAutoCloseable(IO {
-        underlying.installDailySchedule(
-          keyPrefix,
-          schedule.asJava,
-          now => generator(now).asJava
-        )
-      }).void
-
-    override def installPeriodicTick(
-        keyPrefix: String,
-        period: java.time.Duration,
-        generator: (Instant) => A
-    ): Resource[IO, Unit] =
-      Resource.fromAutoCloseable(IO {
-        underlying.installPeriodicTick(
-          keyPrefix,
-          period,
-          now => generator(now)
-        )
-      }).void
-  }
 }

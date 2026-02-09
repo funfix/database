@@ -25,12 +25,15 @@ import scala.concurrent.duration.*
 /** Base test suite for DelayedQueueJDBC with common test cases. */
 abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
 
+  // Import the given PayloadCodec for String
+  import PayloadCodec.given
+
   /** Create a queue configuration for testing. Subclasses override this. */
   def createConfig(tableName: String, queueName: String): DelayedQueueJDBCConfig
 
   /** Helper to create a queue with default settings. */
   def createQueue(tableName: String = "delayed_queue", queueName: String = "test-queue") =
-    DelayedQueueJDBC[String](MessageSerializer.forStrings, createConfig(tableName, queueName))
+    DelayedQueueJDBC[String](createConfig(tableName, queueName))
 
   /** Helper to run migrations and create a queue with unique table names to ensure test isolation.
     */
@@ -279,6 +282,71 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
           } yield ()
         }
       }
+    } yield ()
+  }
+
+  test("concurrency") {
+    val tableName = s"concurrent_table_${System.nanoTime()}"
+    val config = createConfig(tableName, "concurrent-queue")
+    val producers = 2
+    val consumers = 2
+    val messageCount = 100 // Reduced for JDBC performance
+    val now = Instant.now()
+
+    assert(messageCount % producers == 0, "messageCount should be divisible by number of producers")
+    assert(messageCount % consumers == 0, "messageCount should be divisible by number of consumers")
+
+    def producer(queue: DelayedQueue[String], id: Int, count: Int): IO[Int] =
+      (1 to count).toList.traverse { i =>
+        val key = s"producer-$id-message-$i"
+        val payload = s"payload-$key"
+        queue.offerOrUpdate(key, payload, now).map { outcome =>
+          assertEquals(outcome, OfferOutcome.Created)
+          1
+        }
+      }.map(_.sum)
+
+    def allProducers(queue: DelayedQueue[String]): IO[Int] = (1 to producers).toList.parTraverse {
+      id =>
+        producer(queue, id, messageCount / producers)
+    }.map(_.sum)
+
+    def consumer(queue: DelayedQueue[String], count: Int): IO[Int] = (1 to count).toList.traverse {
+      _ =>
+        queue.poll.map { envelope =>
+          assert(
+            envelope.payload.startsWith("payload-"),
+            "payload should have correct format"
+          )
+          1
+        }
+    }.map(_.sum)
+
+    def allConsumers(queue: DelayedQueue[String]): IO[Int] = (1 to consumers).toList.parTraverse {
+      _ =>
+        consumer(queue, messageCount / consumers)
+    }.map(_.sum)
+
+    for {
+      _ <- DelayedQueueJDBC.runMigrations(config)
+      _ <- createQueue(tableName, "concurrent-queue").use { queue =>
+        val test = for {
+          prodFiber <- allProducers(queue).background
+          conFiber <- allConsumers(queue).background
+        } yield (prodFiber, conFiber)
+
+        test.use { case (prodFiber, conFiber) =>
+          for {
+            p <- prodFiber
+            p <- p.embedNever
+            c <- conFiber
+            c <- c.embedNever
+          } yield {
+            assertEquals(p, messageCount)
+            assertEquals(c, messageCount)
+          }
+        }
+      }.timeout(30.seconds)
     } yield ()
   }
 }
