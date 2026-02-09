@@ -17,11 +17,13 @@
 package org.funfix.delayedqueue.scala
 
 import cats.effect.{IO, Resource}
+import cats.syntax.functor.*
 import java.time.Instant
 import org.funfix.delayedqueue.jvm
 import org.funfix.delayedqueue.scala.AckEnvelope.asScala
 import org.funfix.delayedqueue.scala.OfferOutcome.asScala
 import org.funfix.delayedqueue.scala.BatchedReply.asScala
+import org.funfix.delayedqueue.scala.DelayedQueueTimeConfig.asScala
 import scala.jdk.CollectionConverters.*
 
 /** JDBC-based implementation of [[DelayedQueue]] with support for multiple database backends.
@@ -49,7 +51,7 @@ import scala.jdk.CollectionConverters.*
   * )
   *
   * // Run migrations first (once per database)
-  * DelayedQueueJDBC.runMigrations[String](MessageSerializer.forStrings, config).unsafeRunSync()
+  * DelayedQueueJDBC.runMigrations(config).unsafeRunSync()
   *
   * // Create and use the queue
   * DelayedQueueJDBC[String](MessageSerializer.forStrings, config).use { queue =>
@@ -84,7 +86,7 @@ object DelayedQueueJDBC {
   ): Resource[IO, DelayedQueue[A]] =
     Resource.make(
       IO {
-        val jvmQueue = jvm.DelayedQueueJDBC.create(
+        val jvmQueue = jvm.DelayedQueueJDBC.create[A](
           serializer.asJava,
           config.asJava
         )
@@ -96,22 +98,16 @@ object DelayedQueueJDBC {
     *
     * This should be called once per database before creating queue instances.
     *
-    * @tparam A
-    *   the type of message payloads
-    * @param serializer
-    *   serializer for message payloads
     * @param config
     *   JDBC queue configuration
     * @return
     *   IO action that runs the migrations
     */
-  def runMigrations[A](
-      serializer: MessageSerializer[A],
+  def runMigrations(
       config: DelayedQueueJDBCConfig
   ): IO[Unit] =
     IO {
       jvm.DelayedQueueJDBC.runMigrations(
-        serializer.asJava,
         config.asJava
       )
     }

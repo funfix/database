@@ -32,20 +32,21 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   def createQueue(tableName: String = "delayed_queue", queueName: String = "test-queue") =
     DelayedQueueJDBC[String](MessageSerializer.forStrings, createConfig(tableName, queueName))
 
-  /** Helper to run migrations and create a queue. */
-  def withQueue(
-      tableName: String = "delayed_queue",
-      queueName: String = "test-queue"
-  )(test: DelayedQueue[String] => IO[Unit]): IO[Unit] = {
+  /** Helper to run migrations and create a queue with unique table names to ensure test isolation.
+    */
+  def withQueue(test: DelayedQueue[String] => IO[Unit]): IO[Unit] = {
+    // Use a unique table name for each test to avoid interference
+    val tableName = s"test_table_${System.nanoTime()}"
+    val queueName = "test-queue"
     val config = createConfig(tableName, queueName)
     for {
-      _ <- DelayedQueueJDBC.runMigrations(MessageSerializer.forStrings, config)
+      _ <- DelayedQueueJDBC.runMigrations(config)
       _ <- createQueue(tableName, queueName).use(test)
     } yield ()
   }
 
   test("offerOrUpdate should create a new message") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().plusSeconds(10))
         result <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
@@ -54,7 +55,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("offerOrUpdate should update an existing message") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().plusSeconds(10))
         _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
@@ -64,7 +65,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("offerIfNotExists should create a new message") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().plusSeconds(10))
         result <- queue.offerIfNotExists("key1", "payload1", scheduleAt)
@@ -73,7 +74,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("offerIfNotExists should ignore existing message") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().plusSeconds(10))
         _ <- queue.offerIfNotExists("key1", "payload1", scheduleAt)
@@ -83,13 +84,13 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("tryPoll should return None when no messages are available") {
-    withQueue() { queue =>
+    withQueue { queue =>
       queue.tryPoll.assertEquals(None)
     }
   }
 
   test("tryPoll should return a message when scheduled time has passed") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().minusSeconds(1))
         _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
@@ -104,7 +105,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("tryPollMany should return empty list when no messages are available") {
-    withQueue() { queue =>
+    withQueue { queue =>
       queue.tryPollMany(10).map { envelope =>
         assertEquals(envelope.payload, List.empty[String])
       }
@@ -112,7 +113,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("tryPollMany should return multiple messages") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().minusSeconds(1))
         _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
@@ -132,7 +133,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("offerBatch should handle multiple messages") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().plusSeconds(10))
         messages = List(
@@ -156,7 +157,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("read should return a message without locking it") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().plusSeconds(10))
         _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
@@ -172,7 +173,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("dropMessage should remove a message") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().plusSeconds(10))
         _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
@@ -187,7 +188,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("containsMessage should return true for existing message") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().plusSeconds(10))
         _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
@@ -198,7 +199,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("containsMessage should return false for non-existing message") {
-    withQueue() { queue =>
+    withQueue { queue =>
       queue.containsMessage("nonexistent").map { exists =>
         assert(!exists, "nonexistent message should not exist")
       }
@@ -206,7 +207,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("dropAllMessages should remove all messages") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().plusSeconds(10))
         _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
@@ -224,7 +225,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("acknowledge should delete the message") {
-    withQueue() { queue =>
+    withQueue { queue =>
       for {
         scheduleAt <- IO(Instant.now().minusSeconds(1))
         _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
@@ -240,7 +241,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("cron should return a CronService") {
-    withQueue() { queue =>
+    withQueue { queue =>
       queue.cron.map { cronService =>
         assert(cronService != null, "cronService should not be null")
       }
@@ -248,7 +249,7 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("getTimeConfig should return the configured time config") {
-    withQueue() { queue =>
+    withQueue { queue =>
       queue.getTimeConfig.map { config =>
         assert(config != null, "timeConfig should not be null")
       }
@@ -256,11 +257,11 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   }
 
   test("multiple queues can share the same table") {
-    val tableName = "shared_table"
+    val tableName = s"shared_table_${System.nanoTime()}"
     for {
       config1 = createConfig(tableName, "queue1")
       config2 = createConfig(tableName, "queue2")
-      _ <- DelayedQueueJDBC.runMigrations(MessageSerializer.forStrings, config1)
+      _ <- DelayedQueueJDBC.runMigrations(config1)
       _ <- createQueue(tableName, "queue1").use { queue1 =>
         createQueue(tableName, "queue2").use { queue2 =>
           for {
@@ -284,9 +285,12 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
 
 /** H2 database tests for DelayedQueueJDBC. */
 class DelayedQueueJDBCH2Spec extends DelayedQueueJDBCSpec {
+  // Use a stable database name for the test suite
+  private val testDbName = s"test_h2_${System.currentTimeMillis()}"
+
   override def createConfig(tableName: String, queueName: String): DelayedQueueJDBCConfig = {
     val dbConfig = JdbcConnectionConfig(
-      url = s"jdbc:h2:mem:test_${java.util.UUID.randomUUID()};DB_CLOSE_DELAY=-1",
+      url = s"jdbc:h2:mem:$testDbName;DB_CLOSE_DELAY=-1",
       driver = JdbcDriver.H2,
       username = Some("sa"),
       password = Some("")
@@ -297,10 +301,13 @@ class DelayedQueueJDBCH2Spec extends DelayedQueueJDBCSpec {
 
 /** SQLite database tests for DelayedQueueJDBC. */
 class DelayedQueueJDBCSQLiteSpec extends DelayedQueueJDBCSpec {
+  // SQLite needs special mode for shared cache in-memory database
+  private val testDbName = s"test_sqlite_${System.currentTimeMillis()}"
+
   override def createConfig(tableName: String, queueName: String): DelayedQueueJDBCConfig = {
     val dbConfig = JdbcConnectionConfig(
-      url = s"jdbc:sqlite::memory:",
-      driver = JdbcDriver.SQLite
+      url = s"jdbc:sqlite:file:$testDbName?mode=memory&cache=shared",
+      driver = JdbcDriver.Sqlite
     )
     DelayedQueueJDBCConfig.create(dbConfig, tableName, queueName)
   }
@@ -308,9 +315,11 @@ class DelayedQueueJDBCSQLiteSpec extends DelayedQueueJDBCSpec {
 
 /** HSQLDB database tests for DelayedQueueJDBC. */
 class DelayedQueueJDBCHSQLDBSpec extends DelayedQueueJDBCSpec {
+  private val testDbName = s"test_hsqldb_${System.currentTimeMillis()}"
+
   override def createConfig(tableName: String, queueName: String): DelayedQueueJDBCConfig = {
     val dbConfig = JdbcConnectionConfig(
-      url = s"jdbc:hsqldb:mem:test_${java.util.UUID.randomUUID()}",
+      url = s"jdbc:hsqldb:mem:$testDbName",
       driver = JdbcDriver.HSQLDB,
       username = Some("SA"),
       password = Some("")
