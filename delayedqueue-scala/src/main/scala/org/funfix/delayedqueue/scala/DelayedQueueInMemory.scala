@@ -60,9 +60,6 @@ import org.funfix.delayedqueue.jvm
   *   }
   * }
   * }}}
-  *
-  * @tparam A
-  *   the type of message payloads
   */
 object DelayedQueueInMemory {
 
@@ -75,8 +72,6 @@ object DelayedQueueInMemory {
     *   [[DelayedQueueTimeConfig.DEFAULT_IN_MEMORY]])
     * @param ackEnvSource
     *   source identifier for envelopes (defaults to "delayed-queue-inmemory")
-    * @param clock
-    *   clock for time operations (defaults to system UTC clock)
     * @return
     *   a new DelayedQueue instance
     */

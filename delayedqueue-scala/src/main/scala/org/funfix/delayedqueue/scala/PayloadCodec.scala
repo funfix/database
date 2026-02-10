@@ -60,7 +60,7 @@ trait PayloadCodec[A] {
   /** Converts this Scala PayloadCodec to a JVM MessageSerializer. */
   def asJava: jvm.MessageSerializer[A] =
     new jvm.MessageSerializer[A] {
-      override def getTypeName(): String =
+      override def getTypeName: String =
         PayloadCodec.this.typeName
       override def serialize(payload: A): Array[Byte] =
         PayloadCodec.this.serialize(payload)
@@ -86,7 +86,7 @@ object PayloadCodec {
   def fromJava[A](javaSerializer: jvm.MessageSerializer[A]): PayloadCodec[A] =
     new PayloadCodec[A] {
       override def typeName: String =
-        javaSerializer.getTypeName()
+        javaSerializer.getTypeName
       override def serialize(payload: A): Array[Byte] =
         javaSerializer.serialize(payload)
       override def deserialize(serialized: Array[Byte]): Either[IllegalArgumentException, A] =

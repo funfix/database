@@ -115,7 +115,7 @@ private[scala] class CronServiceWrapper[A](
     configHash: CronConfigHash,
     keyPrefix: String,
     scheduleInterval: java.time.Duration,
-    generateMany: (Instant) => List[CronMessage[A]]
+    generateMany: Instant => List[CronMessage[A]]
   ): Resource[IO, Unit] =
     Resource.fromAutoCloseable(IO {
       underlying.install(
@@ -129,7 +129,7 @@ private[scala] class CronServiceWrapper[A](
   override def installDailySchedule(
     keyPrefix: String,
     schedule: CronDailySchedule,
-    generator: (Instant) => CronMessage[A]
+    generator: Instant => CronMessage[A]
   ): Resource[IO, Unit] =
     Resource.fromAutoCloseable(IO {
       underlying.installDailySchedule(
@@ -142,7 +142,7 @@ private[scala] class CronServiceWrapper[A](
   override def installPeriodicTick(
     keyPrefix: String,
     period: java.time.Duration,
-    generator: (Instant) => A
+    generator: Instant => A
   ): Resource[IO, Unit] =
     Resource.fromAutoCloseable(IO {
       underlying.installPeriodicTick(

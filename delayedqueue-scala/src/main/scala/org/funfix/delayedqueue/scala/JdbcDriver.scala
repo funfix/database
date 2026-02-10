@@ -73,6 +73,6 @@ object JdbcDriver {
 
     /** Converts a JVM JdbcDriver to a Scala JdbcDriver. */
     def asScala: JdbcDriver =
-      JdbcDriver(javaDriver.getClassName())
+      JdbcDriver(javaDriver.getClassName)
   }
 }

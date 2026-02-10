@@ -53,7 +53,7 @@ trait DelayedQueue[A] {
 
   /** Batched version of offer operations.
     *
-    * @param In
+    * @tparam In
     *   is the type of the input message, corresponding to each
     *   [ScheduledMessage]. This helps in streaming the original input messages
     *   after processing the batch.
