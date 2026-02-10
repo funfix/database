@@ -60,8 +60,10 @@ trait PayloadCodec[A] {
   /** Converts this Scala PayloadCodec to a JVM MessageSerializer. */
   def asJava: jvm.MessageSerializer[A] =
     new jvm.MessageSerializer[A] {
-      override def getTypeName(): String = PayloadCodec.this.typeName
-      override def serialize(payload: A): Array[Byte] = PayloadCodec.this.serialize(payload)
+      override def getTypeName(): String =
+        PayloadCodec.this.typeName
+      override def serialize(payload: A): Array[Byte] =
+        PayloadCodec.this.serialize(payload)
       override def deserialize(serialized: Array[Byte]): A =
         PayloadCodec.this.deserialize(serialized) match {
           case Right(value) => value
@@ -83,12 +85,14 @@ object PayloadCodec {
     */
   def fromJava[A](javaSerializer: jvm.MessageSerializer[A]): PayloadCodec[A] =
     new PayloadCodec[A] {
-      override def typeName: String = javaSerializer.getTypeName()
-      override def serialize(payload: A): Array[Byte] = javaSerializer.serialize(payload)
+      override def typeName: String =
+        javaSerializer.getTypeName()
+      override def serialize(payload: A): Array[Byte] =
+        javaSerializer.serialize(payload)
       override def deserialize(serialized: Array[Byte]): Either[IllegalArgumentException, A] =
-        try {
+        try
           Right(javaSerializer.deserialize(serialized))
-        } catch {
+        catch {
           case e: IllegalArgumentException => Left(e)
           case NonFatal(e)                 => Left(new IllegalArgumentException(e.getMessage, e))
         }

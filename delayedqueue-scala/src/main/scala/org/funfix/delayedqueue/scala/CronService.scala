@@ -16,7 +16,8 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.effect.{Resource, IO}
+import cats.effect.IO
+import cats.effect.Resource
 import java.time.Duration
 import java.time.Instant
 
@@ -47,9 +48,9 @@ trait CronService[A] {
     *   list of messages to schedule
     */
   def installTick(
-      configHash: CronConfigHash,
-      keyPrefix: String,
-      messages: List[CronMessage[A]]
+    configHash: CronConfigHash,
+    keyPrefix: String,
+    messages: List[CronMessage[A]]
   ): IO[Unit]
 
   /** Uninstalls all future messages for a specific cron configuration.
@@ -86,10 +87,10 @@ trait CronService[A] {
     *   process
     */
   def install(
-      configHash: CronConfigHash,
-      keyPrefix: String,
-      scheduleInterval: Duration,
-      generateMany: (Instant) => List[CronMessage[A]]
+    configHash: CronConfigHash,
+    keyPrefix: String,
+    scheduleInterval: Duration,
+    generateMany: (Instant) => List[CronMessage[A]]
   ): Resource[IO, Unit]
 
   /** Installs a daily schedule with timezone-aware execution times.
@@ -109,9 +110,9 @@ trait CronService[A] {
     *   process
     */
   def installDailySchedule(
-      keyPrefix: String,
-      schedule: CronDailySchedule,
-      generator: (Instant) => CronMessage[A]
+    keyPrefix: String,
+    schedule: CronDailySchedule,
+    generator: (Instant) => CronMessage[A]
   ): Resource[IO, Unit]
 
   /** Installs a periodic tick that generates messages at fixed intervals.
@@ -131,8 +132,8 @@ trait CronService[A] {
     *   process
     */
   def installPeriodicTick(
-      keyPrefix: String,
-      period: Duration,
-      generator: (Instant) => A
+    keyPrefix: String,
+    period: Duration,
+    generator: (Instant) => A
   ): Resource[IO, Unit]
 }

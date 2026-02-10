@@ -16,8 +16,8 @@
 
 package org.funfix.delayedqueue.scala
 
-import scala.concurrent.duration.FiniteDuration
 import org.funfix.delayedqueue.jvm
+import scala.concurrent.duration.FiniteDuration
 
 /** Time configuration for delayed queue operations.
   *
@@ -27,8 +27,8 @@ import org.funfix.delayedqueue.jvm
   *   interval between poll attempts when no messages are available
   */
 final case class DelayedQueueTimeConfig(
-    acquireTimeout: FiniteDuration,
-    pollPeriod: FiniteDuration
+  acquireTimeout: FiniteDuration,
+  pollPeriod: FiniteDuration
 ) {
 
   /** Converts this Scala DelayedQueueTimeConfig to a JVM

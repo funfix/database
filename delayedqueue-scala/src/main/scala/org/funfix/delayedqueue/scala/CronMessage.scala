@@ -35,9 +35,9 @@ import org.funfix.delayedqueue.jvm
   *   the actual execution time (defaults to scheduleAt if None)
   */
 final case class CronMessage[+A](
-    payload: A,
-    scheduleAt: Instant,
-    scheduleAtActual: Option[Instant] = None
+  payload: A,
+  scheduleAt: Instant,
+  scheduleAtActual: Option[Instant] = None
 ) {
 
   /** Converts this CronMessage to a ScheduledMessage.
@@ -50,9 +50,9 @@ final case class CronMessage[+A](
     *   whether the resulting message can update existing entries
     */
   def toScheduled(
-      configHash: CronConfigHash,
-      keyPrefix: String,
-      canUpdate: Boolean
+    configHash: CronConfigHash,
+    keyPrefix: String,
+    canUpdate: Boolean
   ): ScheduledMessage[A] =
     ScheduledMessage(
       key = CronMessage.key(configHash, keyPrefix, scheduleAt),

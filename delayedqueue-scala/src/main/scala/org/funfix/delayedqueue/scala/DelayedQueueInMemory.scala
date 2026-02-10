@@ -16,10 +16,13 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.effect.{IO, Resource, Clock}
-import java.time.{Clock as JavaClock, Instant}
-import org.funfix.delayedqueue.jvm
+import cats.effect.Clock
+import cats.effect.IO
+import cats.effect.Resource
 import cats.effect.std.Dispatcher
+import java.time.Clock as JavaClock
+import java.time.Instant
+import org.funfix.delayedqueue.jvm
 
 /** In-memory implementation of [[DelayedQueue]] using concurrent data
   * structures.
@@ -78,8 +81,8 @@ object DelayedQueueInMemory {
     *   a new DelayedQueue instance
     */
   def apply[A](
-      timeConfig: DelayedQueueTimeConfig = DelayedQueueTimeConfig.DEFAULT_IN_MEMORY,
-      ackEnvSource: String = "delayed-queue-inmemory"
+    timeConfig: DelayedQueueTimeConfig = DelayedQueueTimeConfig.DEFAULT_IN_MEMORY,
+    ackEnvSource: String = "delayed-queue-inmemory"
   ): Resource[IO, DelayedQueue[A]] =
     Dispatcher.sequential[IO].evalMap { dispatcher =>
       IO {
@@ -94,9 +97,9 @@ object DelayedQueueInMemory {
     }
 }
 
-private[scala] final class CatsClockToJavaClock(
-    dispatcher: Dispatcher[IO],
-    zone: java.time.ZoneId = java.time.ZoneId.systemDefault()
+final private[scala] class CatsClockToJavaClock(
+  dispatcher: Dispatcher[IO],
+  zone: java.time.ZoneId = java.time.ZoneId.systemDefault()
 )(using Clock[IO]) extends JavaClock {
   override def getZone: java.time.ZoneId =
     zone

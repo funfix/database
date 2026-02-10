@@ -29,13 +29,15 @@ opaque type CronConfigHash = String
 object CronConfigHash {
 
   /** Creates a CronConfigHash from a String value. */
-  def apply(value: String): CronConfigHash = value
+  def apply(value: String): CronConfigHash =
+    value
 
   /** Conversion extension for CronConfigHash. */
   extension (hash: CronConfigHash) {
 
     /** Gets the string value of the CronConfigHash. */
-    def value: String = hash
+    def value: String =
+      hash
 
     /** Converts this Scala CronConfigHash to a JVM CronConfigHash. */
     def asJava: jvm.CronConfigHash =

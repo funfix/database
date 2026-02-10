@@ -37,10 +37,10 @@ import org.funfix.delayedqueue.jvm
   *   whether existing messages with the same key can be updated
   */
 final case class ScheduledMessage[+A](
-    key: String,
-    payload: A,
-    scheduleAt: Instant,
-    canUpdate: Boolean = true
+  key: String,
+  payload: A,
+  scheduleAt: Instant,
+  canUpdate: Boolean = true
 ) {
 
   /** Converts this Scala ScheduledMessage to a JVM ScheduledMessage. */
@@ -77,8 +77,8 @@ object ScheduledMessage {
   *   the scheduled message
   */
 final case class BatchedMessage[+In, +A](
-    input: In,
-    message: ScheduledMessage[A]
+  input: In,
+  message: ScheduledMessage[A]
 ) {
 
   /** Creates a reply for this batched message with the given outcome. */
@@ -118,9 +118,9 @@ object BatchedMessage {
   *   the result of offering this message
   */
 final case class BatchedReply[+In, +A](
-    input: In,
-    message: ScheduledMessage[A],
-    outcome: OfferOutcome
+  input: In,
+  message: ScheduledMessage[A],
+  outcome: OfferOutcome
 ) {
 
   /** Converts this Scala BatchedReply to a JVM BatchedReply. */

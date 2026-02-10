@@ -17,8 +17,8 @@
 package org.funfix.delayedqueue.scala
 
 import java.time.Instant
-import org.funfix.delayedqueue.scala.ScheduledMessage.asScala
 import org.funfix.delayedqueue.scala.OfferOutcome.asScala
+import org.funfix.delayedqueue.scala.ScheduledMessage.asScala
 
 class ScheduledMessageSpec extends munit.FunSuite {
 

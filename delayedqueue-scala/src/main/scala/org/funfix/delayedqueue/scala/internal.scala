@@ -16,21 +16,22 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.effect.{IO, Resource}
+import cats.effect.IO
+import cats.effect.Resource
 import cats.syntax.functor.*
 import java.time.Instant
 import org.funfix.delayedqueue.jvm
 import org.funfix.delayedqueue.scala.AckEnvelope.asScala
-import org.funfix.delayedqueue.scala.OfferOutcome.asScala
 import org.funfix.delayedqueue.scala.BatchedReply.asScala
 import org.funfix.delayedqueue.scala.DelayedQueueTimeConfig.asScala
+import org.funfix.delayedqueue.scala.OfferOutcome.asScala
 import scala.jdk.CollectionConverters.*
 
 /** Wrapper that implements the Scala DelayedQueue trait by delegating to a JVM
   * DelayedQueue implementation.
   */
 private[scala] class DelayedQueueWrapper[A](
-    underlying: jvm.DelayedQueue[A]
+  underlying: jvm.DelayedQueue[A]
 ) extends DelayedQueue[A] {
 
   override def getTimeConfig: IO[DelayedQueueTimeConfig] =
@@ -43,7 +44,7 @@ private[scala] class DelayedQueueWrapper[A](
     IO(underlying.offerIfNotExists(key, payload, scheduleAt).asScala)
 
   override def offerBatch[In](
-      messages: List[BatchedMessage[In, A]]
+    messages: List[BatchedMessage[In, A]]
   ): IO[List[BatchedReply[In, A]]] =
     IO {
       val javaMessages = messages.map(_.asJava).asJava
@@ -92,13 +93,13 @@ private[scala] class DelayedQueueWrapper[A](
 
 /** Wrapper for CronService that delegates to the JVM implementation. */
 private[scala] class CronServiceWrapper[A](
-    underlying: jvm.CronService[A]
+  underlying: jvm.CronService[A]
 ) extends CronService[A] {
 
   override def installTick(
-      configHash: CronConfigHash,
-      keyPrefix: String,
-      messages: List[CronMessage[A]]
+    configHash: CronConfigHash,
+    keyPrefix: String,
+    messages: List[CronMessage[A]]
   ): IO[Unit] =
     IO {
       val javaMessages = messages.map(_.asJava).asJava
@@ -111,10 +112,10 @@ private[scala] class CronServiceWrapper[A](
     }
 
   override def install(
-      configHash: CronConfigHash,
-      keyPrefix: String,
-      scheduleInterval: java.time.Duration,
-      generateMany: (Instant) => List[CronMessage[A]]
+    configHash: CronConfigHash,
+    keyPrefix: String,
+    scheduleInterval: java.time.Duration,
+    generateMany: (Instant) => List[CronMessage[A]]
   ): Resource[IO, Unit] =
     Resource.fromAutoCloseable(IO {
       underlying.install(
@@ -126,9 +127,9 @@ private[scala] class CronServiceWrapper[A](
     }).void
 
   override def installDailySchedule(
-      keyPrefix: String,
-      schedule: CronDailySchedule,
-      generator: (Instant) => CronMessage[A]
+    keyPrefix: String,
+    schedule: CronDailySchedule,
+    generator: (Instant) => CronMessage[A]
   ): Resource[IO, Unit] =
     Resource.fromAutoCloseable(IO {
       underlying.installDailySchedule(
@@ -139,9 +140,9 @@ private[scala] class CronServiceWrapper[A](
     }).void
 
   override def installPeriodicTick(
-      keyPrefix: String,
-      period: java.time.Duration,
-      generator: (Instant) => A
+    keyPrefix: String,
+    period: java.time.Duration,
+    generator: (Instant) => A
   ): Resource[IO, Unit] =
     Resource.fromAutoCloseable(IO {
       underlying.installPeriodicTick(

@@ -62,12 +62,12 @@ import org.funfix.delayedqueue.jvm
   *   RetryConfig.DEFAULT.
   */
 final case class DelayedQueueJDBCConfig(
-    db: JdbcConnectionConfig,
-    tableName: String,
-    time: DelayedQueueTimeConfig,
-    queueName: String,
-    ackEnvSource: String,
-    retryPolicy: Option[RetryConfig]
+  db: JdbcConnectionConfig,
+  tableName: String,
+  time: DelayedQueueTimeConfig,
+  queueName: String,
+  ackEnvSource: String,
+  retryPolicy: Option[RetryConfig]
 ) {
   require(tableName.nonEmpty, "tableName must not be blank")
   require(queueName.nonEmpty, "queueName must not be blank")
@@ -102,9 +102,9 @@ object DelayedQueueJDBCConfig {
     *   A configuration with default time and retry policies
     */
   def create(
-      db: JdbcConnectionConfig,
-      tableName: String,
-      queueName: String
+    db: JdbcConnectionConfig,
+    tableName: String,
+    queueName: String
   ): DelayedQueueJDBCConfig =
     DelayedQueueJDBCConfig(
       db = db,

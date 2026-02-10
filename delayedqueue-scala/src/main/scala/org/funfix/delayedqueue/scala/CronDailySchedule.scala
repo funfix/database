@@ -39,10 +39,10 @@ import scala.jdk.CollectionConverters.*
   *   how often to check and update the schedule
   */
 final case class CronDailySchedule(
-    zoneId: ZoneId,
-    hoursOfDay: List[LocalTime],
-    scheduleInAdvance: Duration,
-    scheduleInterval: Duration
+  zoneId: ZoneId,
+  hoursOfDay: List[LocalTime],
+  scheduleInAdvance: Duration,
+  scheduleInterval: Duration
 ) {
   require(hoursOfDay.nonEmpty, "hoursOfDay must not be empty")
   require(
@@ -80,10 +80,10 @@ object CronDailySchedule {
 
   /** Creates a DailyCronSchedule with the specified configuration. */
   def create(
-      zoneId: ZoneId,
-      hoursOfDay: List[LocalTime],
-      scheduleInAdvance: Duration,
-      scheduleInterval: Duration
+    zoneId: ZoneId,
+    hoursOfDay: List[LocalTime],
+    scheduleInAdvance: Duration,
+    scheduleInterval: Duration
   ): CronDailySchedule =
     CronDailySchedule(zoneId, hoursOfDay, scheduleInAdvance, scheduleInterval)
 

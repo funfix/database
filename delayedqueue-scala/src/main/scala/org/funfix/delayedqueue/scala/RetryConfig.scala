@@ -52,12 +52,12 @@ import org.funfix.delayedqueue.jvm
   *   Hard timeout for each individual attempt (None means no per-try timeout)
   */
 final case class RetryConfig(
-    initialDelay: Duration,
-    maxDelay: Duration,
-    backoffFactor: Double,
-    maxRetries: Option[Long],
-    totalSoftTimeout: Option[Duration],
-    perTryHardTimeout: Option[Duration]
+  initialDelay: Duration,
+  maxDelay: Duration,
+  backoffFactor: Double,
+  maxRetries: Option[Long],
+  totalSoftTimeout: Option[Duration],
+  perTryHardTimeout: Option[Duration]
 ) {
   require(backoffFactor >= 1.0, s"backoffFactor must be >= 1.0, got $backoffFactor")
   require(!initialDelay.isNegative, s"initialDelay must not be negative, got $initialDelay")

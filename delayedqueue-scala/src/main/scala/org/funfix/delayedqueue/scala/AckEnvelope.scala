@@ -55,12 +55,12 @@ import org.funfix.delayedqueue.jvm
   *   message from the queue
   */
 final case class AckEnvelope[+A](
-    payload: A,
-    messageId: MessageId,
-    timestamp: Instant,
-    source: String,
-    deliveryType: DeliveryType,
-    acknowledge: IO[Unit]
+  payload: A,
+  messageId: MessageId,
+  timestamp: Instant,
+  source: String,
+  deliveryType: DeliveryType,
+  acknowledge: IO[Unit]
 )
 
 object AckEnvelope {
@@ -87,13 +87,15 @@ opaque type MessageId = String
 object MessageId {
 
   /** Creates a MessageId from a String value. */
-  def apply(value: String): MessageId = value
+  def apply(value: String): MessageId =
+    value
 
   /** Conversion extension for String to MessageId. */
   extension (id: MessageId) {
 
     /** Gets the string value of the MessageId. */
-    def value: String = id
+    def value: String =
+      id
 
     /** Converts this Scala MessageId to a JVM MessageId. */
     def asJava: jvm.MessageId =
@@ -122,10 +124,11 @@ enum DeliveryType {
   case Redelivery
 
   /** Converts this Scala DeliveryType to a JVM DeliveryType. */
-  def asJava: jvm.DeliveryType = this match {
-    case FirstDelivery => jvm.DeliveryType.FIRST_DELIVERY
-    case Redelivery    => jvm.DeliveryType.REDELIVERY
-  }
+  def asJava: jvm.DeliveryType =
+    this match {
+      case FirstDelivery => jvm.DeliveryType.FIRST_DELIVERY
+      case Redelivery    => jvm.DeliveryType.REDELIVERY
+    }
 }
 
 object DeliveryType {
@@ -134,9 +137,10 @@ object DeliveryType {
   extension (javaType: jvm.DeliveryType) {
 
     /** Converts a JVM DeliveryType to a Scala DeliveryType. */
-    def asScala: DeliveryType = javaType match {
-      case jvm.DeliveryType.FIRST_DELIVERY => DeliveryType.FirstDelivery
-      case jvm.DeliveryType.REDELIVERY     => DeliveryType.Redelivery
-    }
+    def asScala: DeliveryType =
+      javaType match {
+        case jvm.DeliveryType.FIRST_DELIVERY => DeliveryType.FirstDelivery
+        case jvm.DeliveryType.REDELIVERY     => DeliveryType.Redelivery
+      }
   }
 }

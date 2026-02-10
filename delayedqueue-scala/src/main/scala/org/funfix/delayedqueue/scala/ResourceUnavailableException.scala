@@ -27,5 +27,6 @@ import java.io.IOException
 class ResourceUnavailableException(message: String, cause: Throwable | Null)
   extends IOException(message, cause) {
 
-  def this(message: String) = this(message, null)
+  def this(message: String) =
+    this(message, null)
 }

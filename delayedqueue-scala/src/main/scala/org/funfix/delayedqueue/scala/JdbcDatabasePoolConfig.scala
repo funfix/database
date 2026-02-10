@@ -39,14 +39,14 @@ import org.funfix.delayedqueue.jvm
   *   time to wait for pool initialization
   */
 final case class JdbcDatabasePoolConfig(
-    connectionTimeout: Duration,
-    idleTimeout: Duration,
-    maxLifetime: Duration,
-    keepaliveTime: Duration,
-    maximumPoolSize: Int,
-    minimumIdle: Option[Int],
-    leakDetectionThreshold: Option[Duration],
-    initializationFailTimeout: Option[Duration]
+  connectionTimeout: Duration,
+  idleTimeout: Duration,
+  maxLifetime: Duration,
+  keepaliveTime: Duration,
+  maximumPoolSize: Int,
+  minimumIdle: Option[Int],
+  leakDetectionThreshold: Option[Duration],
+  initializationFailTimeout: Option[Duration]
 ) {
 
   /** Converts this Scala JdbcDatabasePoolConfig to a JVM

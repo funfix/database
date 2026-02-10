@@ -16,10 +16,10 @@
 
 package org.funfix.delayedqueue.scala
 
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
-import java.time.Duration
 
 class CronSpec extends munit.FunSuite {
 

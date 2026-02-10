@@ -16,8 +16,8 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.syntax.all.*
 import cats.effect.IO
+import cats.syntax.all.*
 import java.time.Instant
 import munit.CatsEffectSuite
 import scala.concurrent.duration.*
@@ -341,16 +341,17 @@ class DelayedQueueInMemorySpec extends CatsEffectSuite {
         conFiber <- allConsumers(queue).background
       } yield (prodFiber, conFiber)
 
-    res.use { case (prodFiber, conFiber) =>
-      for {
-        p <- prodFiber
-        p <- p.embedNever
-        c <- conFiber
-        c <- c.embedNever
-      } yield {
-        assertEquals(p, messageCount)
-        assertEquals(c, messageCount)
-      }
+    res.use {
+      case (prodFiber, conFiber) =>
+        for {
+          p <- prodFiber
+          p <- p.embedNever
+          c <- conFiber
+          c <- c.embedNever
+        } yield {
+          assertEquals(p, messageCount)
+          assertEquals(c, messageCount)
+        }
     }.timeout(30.seconds)
   }
 }

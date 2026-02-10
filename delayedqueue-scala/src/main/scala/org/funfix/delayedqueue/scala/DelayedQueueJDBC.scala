@@ -16,7 +16,8 @@
 
 package org.funfix.delayedqueue.scala
 
-import cats.effect.{IO, Resource}
+import cats.effect.IO
+import cats.effect.Resource
 import cats.effect.std.Dispatcher
 import org.funfix.delayedqueue.jvm
 
@@ -78,7 +79,7 @@ object DelayedQueueJDBC {
     *   a Resource that manages the queue lifecycle
     */
   def apply[A](
-      config: DelayedQueueJDBCConfig
+    config: DelayedQueueJDBCConfig
   )(using codec: PayloadCodec[A]): Resource[IO, DelayedQueue[A]] =
     Dispatcher.sequential[IO].flatMap { dispatcher =>
       Resource.fromAutoCloseable(IO {
@@ -101,7 +102,7 @@ object DelayedQueueJDBC {
     *   IO action that runs the migrations
     */
   def runMigrations(
-      config: DelayedQueueJDBCConfig
+    config: DelayedQueueJDBCConfig
   ): IO[Unit] =
     IO.interruptible {
       jvm.DelayedQueueJDBC.runMigrations(

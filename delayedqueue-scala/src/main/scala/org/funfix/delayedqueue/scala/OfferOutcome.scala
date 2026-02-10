@@ -28,14 +28,16 @@ sealed trait OfferOutcome {
   /** Returns true if the offer was ignored (message already exists and cannot
     * be updated).
     */
-  def isIgnored: Boolean = this == OfferOutcome.Ignored
+  def isIgnored: Boolean =
+    this == OfferOutcome.Ignored
 
   /** Converts this Scala OfferOutcome to a JVM OfferOutcome. */
-  def asJava: jvm.OfferOutcome = this match {
-    case OfferOutcome.Created => jvm.OfferOutcome.Created.INSTANCE
-    case OfferOutcome.Updated => jvm.OfferOutcome.Updated.INSTANCE
-    case OfferOutcome.Ignored => jvm.OfferOutcome.Ignored.INSTANCE
-  }
+  def asJava: jvm.OfferOutcome =
+    this match {
+      case OfferOutcome.Created => jvm.OfferOutcome.Created.INSTANCE
+      case OfferOutcome.Updated => jvm.OfferOutcome.Updated.INSTANCE
+      case OfferOutcome.Ignored => jvm.OfferOutcome.Ignored.INSTANCE
+    }
 }
 
 object OfferOutcome {
@@ -53,10 +55,11 @@ object OfferOutcome {
   extension (javaOutcome: jvm.OfferOutcome) {
 
     /** Converts a JVM OfferOutcome to a Scala OfferOutcome. */
-    def asScala: OfferOutcome = javaOutcome match {
-      case _: jvm.OfferOutcome.Created => OfferOutcome.Created
-      case _: jvm.OfferOutcome.Updated => OfferOutcome.Updated
-      case _: jvm.OfferOutcome.Ignored => OfferOutcome.Ignored
-    }
+    def asScala: OfferOutcome =
+      javaOutcome match {
+        case _: jvm.OfferOutcome.Created => OfferOutcome.Created
+        case _: jvm.OfferOutcome.Updated => OfferOutcome.Updated
+        case _: jvm.OfferOutcome.Ignored => OfferOutcome.Ignored
+      }
   }
 }

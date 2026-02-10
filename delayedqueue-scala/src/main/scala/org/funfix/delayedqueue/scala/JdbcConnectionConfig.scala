@@ -32,11 +32,11 @@ import org.funfix.delayedqueue.jvm
   *   optional connection pool configuration
   */
 final case class JdbcConnectionConfig(
-    url: String,
-    driver: JdbcDriver,
-    username: Option[String] = None,
-    password: Option[String] = None,
-    pool: Option[JdbcDatabasePoolConfig] = None
+  url: String,
+  driver: JdbcDriver,
+  username: Option[String] = None,
+  password: Option[String] = None,
+  pool: Option[JdbcDatabasePoolConfig] = None
 ) {
 
   /** Converts this Scala JdbcConnectionConfig to a JVM JdbcConnectionConfig. */

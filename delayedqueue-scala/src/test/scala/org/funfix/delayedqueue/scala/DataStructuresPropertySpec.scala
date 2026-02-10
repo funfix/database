@@ -16,16 +16,18 @@
 
 package org.funfix.delayedqueue.scala
 
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneId
 import munit.ScalaCheckSuite
-import org.scalacheck.Prop.*
-import org.scalacheck.Gen
-import scala.concurrent.duration.FiniteDuration
-import java.time.{Instant, LocalTime, ZoneId}
-import org.funfix.delayedqueue.scala.ScheduledMessage.asScala
 import org.funfix.delayedqueue.scala.DelayedQueueTimeConfig.asScala
+import org.funfix.delayedqueue.scala.Generators.given
 import org.funfix.delayedqueue.scala.MessageId.asScala
 import org.funfix.delayedqueue.scala.OfferOutcome.asScala
-import org.funfix.delayedqueue.scala.Generators.given
+import org.funfix.delayedqueue.scala.ScheduledMessage.asScala
+import org.scalacheck.Gen
+import org.scalacheck.Prop.*
+import scala.concurrent.duration.FiniteDuration
 
 class DataStructuresPropertySpec extends ScalaCheckSuite {
   property("ScheduledMessage asJava/asScala roundtrip preserves data") {

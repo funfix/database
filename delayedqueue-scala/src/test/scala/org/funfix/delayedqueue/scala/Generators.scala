@@ -16,9 +16,12 @@
 
 package org.funfix.delayedqueue.scala
 
-import org.scalacheck.{Arbitrary, Gen}
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneId
+import org.scalacheck.Arbitrary
+import org.scalacheck.Gen
 import scala.concurrent.duration.*
-import java.time.{Instant, LocalTime, ZoneId}
 
 /** Common ScalaCheck generators for DelayedQueue data structures. */
 object Generators {
