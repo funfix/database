@@ -21,3 +21,4 @@ jobs:
           PGP_SECRET: ${{ secrets.SIGNING_KEY }}
           SONATYPE_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          BUILD_RELEASE: true

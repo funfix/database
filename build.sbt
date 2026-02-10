@@ -1,6 +1,7 @@
 import java.io.FileInputStream
 import java.util.Properties
 import sbt.ThisBuild
+import scala.sys.process.Process
 
 val scala3Version = "3.3.7"
 val scala2Version = "2.13.18"
@@ -130,10 +131,14 @@ lazy val root = project
     publishLocalGradleDependencies := {
       import scala.sys.process.*
       val rootDir = (ThisBuild / baseDirectory).value
-      val command = Process(
-        "./gradlew" :: "publishToMavenLocal" :: Nil,
-        rootDir
-      )
+      val commandArgs =
+        List(
+          List("./gradlew"),
+          if (!version.value.endsWith("-SNAPSHOT")) List("-PbuildRelease=true") else Nil,
+          List("publishToMavenLocal")
+        ).flatten
+
+      val command = Process(commandArgs, rootDir)
       val log = streams.value.log
       val exitCode = command ! log
       if (exitCode != 0) {
