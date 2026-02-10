@@ -262,9 +262,8 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
 
   test("multiple queues can share the same table") {
     val tableName = s"shared_table_${System.nanoTime()}"
+    val config1 = createConfig(tableName, "queue1")
     for {
-      config1 = createConfig(tableName, "queue1")
-      config2 = createConfig(tableName, "queue2")
       _ <- DelayedQueueJDBC.runMigrations(config1)
       _ <- createQueue(tableName, "queue1").use { queue1 =>
         createQueue(tableName, "queue2").use { queue2 =>

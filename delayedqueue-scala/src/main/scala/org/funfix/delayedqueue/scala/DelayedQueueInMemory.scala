@@ -95,7 +95,7 @@ object DelayedQueueInMemory {
 final private[scala] class CatsClockToJavaClock(
   dispatcher: Dispatcher[IO],
   zone: java.time.ZoneId = java.time.ZoneId.systemDefault()
-)(using Clock[IO]) extends JavaClock {
+)(implicit clock: Clock[IO]) extends JavaClock {
   override def getZone: java.time.ZoneId =
     zone
 
@@ -106,4 +106,9 @@ final private[scala] class CatsClockToJavaClock(
     dispatcher.unsafeRunSync(
       Clock[IO].realTime.map(it => Instant.ofEpochMilli(it.toMillis))
     )
+}
+
+private[scala] object CatsClockToJavaClock {
+  def apply(dispatcher: Dispatcher[IO])(implicit clock: Clock[IO]): CatsClockToJavaClock =
+    new CatsClockToJavaClock(dispatcher)
 }

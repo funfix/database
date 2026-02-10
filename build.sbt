@@ -1,5 +1,9 @@
 import java.io.FileInputStream
 import java.util.Properties
+import sbt.ThisBuild
+
+val scala3Version = "3.3.7"
+val scala2Version = "2.13.18"
 
 val publishLocalGradleDependencies =
   taskKey[Unit]("Builds and publishes gradle dependencies")
@@ -10,12 +14,7 @@ val props =
 inThisBuild(
   Seq(
     organization := "org.funfix",
-    scalaVersion := "3.8.1",
-    scalacOptions ++= Seq(
-      "-no-indent",
-      "-Yexplicit-nulls",
-      "-Werror",
-    ),
+    scalaVersion := scala2Version,
     // ---
     // Settings for dealing with the local Gradle-assembled artifacts
     // Also see: publishLocalGradleDependencies
@@ -42,11 +41,43 @@ inThisBuild(
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
+val sharedSettings = Seq(
+  crossScalaVersions := Seq(scala3Version, scala2Version),
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((3, _)) =>
+        Seq("-no-indent")
+      //          Seq.empty
+      case Some((2, _)) | _ =>
+        Seq("-Xsource:3-cross")
+    }
+  },
+  Compile / compile / wartremoverErrors ++= Seq(
+    Wart.Null,
+    Wart.AsInstanceOf,
+    Wart.ExplicitImplicitTypes,
+    Wart.FinalCaseClass,
+    Wart.FinalVal,
+    Wart.ImplicitConversion,
+    Wart.IsInstanceOf,
+    Wart.JavaSerializable,
+    Wart.LeakingSealed,
+    Wart.NonUnitStatements,
+    Wart.TripleQuestionMark,
+    Wart.TryPartial,
+    Wart.Return,
+    Wart.PublicInference,
+    Wart.OptionPartial,
+    Wart.ArrayEquals
+  )
+)
+
 lazy val root = project
   .in(file("."))
   .settings(
     publish := {},
     publishLocal := {},
+    crossScalaVersions := Nil,
     // Task for triggering the Gradle build and publishing the artefacts
     // locally, because we depend on them
     publishLocalGradleDependencies := {
@@ -67,6 +98,7 @@ lazy val root = project
 
 lazy val delayedqueueJVM = project
   .in(file("delayedqueue-scala"))
+  .settings(sharedSettings)
   .settings(
     name := "delayedqueue-scala",
     libraryDependencies ++= Seq(
@@ -81,6 +113,6 @@ lazy val delayedqueueJVM = project
       // JDBC drivers for testing
       "com.h2database" % "h2" % "2.4.240" % Test,
       "org.hsqldb" % "hsqldb" % "2.7.4" % Test,
-      "org.xerial" % "sqlite-jdbc" % "3.51.1.0" % Test,
+      "org.xerial" % "sqlite-jdbc" % "3.51.1.0" % Test
     )
   )

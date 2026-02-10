@@ -60,32 +60,27 @@ import org.funfix.delayedqueue.jvm
   *   } yield ()
   * }
   * }}}
-  *
-  * @tparam A
-  *   the type of message payloads
   */
 object DelayedQueueJDBC {
 
   /** Creates a JDBC-based delayed queue with the given configuration.
     *
     * @tparam A
-    *   the type of message payloads
+    *   the type of message payloads, with a [[PayloadCodec]] available for
+    *   serialization
     * @param config
     *   JDBC queue configuration
-    * @param codec
-    *   implicit payload codec for serialization (e.g., PayloadCodec.forStrings
-    *   for String)
     * @return
     *   a Resource that manages the queue lifecycle
     */
-  def apply[A](
+  def apply[A: PayloadCodec](
     config: DelayedQueueJDBCConfig
-  )(using codec: PayloadCodec[A]): Resource[IO, DelayedQueue[A]] =
+  ): Resource[IO, DelayedQueue[A]] =
     Dispatcher.sequential[IO].flatMap { dispatcher =>
       Resource.fromAutoCloseable(IO {
         val javaClock = CatsClockToJavaClock(dispatcher)
         jvm.DelayedQueueJDBC.create[A](
-          codec.asJava,
+          implicitly[PayloadCodec[A]].asJava,
           config.asJava,
           javaClock
         )

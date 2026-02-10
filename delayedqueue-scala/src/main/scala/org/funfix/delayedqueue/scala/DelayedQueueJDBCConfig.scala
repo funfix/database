@@ -76,6 +76,7 @@ final case class DelayedQueueJDBCConfig(
   /** Converts this Scala DelayedQueueJDBCConfig to a JVM
     * DelayedQueueJDBCConfig.
     */
+  @SuppressWarnings(Array("org.wartremover.warts.Null")) // JVM interop
   def asJava: jvm.DelayedQueueJDBCConfig =
     new jvm.DelayedQueueJDBCConfig(
       db.asJava,
@@ -83,7 +84,7 @@ final case class DelayedQueueJDBCConfig(
       time.asJava,
       queueName,
       ackEnvSource,
-      retryPolicy.map(_.asJava).getOrElse(null)
+      retryPolicy.map(_.asJava).orNull
     )
 }
 

@@ -24,8 +24,9 @@ import java.io.IOException
   * Example: issues with the RDBMS (bugs, or connection unavailable, failing
   * after multiple retries)
   */
-class ResourceUnavailableException(message: String, cause: Throwable | Null)
-  extends IOException(message, cause) {
+@SuppressWarnings(Array("org.wartremover.warts.Null")) // Java interop
+class ResourceUnavailableException(message: String, cause: Option[Throwable])
+  extends IOException(message, cause.orNull) {
 
   def this(message: String) =
     this(message, null)

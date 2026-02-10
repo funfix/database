@@ -67,7 +67,7 @@ trait PayloadCodec[A] {
       override def deserialize(serialized: Array[Byte]): A =
         PayloadCodec.this.deserialize(serialized) match {
           case Right(value) => value
-          case Left(error)  => throw error
+          case Left(error) => throw error
         }
     }
 }
@@ -78,7 +78,7 @@ object PayloadCodec {
     *
     * This is based on the JVM MessageSerializer.forStrings implementation.
     */
-  given forStrings: PayloadCodec[String] =
+  implicit lazy val forStrings: PayloadCodec[String] =
     fromJava(jvm.MessageSerializer.forStrings())
 
   /** Wraps a JVM MessageSerializer to provide a Scala PayloadCodec interface.
@@ -94,7 +94,7 @@ object PayloadCodec {
           Right(javaSerializer.deserialize(serialized))
         catch {
           case e: IllegalArgumentException => Left(e)
-          case NonFatal(e)                 =>
+          case NonFatal(e) =>
             Left(new IllegalArgumentException(e.getMessage, e))
         }
     }

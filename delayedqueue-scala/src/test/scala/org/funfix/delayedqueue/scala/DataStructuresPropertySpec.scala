@@ -65,7 +65,7 @@ class DataStructuresPropertySpec extends ScalaCheckSuite {
 
   property("CronMessage key is unique for different times") {
     forAll { (instant1: Instant, instant2: Instant) =>
-      if instant1 != instant2 then {
+      if (instant1 != instant2) {
         val hash = CronConfigHash.fromString("test")
         val prefix = "test-prefix"
         val key1 = CronMessage.key(hash, prefix, instant1)
@@ -97,7 +97,7 @@ class DataStructuresPropertySpec extends ScalaCheckSuite {
 
   property("CronDailySchedule getNextTimes always returns at least one time") {
     forAll { (hours: List[LocalTime], now: Instant, zoneId: ZoneId) =>
-      if hours.nonEmpty then {
+      if (hours.nonEmpty) {
         val schedule = CronDailySchedule(
           zoneId = zoneId,
           hoursOfDay = hours,
@@ -129,7 +129,7 @@ class DataStructuresPropertySpec extends ScalaCheckSuite {
   property("RetryConfig validates backoffFactor >= 1.0") {
     forAll { (backoffFactor: Double) =>
       // Simplified test: just check that invalid backoff factors are rejected
-      if backoffFactor < 1.0 && !backoffFactor.isNaN && !backoffFactor.isInfinite then {
+      if (backoffFactor < 1.0 && !backoffFactor.isNaN && !backoffFactor.isInfinite) {
         val _ = intercept[IllegalArgumentException] {
           RetryConfig(
             initialDelay = java.time.Duration.ofMillis(100),
@@ -141,7 +141,7 @@ class DataStructuresPropertySpec extends ScalaCheckSuite {
           )
         }
         ()
-      } else if backoffFactor >= 1.0 && !backoffFactor.isNaN && !backoffFactor.isInfinite then {
+      } else if (backoffFactor >= 1.0 && !backoffFactor.isNaN && !backoffFactor.isInfinite) {
         val config = RetryConfig(
           initialDelay = java.time.Duration.ofMillis(100),
           maxDelay = java.time.Duration.ofMillis(1000),

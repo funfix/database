@@ -50,9 +50,10 @@ The public API should be idiomatic Scala, leveraging Scala 3 features where appr
 ## Build system
 - Project uses `sbt` (see `build.sbt` in root).
 - This sub-project has non-standard wiring to the Gradle project, so before anything, we need to ensure that the  Gradle dependency was published locally: `sbt publishLocalGradleDependencies`
-- Run tests: `sbt test`
-- Compile: `sbt compile`
-- Format (required): `sbt scalafmtAll`
+- Project cross-compiles for Scala 2.13 and Scala 3 (thus `+` prefix is used for the following commands)
+    - Run tests: `sbt +test`
+    - Compile: `sbt +compile`
+- Formatting (required): `sbt scalafmtAll`
 
 ## References
 - Skills:

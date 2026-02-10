@@ -76,25 +76,13 @@ object AckEnvelope {
 }
 
 /** Unique identifier for a message. */
-opaque type MessageId = String
+final case class MessageId(value: String) {
+  /** Converts this Scala MessageId to a JVM MessageId. */
+  def asJava: jvm.MessageId =
+    new jvm.MessageId(value)
+}
 
 object MessageId {
-
-  /** Creates a MessageId from a String value. */
-  def apply(value: String): MessageId =
-    value
-
-  /** Conversion extension for String to MessageId. */
-  extension (id: MessageId) {
-
-    /** Gets the string value of the MessageId. */
-    def value: String =
-      id
-
-    /** Converts this Scala MessageId to a JVM MessageId. */
-    def asJava: jvm.MessageId =
-      new jvm.MessageId(id)
-  }
 
   /** Converts a JVM MessageId to a Scala MessageId. */
   def fromJava(javaId: jvm.MessageId): MessageId =
@@ -104,28 +92,29 @@ object MessageId {
 /** Indicates whether a message is being delivered for the first time or
   * redelivered.
   */
-enum DeliveryType {
-
-  /** Message is being delivered for the first time. */
-  case FirstDelivery
-
-  /** Message is being redelivered (was scheduled again after initial delivery).
-    */
-  case Redelivery
-
+sealed trait DeliveryType extends Product with Serializable {
   /** Converts this Scala DeliveryType to a JVM DeliveryType. */
   def asJava: jvm.DeliveryType =
     this match {
-      case FirstDelivery => jvm.DeliveryType.FIRST_DELIVERY
-      case Redelivery    => jvm.DeliveryType.REDELIVERY
+      case DeliveryType.FirstDelivery =>
+        jvm.DeliveryType.FIRST_DELIVERY
+      case DeliveryType.Redelivery =>
+        jvm.DeliveryType.REDELIVERY
     }
 }
 
 object DeliveryType {
+  /** Message is being delivered for the first time. */
+  case object FirstDelivery extends DeliveryType
+
+  /** Message is being redelivered (was scheduled again after initial delivery).
+    */
+  case object Redelivery extends DeliveryType
+
   /** Converts a JVM DeliveryType to a Scala DeliveryType. */
   def fromJava(javaType: jvm.DeliveryType): DeliveryType =
     javaType match {
       case jvm.DeliveryType.FIRST_DELIVERY => DeliveryType.FirstDelivery
-      case jvm.DeliveryType.REDELIVERY     => DeliveryType.Redelivery
+      case jvm.DeliveryType.REDELIVERY => DeliveryType.Redelivery
     }
 }

@@ -52,6 +52,7 @@ final case class JdbcDatabasePoolConfig(
   /** Converts this Scala JdbcDatabasePoolConfig to a JVM
     * JdbcDatabasePoolConfig.
     */
+  @SuppressWarnings(Array("org.wartremover.warts.Null")) // Java interop
   def asJava: jvm.JdbcDatabasePoolConfig =
     new jvm.JdbcDatabasePoolConfig(
       connectionTimeout,
@@ -59,9 +60,9 @@ final case class JdbcDatabasePoolConfig(
       maxLifetime,
       keepaliveTime,
       maximumPoolSize,
-      minimumIdle.map(Int.box).getOrElse(null),
-      leakDetectionThreshold.getOrElse(null),
-      initializationFailTimeout.getOrElse(null)
+      minimumIdle.map(Int.box).orNull,
+      leakDetectionThreshold.orNull,
+      initializationFailTimeout.orNull
     )
 }
 

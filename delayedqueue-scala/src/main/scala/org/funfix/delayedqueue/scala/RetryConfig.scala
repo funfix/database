@@ -73,14 +73,15 @@ final case class RetryConfig(
   )
 
   /** Converts this Scala RetryConfig to a JVM RetryConfig. */
+  @SuppressWarnings(Array("org.wartremover.warts.Null")) // Java interop
   def asJava: jvm.RetryConfig =
     new jvm.RetryConfig(
       initialDelay,
       maxDelay,
       backoffFactor,
-      maxRetries.map(Long.box).getOrElse(null),
-      totalSoftTimeout.getOrElse(null),
-      perTryHardTimeout.getOrElse(null)
+      maxRetries.map(Long.box).orNull,
+      totalSoftTimeout.orNull,
+      perTryHardTimeout.orNull
     )
 }
 

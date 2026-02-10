@@ -62,12 +62,12 @@ final case class CronMessage[+A](
     )
 
   /** Converts this Scala CronMessage to a JVM CronMessage. */
+  @SuppressWarnings(Array("org.wartremover.warts.Null")) // JVM interop
   def asJava[A1 >: A]: jvm.CronMessage[A1] =
-    new jvm.CronMessage[A1](payload, scheduleAt, scheduleAtActual.getOrElse(null))
+    new jvm.CronMessage[A1](payload, scheduleAt, scheduleAtActual.orNull)
 }
 
 object CronMessage {
-
   /** Generates a unique key for a cron message.
     *
     * @param configHash

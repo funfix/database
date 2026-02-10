@@ -40,13 +40,14 @@ final case class JdbcConnectionConfig(
 ) {
 
   /** Converts this Scala JdbcConnectionConfig to a JVM JdbcConnectionConfig. */
+  @SuppressWarnings(Array("org.wartremover.warts.Null")) // Java interop
   def asJava: jvm.JdbcConnectionConfig =
     new jvm.JdbcConnectionConfig(
       url,
       driver.asJava,
-      username.getOrElse(null),
-      password.getOrElse(null),
-      pool.map(_.asJava).getOrElse(null)
+      username.orNull,
+      password.orNull,
+      pool.map(_.asJava).orNull
     )
 }
 
