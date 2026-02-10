@@ -17,6 +17,13 @@ jobs:
           distribution: 'temurin'
       - run: ./sbt ci-publish
         env:
+          # For gradle
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          # For sbt
           PGP_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSWORD }}
           PGP_SECRET: ${{ secrets.SIGNING_KEY }}
           SONATYPE_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
