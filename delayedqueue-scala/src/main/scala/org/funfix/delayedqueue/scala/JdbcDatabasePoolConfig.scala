@@ -69,23 +69,19 @@ object JdbcDatabasePoolConfig {
 
   /** Default connection pool configuration. */
   val DEFAULT: JdbcDatabasePoolConfig =
-    new jvm.JdbcDatabasePoolConfig().asScala
+    JdbcDatabasePoolConfig.fromJava(new jvm.JdbcDatabasePoolConfig())
 
-  /** Conversion extension for JVM JdbcDatabasePoolConfig. */
-  extension (javaConfig: jvm.JdbcDatabasePoolConfig) {
-
-    /** Converts a JVM JdbcDatabasePoolConfig to a Scala JdbcDatabasePoolConfig.
-      */
-    def asScala: JdbcDatabasePoolConfig =
-      JdbcDatabasePoolConfig(
-        connectionTimeout = javaConfig.connectionTimeout,
-        idleTimeout = javaConfig.idleTimeout,
-        maxLifetime = javaConfig.maxLifetime,
-        keepaliveTime = javaConfig.keepaliveTime,
-        maximumPoolSize = javaConfig.maximumPoolSize,
-        minimumIdle = Option(javaConfig.minimumIdle).map(_.intValue),
-        leakDetectionThreshold = Option(javaConfig.leakDetectionThreshold),
-        initializationFailTimeout = Option(javaConfig.initializationFailTimeout)
-      )
-  }
+  /** Converts a JVM JdbcDatabasePoolConfig to a Scala JdbcDatabasePoolConfig.
+    */
+  def fromJava(javaConfig: jvm.JdbcDatabasePoolConfig): JdbcDatabasePoolConfig =
+    JdbcDatabasePoolConfig(
+      connectionTimeout = javaConfig.connectionTimeout,
+      idleTimeout = javaConfig.idleTimeout,
+      maxLifetime = javaConfig.maxLifetime,
+      keepaliveTime = javaConfig.keepaliveTime,
+      maximumPoolSize = javaConfig.maximumPoolSize,
+      minimumIdle = Option(javaConfig.minimumIdle).map(_.intValue),
+      leakDetectionThreshold = Option(javaConfig.leakDetectionThreshold),
+      initializationFailTimeout = Option(javaConfig.initializationFailTimeout)
+    )
 }

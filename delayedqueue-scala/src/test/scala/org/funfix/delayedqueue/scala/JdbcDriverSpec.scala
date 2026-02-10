@@ -16,10 +16,7 @@
 
 package org.funfix.delayedqueue.scala
 
-import org.funfix.delayedqueue.scala.JdbcDriver.asScala
-
 class JdbcDriverSpec extends munit.FunSuite {
-
   test("JdbcDriver constants should have correct class names") {
     assertEquals(JdbcDriver.HSQLDB.className, "org.hsqldb.jdbc.JDBCDriver")
     assertEquals(JdbcDriver.H2.className, "org.h2.Driver")
@@ -46,10 +43,10 @@ class JdbcDriverSpec extends munit.FunSuite {
     assertEquals(JdbcDriver.entries.toSet, allDrivers)
   }
 
-  test("asJava and asScala should be symmetric") {
+  test("asJava and fromJava should be symmetric") {
     JdbcDriver.entries.foreach { driver =>
-      val roundtripped = driver.asJava.asScala
-      assertEquals(roundtripped.className, driver.className)
+      val roundTripped = JdbcDriver.fromJava(driver.asJava)
+      assertEquals(roundTripped.className, driver.className)
     }
   }
 }

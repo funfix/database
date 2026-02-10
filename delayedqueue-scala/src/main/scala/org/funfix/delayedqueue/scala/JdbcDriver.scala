@@ -35,14 +35,14 @@ final case class JdbcDriver private (className: String) {
 
 object JdbcDriver {
 
-  val HSQLDB: JdbcDriver = jvm.JdbcDriver.HSQLDB.asScala
-  val H2: JdbcDriver = jvm.JdbcDriver.H2.asScala
-  val MsSqlServer: JdbcDriver = jvm.JdbcDriver.MsSqlServer.asScala
-  val Sqlite: JdbcDriver = jvm.JdbcDriver.Sqlite.asScala
-  val MariaDB: JdbcDriver = jvm.JdbcDriver.MariaDB.asScala
-  val MySQL: JdbcDriver = jvm.JdbcDriver.MySQL.asScala
-  val PostgreSQL: JdbcDriver = jvm.JdbcDriver.PostgreSQL.asScala
-  val Oracle: JdbcDriver = jvm.JdbcDriver.Oracle.asScala
+  val HSQLDB: JdbcDriver = JdbcDriver.fromJava(jvm.JdbcDriver.HSQLDB)
+  val H2: JdbcDriver = JdbcDriver.fromJava(jvm.JdbcDriver.H2)
+  val MsSqlServer: JdbcDriver = JdbcDriver.fromJava(jvm.JdbcDriver.MsSqlServer)
+  val Sqlite: JdbcDriver = JdbcDriver.fromJava(jvm.JdbcDriver.Sqlite)
+  val MariaDB: JdbcDriver = JdbcDriver.fromJava(jvm.JdbcDriver.MariaDB)
+  val MySQL: JdbcDriver = JdbcDriver.fromJava(jvm.JdbcDriver.MySQL)
+  val PostgreSQL: JdbcDriver = JdbcDriver.fromJava(jvm.JdbcDriver.PostgreSQL)
+  val Oracle: JdbcDriver = JdbcDriver.fromJava(jvm.JdbcDriver.Oracle)
 
   val entries: List[JdbcDriver] =
     List(H2, HSQLDB, MariaDB, MsSqlServer, MySQL, PostgreSQL, Sqlite, Oracle)
@@ -68,11 +68,7 @@ object JdbcDriver {
   def fromClassName(className: String): Option[JdbcDriver] =
     entries.find(_.className.equalsIgnoreCase(className))
 
-  /** Conversion extension for JVM JdbcDriver. */
-  extension (javaDriver: jvm.JdbcDriver) {
-
-    /** Converts a JVM JdbcDriver to a Scala JdbcDriver. */
-    def asScala: JdbcDriver =
-      JdbcDriver(javaDriver.getClassName)
-  }
+  /** Converts a JVM JdbcDriver to a Scala JdbcDriver. */
+  def fromJava(javaDriver: jvm.JdbcDriver): JdbcDriver =
+    JdbcDriver(javaDriver.getClassName)
 }

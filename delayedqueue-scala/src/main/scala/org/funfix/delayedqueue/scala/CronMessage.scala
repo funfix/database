@@ -92,20 +92,16 @@ object CronMessage {
     */
   def staticPayload[A](payload: A): CronMessageGenerator[A] = {
     val jvmGenerator = jvm.CronMessage.staticPayload(payload)
-    (scheduleAt: Instant) => jvmGenerator.invoke(scheduleAt).asScala
+    (scheduleAt: Instant) => CronMessage.fromJava(jvmGenerator.invoke(scheduleAt))
   }
 
-  /** Conversion extension for JVM CronMessage. */
-  extension [A](javaMsg: jvm.CronMessage[A]) {
-
-    /** Converts a JVM CronMessage to a Scala CronMessage. */
-    def asScala: CronMessage[A] =
-      CronMessage(
-        payload = javaMsg.payload,
-        scheduleAt = javaMsg.scheduleAt,
-        scheduleAtActual = Option(javaMsg.scheduleAtActual)
-      )
-  }
+  /** Converts a JVM CronMessage to a Scala CronMessage. */
+  def fromJava[A](javaMsg: jvm.CronMessage[? <: A]): CronMessage[A] =
+    CronMessage(
+      payload = javaMsg.payload,
+      scheduleAt = javaMsg.scheduleAt,
+      scheduleAtActual = Option(javaMsg.scheduleAtActual)
+    )
 }
 
 /** Function that generates CronMessages for given instants. */

@@ -78,7 +78,7 @@ final case class CronDailySchedule(
 
 object CronDailySchedule {
 
-  /** Creates a DailyCronSchedule with the specified configuration. */
+  /** Creates a [[DailyCronSchedule]] with the specified configuration. */
   def create(
     zoneId: ZoneId,
     hoursOfDay: List[LocalTime],
@@ -87,16 +87,12 @@ object CronDailySchedule {
   ): CronDailySchedule =
     CronDailySchedule(zoneId, hoursOfDay, scheduleInAdvance, scheduleInterval)
 
-  /** Conversion extension for JVM CronDailySchedule. */
-  extension (javaSchedule: jvm.CronDailySchedule) {
-
-    /** Converts a JVM CronDailySchedule to a Scala CronDailySchedule. */
-    def asScala: CronDailySchedule =
-      CronDailySchedule(
-        zoneId = javaSchedule.zoneId,
-        hoursOfDay = javaSchedule.hoursOfDay.asScala.toList,
-        scheduleInAdvance = javaSchedule.scheduleInAdvance,
-        scheduleInterval = javaSchedule.scheduleInterval
-      )
-  }
+  /** Converts from the JVM type to the Scala-specific [[CronDailySchedule]]. */
+  def fromJava(javaSchedule: jvm.CronDailySchedule): CronDailySchedule =
+    CronDailySchedule(
+      zoneId = javaSchedule.zoneId,
+      hoursOfDay = javaSchedule.hoursOfDay.asScala.toList,
+      scheduleInAdvance = javaSchedule.scheduleInAdvance,
+      scheduleInterval = javaSchedule.scheduleInterval
+    )
 }

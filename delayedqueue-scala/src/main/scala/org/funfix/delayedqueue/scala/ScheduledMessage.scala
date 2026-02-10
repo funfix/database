@@ -49,19 +49,14 @@ final case class ScheduledMessage[+A](
 }
 
 object ScheduledMessage {
-
-  /** Conversion extension for JVM ScheduledMessage. */
-  extension [A](javaMsg: jvm.ScheduledMessage[A]) {
-
-    /** Converts a JVM ScheduledMessage to a Scala ScheduledMessage. */
-    def asScala: ScheduledMessage[A] =
-      ScheduledMessage(
-        key = javaMsg.key,
-        payload = javaMsg.payload,
-        scheduleAt = javaMsg.scheduleAt,
-        canUpdate = javaMsg.canUpdate
-      )
-  }
+  /** Converts a JVM ScheduledMessage to a Scala ScheduledMessage. */
+  def fromJava[A](javaMsg: jvm.ScheduledMessage[? <: A]): ScheduledMessage[A] =
+    ScheduledMessage(
+      key = javaMsg.key,
+      payload = javaMsg.payload,
+      scheduleAt = javaMsg.scheduleAt,
+      canUpdate = javaMsg.canUpdate
+    )
 }
 
 /** Wrapper for batched message operations, associating input metadata with
@@ -91,17 +86,12 @@ final case class BatchedMessage[+In, +A](
 }
 
 object BatchedMessage {
-
-  /** Conversion extension for JVM BatchedMessage. */
-  extension [In, A](javaMsg: jvm.BatchedMessage[In, A]) {
-
-    /** Converts a JVM BatchedMessage to a Scala BatchedMessage. */
-    def asScala: BatchedMessage[In, A] =
-      BatchedMessage(
-        input = javaMsg.input,
-        message = ScheduledMessage.asScala(javaMsg.message)
-      )
-  }
+  /** Converts a JVM BatchedMessage to a Scala BatchedMessage. */
+  def fromJava[In, A](javaMsg: jvm.BatchedMessage[? <: In, ? <: A]): BatchedMessage[In, A] =
+    BatchedMessage(
+      input = javaMsg.input,
+      message = ScheduledMessage.fromJava(javaMsg.message)
+    )
 }
 
 /** Reply for a batched message operation, containing the outcome.
@@ -130,15 +120,11 @@ final case class BatchedReply[+In, +A](
 
 object BatchedReply {
 
-  /** Conversion extension for JVM BatchedReply. */
-  extension [In, A](javaReply: jvm.BatchedReply[In, A]) {
-
-    /** Converts a JVM BatchedReply to a Scala BatchedReply. */
-    def asScala: BatchedReply[In, A] =
-      BatchedReply(
-        input = javaReply.input,
-        message = ScheduledMessage.asScala(javaReply.message),
-        outcome = OfferOutcome.asScala(javaReply.outcome)
-      )
-  }
+  /** Converts a JVM BatchedReply to a Scala BatchedReply. */
+  def fromJava[In, A](javaReply: jvm.BatchedReply[? <: In, ? <: A]): BatchedReply[In, A] =
+    BatchedReply(
+      input = javaReply.input,
+      message = ScheduledMessage.fromJava(javaReply.message),
+      outcome = OfferOutcome.fromJava(javaReply.outcome)
+    )
 }

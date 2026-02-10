@@ -20,35 +20,30 @@ import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 import munit.ScalaCheckSuite
-import org.funfix.delayedqueue.scala.DelayedQueueTimeConfig.asScala
-import org.funfix.delayedqueue.scala.Generators.given
-import org.funfix.delayedqueue.scala.MessageId.asScala
-import org.funfix.delayedqueue.scala.OfferOutcome.asScala
-import org.funfix.delayedqueue.scala.ScheduledMessage.asScala
 import org.scalacheck.Gen
 import org.scalacheck.Prop.*
 import scala.concurrent.duration.FiniteDuration
 
 class DataStructuresPropertySpec extends ScalaCheckSuite {
-  property("ScheduledMessage asJava/asScala roundtrip preserves data") {
+  property("ScheduledMessage asJava/fromJava roundtrip preserves data") {
     forAll { (key: String, payload: String, instant: Instant, canUpdate: Boolean) =>
       val original = ScheduledMessage(key, payload, instant, canUpdate)
-      val roundtripped = original.asJava.asScala
+      val roundTripped = ScheduledMessage.fromJava(original.asJava)
 
-      assertEquals(roundtripped.key, original.key)
-      assertEquals(roundtripped.payload, original.payload)
-      assertEquals(roundtripped.scheduleAt, original.scheduleAt)
-      assertEquals(roundtripped.canUpdate, original.canUpdate)
+      assertEquals(roundTripped.key, original.key)
+      assertEquals(roundTripped.payload, original.payload)
+      assertEquals(roundTripped.scheduleAt, original.scheduleAt)
+      assertEquals(roundTripped.canUpdate, original.canUpdate)
     }
   }
 
-  property("DelayedQueueTimeConfig asJava/asScala roundtrip preserves data") {
+  property("DelayedQueueTimeConfig asJava/fromJava roundtrip preserves data") {
     forAll { (acquireTimeout: FiniteDuration, pollPeriod: FiniteDuration) =>
       val original = DelayedQueueTimeConfig(acquireTimeout, pollPeriod)
-      val roundtripped = original.asJava.asScala
+      val roundTripped = DelayedQueueTimeConfig.fromJava(original.asJava)
 
-      assertEquals(roundtripped.acquireTimeout.toMillis, original.acquireTimeout.toMillis)
-      assertEquals(roundtripped.pollPeriod.toMillis, original.pollPeriod.toMillis)
+      assertEquals(roundTripped.acquireTimeout.toMillis, original.acquireTimeout.toMillis)
+      assertEquals(roundTripped.pollPeriod.toMillis, original.pollPeriod.toMillis)
     }
   }
 
@@ -56,7 +51,7 @@ class DataStructuresPropertySpec extends ScalaCheckSuite {
     forAll { (value: String) =>
       val messageId = MessageId(value)
       assertEquals(messageId.value, value)
-      assertEquals(messageId.asJava.asScala.value, value)
+      assertEquals(MessageId.fromJava(messageId.asJava).value, value)
     }
   }
 
@@ -116,19 +111,18 @@ class DataStructuresPropertySpec extends ScalaCheckSuite {
     }
   }
 
-  property("OfferOutcome asJava/asScala roundtrip") {
+  property("OfferOutcome asJava/fromJava roundtrip") {
     forAll(Gen.oneOf(OfferOutcome.Created, OfferOutcome.Updated, OfferOutcome.Ignored)) {
       outcome =>
-        val roundtripped = outcome.asJava.asScala
-        assertEquals(roundtripped, outcome)
+        val roundTripped = OfferOutcome.fromJava(outcome.asJava)
+        assertEquals(roundTripped, outcome)
     }
   }
 
-  property("DeliveryType asJava/asScala roundtrip") {
-    import org.funfix.delayedqueue.scala.DeliveryType.asScala
+  property("DeliveryType asJava/fromJava roundtrip") {
     forAll(Gen.oneOf(DeliveryType.FirstDelivery, DeliveryType.Redelivery)) { deliveryType =>
-      val roundtripped = deliveryType.asJava.asScala
-      assertEquals(roundtripped, deliveryType)
+      val roundTripped = DeliveryType.fromJava(deliveryType.asJava)
+      assertEquals(roundTripped, deliveryType)
     }
   }
 

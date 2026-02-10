@@ -51,18 +51,13 @@ final case class JdbcConnectionConfig(
 }
 
 object JdbcConnectionConfig {
-
-  /** Conversion extension for JVM JdbcConnectionConfig. */
-  extension (javaConfig: jvm.JdbcConnectionConfig) {
-
-    /** Converts a JVM JdbcConnectionConfig to a Scala JdbcConnectionConfig. */
-    def asScala: JdbcConnectionConfig =
-      JdbcConnectionConfig(
-        url = javaConfig.url,
-        driver = JdbcDriver.asScala(javaConfig.driver),
-        username = Option(javaConfig.username),
-        password = Option(javaConfig.password),
-        pool = Option(javaConfig.pool).map(JdbcDatabasePoolConfig.asScala)
-      )
-  }
+  /** Converts a JVM JdbcConnectionConfig to a Scala JdbcConnectionConfig. */
+  def fromJava(javaConfig: jvm.JdbcConnectionConfig): JdbcConnectionConfig =
+    JdbcConnectionConfig(
+      url = javaConfig.url,
+      driver = JdbcDriver.fromJava(javaConfig.driver),
+      username = Option(javaConfig.username),
+      password = Option(javaConfig.password),
+      pool = Option(javaConfig.pool).map(JdbcDatabasePoolConfig.fromJava)
+    )
 }

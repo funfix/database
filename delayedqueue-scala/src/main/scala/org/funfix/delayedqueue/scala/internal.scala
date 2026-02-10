@@ -21,10 +21,6 @@ import cats.effect.Resource
 import cats.syntax.functor.*
 import java.time.Instant
 import org.funfix.delayedqueue.jvm
-import org.funfix.delayedqueue.scala.AckEnvelope.asScala
-import org.funfix.delayedqueue.scala.BatchedReply.asScala
-import org.funfix.delayedqueue.scala.DelayedQueueTimeConfig.asScala
-import org.funfix.delayedqueue.scala.OfferOutcome.asScala
 import scala.jdk.CollectionConverters.*
 
 /** Wrapper that implements the Scala DelayedQueue trait by delegating to a JVM
@@ -35,13 +31,13 @@ private[scala] class DelayedQueueWrapper[A](
 ) extends DelayedQueue[A] {
 
   override def getTimeConfig: IO[DelayedQueueTimeConfig] =
-    IO(underlying.getTimeConfig.asScala)
+    IO(DelayedQueueTimeConfig.fromJava(underlying.getTimeConfig))
 
   override def offerOrUpdate(key: String, payload: A, scheduleAt: Instant): IO[OfferOutcome] =
-    IO(underlying.offerOrUpdate(key, payload, scheduleAt).asScala)
+    IO(OfferOutcome.fromJava(underlying.offerOrUpdate(key, payload, scheduleAt)))
 
   override def offerIfNotExists(key: String, payload: A, scheduleAt: Instant): IO[OfferOutcome] =
-    IO(underlying.offerIfNotExists(key, payload, scheduleAt).asScala)
+    IO(OfferOutcome.fromJava(underlying.offerIfNotExists(key, payload, scheduleAt)))
 
   override def offerBatch[In](
     messages: List[BatchedMessage[In, A]]
@@ -49,12 +45,12 @@ private[scala] class DelayedQueueWrapper[A](
     IO {
       val javaMessages = messages.map(_.asJava).asJava
       val javaReplies = underlying.offerBatch(javaMessages)
-      javaReplies.asScala.toList.map(_.asScala)
+      javaReplies.asScala.toList.map(BatchedReply.fromJava)
     }
 
   override def tryPoll: IO[Option[AckEnvelope[A]]] =
     IO {
-      Option(underlying.tryPoll()).map(_.asScala)
+      Option(underlying.tryPoll()).map(AckEnvelope.fromJava)
     }
 
   override def tryPollMany(batchMaxSize: Int): IO[AckEnvelope[List[A]]] =
@@ -62,20 +58,20 @@ private[scala] class DelayedQueueWrapper[A](
       val javaEnvelope = underlying.tryPollMany(batchMaxSize)
       AckEnvelope(
         payload = javaEnvelope.payload.asScala.toList,
-        messageId = MessageId.asScala(javaEnvelope.messageId),
+        messageId = MessageId.fromJava(javaEnvelope.messageId),
         timestamp = javaEnvelope.timestamp,
         source = javaEnvelope.source,
-        deliveryType = DeliveryType.asScala(javaEnvelope.deliveryType),
+        deliveryType = DeliveryType.fromJava(javaEnvelope.deliveryType),
         acknowledge = IO.blocking(javaEnvelope.acknowledge())
       )
     }
 
   override def poll: IO[AckEnvelope[A]] =
-    IO.interruptible(underlying.poll().asScala)
+    IO.interruptible(AckEnvelope.fromJava(underlying.poll()))
 
   override def read(key: String): IO[Option[AckEnvelope[A]]] =
     IO {
-      Option(underlying.read(key)).map(_.asScala)
+      Option(underlying.read(key)).map(AckEnvelope.fromJava)
     }
 
   override def dropMessage(key: String): IO[Boolean] =
@@ -92,7 +88,7 @@ private[scala] class DelayedQueueWrapper[A](
 }
 
 /** Wrapper for CronService that delegates to the JVM implementation. */
-private[scala] class CronServiceWrapper[A](
+final private[scala] class CronServiceWrapper[A](
   underlying: jvm.CronService[A]
 ) extends CronService[A] {
 

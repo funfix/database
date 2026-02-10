@@ -17,7 +17,6 @@
 package org.funfix.delayedqueue.scala
 
 import java.time.Duration
-import org.funfix.delayedqueue.scala.RetryConfig.asScala
 
 class RetryConfigSpec extends munit.FunSuite {
 
@@ -37,16 +36,16 @@ class RetryConfigSpec extends munit.FunSuite {
     assertEquals(RetryConfig.NO_RETRIES.backoffFactor, 1.0)
   }
 
-  test("asJava and asScala should be symmetric") {
+  test("asJava and fromJava should be symmetric") {
     val original = RetryConfig.DEFAULT
-    val roundtripped = original.asJava.asScala
+    val roundTripped = RetryConfig.fromJava(original.asJava)
 
-    assertEquals(roundtripped.maxRetries, original.maxRetries)
-    assertEquals(roundtripped.totalSoftTimeout, original.totalSoftTimeout)
-    assertEquals(roundtripped.perTryHardTimeout, original.perTryHardTimeout)
-    assertEquals(roundtripped.initialDelay, original.initialDelay)
-    assertEquals(roundtripped.maxDelay, original.maxDelay)
-    assertEquals(roundtripped.backoffFactor, original.backoffFactor)
+    assertEquals(roundTripped.maxRetries, original.maxRetries)
+    assertEquals(roundTripped.totalSoftTimeout, original.totalSoftTimeout)
+    assertEquals(roundTripped.perTryHardTimeout, original.perTryHardTimeout)
+    assertEquals(roundTripped.initialDelay, original.initialDelay)
+    assertEquals(roundTripped.maxDelay, original.maxDelay)
+    assertEquals(roundTripped.backoffFactor, original.backoffFactor)
   }
 
   test("should validate backoffFactor >= 1.0") {

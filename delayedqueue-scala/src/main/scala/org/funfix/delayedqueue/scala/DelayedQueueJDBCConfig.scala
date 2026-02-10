@@ -115,19 +115,15 @@ object DelayedQueueJDBCConfig {
       retryPolicy = Some(RetryConfig.DEFAULT)
     )
 
-  /** Conversion extension for JVM DelayedQueueJDBCConfig. */
-  extension (javaConfig: jvm.DelayedQueueJDBCConfig) {
-
-    /** Converts a JVM DelayedQueueJDBCConfig to a Scala DelayedQueueJDBCConfig.
-      */
-    def asScala: DelayedQueueJDBCConfig =
-      DelayedQueueJDBCConfig(
-        db = JdbcConnectionConfig.asScala(javaConfig.db),
-        tableName = javaConfig.tableName,
-        time = DelayedQueueTimeConfig.asScala(javaConfig.time),
-        queueName = javaConfig.queueName,
-        ackEnvSource = javaConfig.ackEnvSource,
-        retryPolicy = Option(javaConfig.retryPolicy).map(RetryConfig.asScala)
-      )
-  }
+  /** Converts a JVM DelayedQueueJDBCConfig to a Scala DelayedQueueJDBCConfig.
+    */
+  def fromJava(javaConfig: jvm.DelayedQueueJDBCConfig): DelayedQueueJDBCConfig =
+    DelayedQueueJDBCConfig(
+      db = JdbcConnectionConfig.fromJava(javaConfig.db),
+      tableName = javaConfig.tableName,
+      time = DelayedQueueTimeConfig.fromJava(javaConfig.time),
+      queueName = javaConfig.queueName,
+      ackEnvSource = javaConfig.ackEnvSource,
+      retryPolicy = Option(javaConfig.retryPolicy).map(RetryConfig.fromJava)
+    )
 }

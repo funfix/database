@@ -24,43 +24,26 @@ import org.funfix.delayedqueue.jvm
   * belonging to that configuration. If the configuration changes, the hash will
   * differ, allowing the system to clean up old scheduled messages.
   */
-opaque type CronConfigHash = String
+final case class CronConfigHash(value: String) {
+  /** Converts this Scala CronConfigHash to a JVM CronConfigHash. */
+  def asJava: jvm.CronConfigHash =
+    new jvm.CronConfigHash(value)
+}
 
 object CronConfigHash {
-
-  /** Creates a CronConfigHash from a String value. */
-  def apply(value: String): CronConfigHash =
-    value
-
-  /** Conversion extension for CronConfigHash. */
-  extension (hash: CronConfigHash) {
-
-    /** Gets the string value of the CronConfigHash. */
-    def value: String =
-      hash
-
-    /** Converts this Scala CronConfigHash to a JVM CronConfigHash. */
-    def asJava: jvm.CronConfigHash =
-      new jvm.CronConfigHash(hash)
-  }
-
   /** Creates a ConfigHash from a daily cron schedule configuration. */
   def fromDailyCron(config: CronDailySchedule): CronConfigHash =
-    jvm.CronConfigHash.fromDailyCron(config.asJava).asScala
+    fromJava(jvm.CronConfigHash.fromDailyCron(config.asJava))
 
   /** Creates a ConfigHash from a periodic tick configuration. */
   def fromPeriodicTick(period: java.time.Duration): CronConfigHash =
-    jvm.CronConfigHash.fromPeriodicTick(period).asScala
+    fromJava(jvm.CronConfigHash.fromPeriodicTick(period))
 
   /** Creates a ConfigHash from an arbitrary string. */
   def fromString(text: String): CronConfigHash =
-    jvm.CronConfigHash.fromString(text).asScala
+    fromJava(jvm.CronConfigHash.fromString(text))
 
-  /** Conversion extension for JVM CronConfigHash. */
-  extension (javaHash: jvm.CronConfigHash) {
-
-    /** Converts a JVM CronConfigHash to a Scala CronConfigHash. */
-    def asScala: CronConfigHash =
-      CronConfigHash(javaHash.value)
-  }
+  /** Converts a JVM CronConfigHash to a Scala CronConfigHash. */
+  def fromJava(javaHash: jvm.CronConfigHash): CronConfigHash =
+    CronConfigHash(javaHash.value)
 }

@@ -96,24 +96,20 @@ object RetryConfig {
     *   - 2.0 backoff factor (exponential doubling)
     */
   val DEFAULT: RetryConfig =
-    jvm.RetryConfig.DEFAULT.asScala
+    fromJava(jvm.RetryConfig.DEFAULT)
 
   /** No retries - operations fail immediately on first error. */
   val NO_RETRIES: RetryConfig =
-    jvm.RetryConfig.NO_RETRIES.asScala
+    fromJava(jvm.RetryConfig.NO_RETRIES)
 
-  /** Conversion extension for JVM RetryConfig. */
-  extension (javaConfig: jvm.RetryConfig) {
-
-    /** Converts a JVM RetryConfig to a Scala RetryConfig. */
-    def asScala: RetryConfig =
-      RetryConfig(
-        initialDelay = javaConfig.initialDelay,
-        maxDelay = javaConfig.maxDelay,
-        backoffFactor = javaConfig.backoffFactor,
-        maxRetries = Option(javaConfig.maxRetries).map(_.longValue),
-        totalSoftTimeout = Option(javaConfig.totalSoftTimeout),
-        perTryHardTimeout = Option(javaConfig.perTryHardTimeout)
-      )
-  }
+  /** Converts a JVM RetryConfig to a Scala RetryConfig. */
+  def fromJava(javaConfig: jvm.RetryConfig): RetryConfig =
+    RetryConfig(
+      initialDelay = javaConfig.initialDelay,
+      maxDelay = javaConfig.maxDelay,
+      backoffFactor = javaConfig.backoffFactor,
+      maxRetries = Option(javaConfig.maxRetries).map(_.longValue),
+      totalSoftTimeout = Option(javaConfig.totalSoftTimeout),
+      perTryHardTimeout = Option(javaConfig.perTryHardTimeout)
+    )
 }

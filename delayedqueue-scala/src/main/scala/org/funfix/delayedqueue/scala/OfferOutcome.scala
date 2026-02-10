@@ -51,15 +51,11 @@ object OfferOutcome {
   /** Message offer was ignored (already exists and canUpdate was false). */
   case object Ignored extends OfferOutcome
 
-  /** Conversion extension for JVM OfferOutcome. */
-  extension (javaOutcome: jvm.OfferOutcome) {
-
-    /** Converts a JVM OfferOutcome to a Scala OfferOutcome. */
-    def asScala: OfferOutcome =
-      javaOutcome match {
-        case _: jvm.OfferOutcome.Created => OfferOutcome.Created
-        case _: jvm.OfferOutcome.Updated => OfferOutcome.Updated
-        case _: jvm.OfferOutcome.Ignored => OfferOutcome.Ignored
-      }
-  }
+  /** Converts a JVM OfferOutcome to a Scala OfferOutcome. */
+  def fromJava(javaOutcome: jvm.OfferOutcome): OfferOutcome =
+    javaOutcome match {
+      case _: jvm.OfferOutcome.Created => OfferOutcome.Created
+      case _: jvm.OfferOutcome.Updated => OfferOutcome.Updated
+      case _: jvm.OfferOutcome.Ignored => OfferOutcome.Ignored
+    }
 }

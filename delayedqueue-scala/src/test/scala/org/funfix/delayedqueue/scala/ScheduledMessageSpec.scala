@@ -17,12 +17,9 @@
 package org.funfix.delayedqueue.scala
 
 import java.time.Instant
-import org.funfix.delayedqueue.scala.OfferOutcome.asScala
-import org.funfix.delayedqueue.scala.ScheduledMessage.asScala
 
 class ScheduledMessageSpec extends munit.FunSuite {
-
-  test("ScheduledMessage asJava and asScala should be symmetric") {
+  test("ScheduledMessage asJava and fromJava should be symmetric") {
     val original = ScheduledMessage(
       key = "test-key",
       payload = "test-payload",
@@ -30,12 +27,11 @@ class ScheduledMessageSpec extends munit.FunSuite {
       canUpdate = true
     )
 
-    val roundtripped = original.asJava.asScala
-
-    assertEquals(roundtripped.key, original.key)
-    assertEquals(roundtripped.payload, original.payload)
-    assertEquals(roundtripped.scheduleAt, original.scheduleAt)
-    assertEquals(roundtripped.canUpdate, original.canUpdate)
+    val roundTripped = ScheduledMessage.fromJava(original.asJava)
+    assertEquals(roundTripped.key, original.key)
+    assertEquals(roundTripped.payload, original.payload)
+    assertEquals(roundTripped.scheduleAt, original.scheduleAt)
+    assertEquals(roundTripped.canUpdate, original.canUpdate)
   }
 
   test("BatchedMessage reply should create BatchedReply") {
@@ -59,12 +55,12 @@ class ScheduledMessageSpec extends munit.FunSuite {
     assert(!OfferOutcome.Updated.isIgnored)
   }
 
-  test("OfferOutcome asJava and asScala should be symmetric") {
+  test("OfferOutcome asJava and fromJava should be symmetric") {
     val outcomes = List(OfferOutcome.Created, OfferOutcome.Updated, OfferOutcome.Ignored)
 
     outcomes.foreach { outcome =>
-      val roundtripped = outcome.asJava.asScala
-      assertEquals(roundtripped, outcome)
+      val roundTripped = OfferOutcome.fromJava(outcome.asJava)
+      assertEquals(roundTripped, outcome)
     }
   }
 }

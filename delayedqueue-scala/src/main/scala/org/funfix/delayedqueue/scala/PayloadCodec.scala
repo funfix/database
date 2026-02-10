@@ -94,7 +94,8 @@ object PayloadCodec {
           Right(javaSerializer.deserialize(serialized))
         catch {
           case e: IllegalArgumentException => Left(e)
-          case NonFatal(e)                 => Left(new IllegalArgumentException(e.getMessage, e))
+          case NonFatal(e)                 =>
+            Left(new IllegalArgumentException(e.getMessage, e))
         }
     }
 }

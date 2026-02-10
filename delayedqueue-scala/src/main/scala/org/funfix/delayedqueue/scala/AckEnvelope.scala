@@ -64,21 +64,15 @@ final case class AckEnvelope[+A](
 )
 
 object AckEnvelope {
-
-  /** Conversion extension for JVM AckEnvelope. */
-  extension [A](javaEnv: jvm.AckEnvelope[A]) {
-
-    /** Converts a JVM AckEnvelope to a Scala AckEnvelope. */
-    def asScala: AckEnvelope[A] =
-      AckEnvelope(
-        payload = javaEnv.payload,
-        messageId = MessageId.asScala(javaEnv.messageId),
-        timestamp = javaEnv.timestamp,
-        source = javaEnv.source,
-        deliveryType = DeliveryType.asScala(javaEnv.deliveryType),
-        acknowledge = IO.blocking(javaEnv.acknowledge())
-      )
-  }
+  def fromJava[A](javaEnv: jvm.AckEnvelope[? <: A]): AckEnvelope[A] =
+    AckEnvelope(
+      payload = javaEnv.payload,
+      messageId = MessageId.fromJava(javaEnv.messageId),
+      timestamp = javaEnv.timestamp,
+      source = javaEnv.source,
+      deliveryType = DeliveryType.fromJava(javaEnv.deliveryType),
+      acknowledge = IO.blocking(javaEnv.acknowledge())
+    )
 }
 
 /** Unique identifier for a message. */
@@ -102,13 +96,9 @@ object MessageId {
       new jvm.MessageId(id)
   }
 
-  /** Conversion extension for JVM MessageId. */
-  extension (javaId: jvm.MessageId) {
-
-    /** Converts a JVM MessageId to a Scala MessageId. */
-    def asScala: MessageId =
-      MessageId(javaId.value)
-  }
+  /** Converts a JVM MessageId to a Scala MessageId. */
+  def fromJava(javaId: jvm.MessageId): MessageId =
+    MessageId(javaId.value)
 }
 
 /** Indicates whether a message is being delivered for the first time or
@@ -132,15 +122,10 @@ enum DeliveryType {
 }
 
 object DeliveryType {
-
-  /** Conversion extension for JVM DeliveryType. */
-  extension (javaType: jvm.DeliveryType) {
-
-    /** Converts a JVM DeliveryType to a Scala DeliveryType. */
-    def asScala: DeliveryType =
-      javaType match {
-        case jvm.DeliveryType.FIRST_DELIVERY => DeliveryType.FirstDelivery
-        case jvm.DeliveryType.REDELIVERY     => DeliveryType.Redelivery
-      }
-  }
+  /** Converts a JVM DeliveryType to a Scala DeliveryType. */
+  def fromJava(javaType: jvm.DeliveryType): DeliveryType =
+    javaType match {
+      case jvm.DeliveryType.FIRST_DELIVERY => DeliveryType.FirstDelivery
+      case jvm.DeliveryType.REDELIVERY     => DeliveryType.Redelivery
+    }
 }
