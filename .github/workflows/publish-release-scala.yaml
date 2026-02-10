@@ -26,6 +26,7 @@ jobs:
           # For sbt
           PGP_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSWORD }}
           PGP_SECRET: ${{ secrets.SIGNING_KEY }}
+          SBT_PGP_USE_GPG: false
           SONATYPE_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           BUILD_RELEASE: true
