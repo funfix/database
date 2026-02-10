@@ -65,7 +65,7 @@ jobs:
       - name: Docker Info
         run: docker info
       - name: Test (SBT)
-        run: ./sbt ";publishLocalGradleDependencies;test;scalafmtCheckAll"
+        run: ./sbt ci-test
       - name: Upload Results
         uses: actions/upload-artifact@v5
         if: always()

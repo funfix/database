@@ -15,7 +15,7 @@ jobs:
         with:
           java-version: 21
           distribution: 'temurin'
-      - run: sbt ci-release
+      - run: ./sbt ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSWORD }}
           PGP_SECRET: ${{ secrets.SIGNING_KEY }}
