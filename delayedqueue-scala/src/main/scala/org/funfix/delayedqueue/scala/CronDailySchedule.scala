@@ -25,13 +25,14 @@ import scala.jdk.CollectionConverters.*
 
 /** Configuration for daily recurring scheduled messages with timezone support.
   *
-  * This class defines when messages should be scheduled each day, with support for multiple times
-  * per day and scheduling messages in advance.
+  * This class defines when messages should be scheduled each day, with support
+  * for multiple times per day and scheduling messages in advance.
   *
   * @param zoneId
   *   the timezone for interpreting the hours of day
   * @param hoursOfDay
-  *   the times during each day when messages should be scheduled (must not be empty)
+  *   the times during each day when messages should be scheduled (must not be
+  *   empty)
   * @param scheduleInAdvance
   *   how far in advance to schedule messages
   * @param scheduleInterval
@@ -51,8 +52,9 @@ final case class CronDailySchedule(
 
   /** Calculates the next scheduled times starting from now.
     *
-    * Returns all times that should be scheduled, from now until (now + scheduleInAdvance). Always
-    * returns at least one time (the next scheduled time), even if it's beyond scheduleInAdvance.
+    * Returns all times that should be scheduled, from now until (now +
+    * scheduleInAdvance). Always returns at least one time (the next scheduled
+    * time), even if it's beyond scheduleInAdvance.
     *
     * @param now
     *   the current time

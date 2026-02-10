@@ -21,8 +21,9 @@ import org.funfix.delayedqueue.jvm
 
 /** Configuration for retry loops with exponential backoff.
   *
-  * Used to configure retry behavior for database operations that may experience transient failures
-  * such as deadlocks, connection issues, or transaction rollbacks.
+  * Used to configure retry behavior for database operations that may experience
+  * transient failures such as deadlocks, connection issues, or transaction
+  * rollbacks.
   *
   * ==Example==
   *
@@ -85,7 +86,8 @@ final case class RetryConfig(
 
 object RetryConfig {
 
-  /** Default retry configuration with reasonable defaults for database operations:
+  /** Default retry configuration with reasonable defaults for database
+    * operations:
     *   - 5 retries maximum
     *   - 30 second total timeout
     *   - 10 second per-try timeout

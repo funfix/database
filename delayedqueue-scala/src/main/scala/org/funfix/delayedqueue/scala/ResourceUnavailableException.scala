@@ -16,13 +16,16 @@
 
 package org.funfix.delayedqueue.scala
 
-/** Checked exception thrown in case of exceptions happening that are not recoverable, rendering
-  * DelayedQueue inaccessible.
+import java.io.IOException
+
+/** Checked exception thrown in case of exceptions happening that are not
+  * recoverable, rendering DelayedQueue inaccessible.
   *
-  * Example: issues with the RDBMS (bugs, or connection unavailable, failing after multiple retries)
+  * Example: issues with the RDBMS (bugs, or connection unavailable, failing
+  * after multiple retries)
   */
 class ResourceUnavailableException(message: String, cause: Throwable | Null)
-  extends Exception(message, cause) {
+  extends IOException(message, cause) {
 
   def this(message: String) = this(message, null)
 }

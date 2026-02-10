@@ -20,12 +20,14 @@ import org.funfix.delayedqueue.jvm
 
 /** Outcome of offering a message to the delayed queue.
   *
-  * This sealed trait represents the possible results when adding or updating a message in the
-  * queue.
+  * This sealed trait represents the possible results when adding or updating a
+  * message in the queue.
   */
 sealed trait OfferOutcome {
 
-  /** Returns true if the offer was ignored (message already exists and cannot be updated). */
+  /** Returns true if the offer was ignored (message already exists and cannot
+    * be updated).
+    */
   def isIgnored: Boolean = this == OfferOutcome.Ignored
 
   /** Converts this Scala OfferOutcome to a JVM OfferOutcome. */

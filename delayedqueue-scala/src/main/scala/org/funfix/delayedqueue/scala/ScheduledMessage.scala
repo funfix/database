@@ -21,13 +21,14 @@ import org.funfix.delayedqueue.jvm
 
 /** Represents a message scheduled for future delivery in the delayed queue.
   *
-  * This is the primary data structure for messages that will be processed at a specific time in the
-  * future.
+  * This is the primary data structure for messages that will be processed at a
+  * specific time in the future.
   *
   * @tparam A
   *   the type of the message payload
   * @param key
-  *   unique identifier for this message; can be used to update or delete the message
+  *   unique identifier for this message; can be used to update or delete the
+  *   message
   * @param payload
   *   the actual message content
   * @param scheduleAt
@@ -63,7 +64,8 @@ object ScheduledMessage {
   }
 }
 
-/** Wrapper for batched message operations, associating input metadata with scheduled messages.
+/** Wrapper for batched message operations, associating input metadata with
+  * scheduled messages.
   *
   * @tparam In
   *   the type of the input metadata

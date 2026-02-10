@@ -20,7 +20,8 @@ import org.funfix.delayedqueue.jvm
 
 /** Configuration for JDBC-based delayed queue instances.
   *
-  * This configuration groups together all settings needed to create a DelayedQueueJDBC instance.
+  * This configuration groups together all settings needed to create a
+  * DelayedQueueJDBC instance.
   *
   * ==Example==
   *
@@ -50,13 +51,15 @@ import org.funfix.delayedqueue.jvm
   * @param time
   *   Time configuration for queue operations (poll periods, timeouts, etc.)
   * @param queueName
-  *   Unique name for this queue instance, used for partitioning messages in shared tables. Multiple
-  *   queue instances can share the same database table if they have different queue names.
+  *   Unique name for this queue instance, used for partitioning messages in
+  *   shared tables. Multiple queue instances can share the same database table
+  *   if they have different queue names.
   * @param ackEnvSource
-  *   Source identifier for acknowledgement envelopes, used for tracing and debugging. Typically,
-  *   follows the pattern "DelayedQueueJDBC:{queueName}".
+  *   Source identifier for acknowledgement envelopes, used for tracing and
+  *   debugging. Typically, follows the pattern "DelayedQueueJDBC:{queueName}".
   * @param retryPolicy
-  *   Optional retry configuration for database operations. If None, uses RetryConfig.DEFAULT.
+  *   Optional retry configuration for database operations. If None, uses
+  *   RetryConfig.DEFAULT.
   */
 final case class DelayedQueueJDBCConfig(
     db: JdbcConnectionConfig,
@@ -70,7 +73,9 @@ final case class DelayedQueueJDBCConfig(
   require(queueName.nonEmpty, "queueName must not be blank")
   require(ackEnvSource.nonEmpty, "ackEnvSource must not be blank")
 
-  /** Converts this Scala DelayedQueueJDBCConfig to a JVM DelayedQueueJDBCConfig. */
+  /** Converts this Scala DelayedQueueJDBCConfig to a JVM
+    * DelayedQueueJDBCConfig.
+    */
   def asJava: jvm.DelayedQueueJDBCConfig =
     new jvm.DelayedQueueJDBCConfig(
       db.asJava,
@@ -84,7 +89,8 @@ final case class DelayedQueueJDBCConfig(
 
 object DelayedQueueJDBCConfig {
 
-  /** Creates a default configuration for the given database, table name, and queue name.
+  /** Creates a default configuration for the given database, table name, and
+    * queue name.
     *
     * @param db
     *   JDBC connection configuration
@@ -112,7 +118,8 @@ object DelayedQueueJDBCConfig {
   /** Conversion extension for JVM DelayedQueueJDBCConfig. */
   extension (javaConfig: jvm.DelayedQueueJDBCConfig) {
 
-    /** Converts a JVM DelayedQueueJDBCConfig to a Scala DelayedQueueJDBCConfig. */
+    /** Converts a JVM DelayedQueueJDBCConfig to a Scala DelayedQueueJDBCConfig.
+      */
     def asScala: DelayedQueueJDBCConfig =
       DelayedQueueJDBCConfig(
         db = JdbcConnectionConfig.asScala(javaConfig.db),

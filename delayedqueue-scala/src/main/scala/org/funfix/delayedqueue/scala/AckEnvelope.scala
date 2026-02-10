@@ -22,8 +22,9 @@ import org.funfix.delayedqueue.jvm
 
 /** Message envelope that includes an acknowledgment callback.
   *
-  * This wrapper is returned when polling messages from the queue. It contains the message payload
-  * plus metadata and an acknowledgment function that should be called after processing completes.
+  * This wrapper is returned when polling messages from the queue. It contains
+  * the message payload plus metadata and an acknowledgment function that should
+  * be called after processing completes.
   *
   * This type is not serializable.
   *
@@ -50,7 +51,8 @@ import org.funfix.delayedqueue.jvm
   * @param deliveryType
   *   indicates whether this is the first delivery or a redelivery
   * @param acknowledge
-  *   IO action to call to acknowledge successful processing, and delete the message from the queue
+  *   IO action to call to acknowledge successful processing, and delete the
+  *   message from the queue
   */
 final case class AckEnvelope[+A](
     payload: A,
@@ -107,13 +109,16 @@ object MessageId {
   }
 }
 
-/** Indicates whether a message is being delivered for the first time or redelivered. */
+/** Indicates whether a message is being delivered for the first time or
+  * redelivered.
+  */
 enum DeliveryType {
 
   /** Message is being delivered for the first time. */
   case FirstDelivery
 
-  /** Message is being redelivered (was scheduled again after initial delivery). */
+  /** Message is being redelivered (was scheduled again after initial delivery).
+    */
   case Redelivery
 
   /** Converts this Scala DeliveryType to a JVM DeliveryType. */

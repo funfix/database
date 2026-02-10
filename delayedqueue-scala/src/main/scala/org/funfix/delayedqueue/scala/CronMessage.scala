@@ -21,9 +21,9 @@ import org.funfix.delayedqueue.jvm
 
 /** Represents a message for periodic (cron-like) scheduling.
   *
-  * This wrapper is used for messages that should be scheduled repeatedly. The `scheduleAt` is used
-  * to generate the unique key, while `scheduleAtActual` allows for a different execution time
-  * (e.g., to add a delay).
+  * This wrapper is used for messages that should be scheduled repeatedly. The
+  * `scheduleAt` is used to generate the unique key, while `scheduleAtActual`
+  * allows for a different execution time (e.g., to add a delay).
   *
   * @tparam A
   *   the type of the message payload
@@ -82,7 +82,8 @@ object CronMessage {
   def key(configHash: CronConfigHash, keyPrefix: String, scheduleAt: Instant): String =
     jvm.CronMessage.key(configHash.asJava, keyPrefix, scheduleAt)
 
-  /** Creates a factory function that produces CronMessages with a static payload.
+  /** Creates a factory function that produces CronMessages with a static
+    * payload.
     *
     * @param payload
     *   the static payload to use for all generated messages

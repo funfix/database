@@ -22,9 +22,9 @@ import java.time.Instant
 
 /** Service for installing cron-like periodic schedules in a delayed queue.
   *
-  * This service allows installing tasks that execute at regular intervals or at specific times each
-  * day. Configuration changes are detected via hash comparisons, allowing automatic cleanup of
-  * obsolete schedules.
+  * This service allows installing tasks that execute at regular intervals or at
+  * specific times each day. Configuration changes are detected via hash
+  * comparisons, allowing automatic cleanup of obsolete schedules.
   *
   * @tparam A
   *   the type of message payload
@@ -33,11 +33,11 @@ trait CronService[A] {
 
   /** Installs a one-time set of future scheduled messages.
     *
-    * This method is useful for installing a fixed set of future events that belong to a specific
-    * configuration (e.g., from a database or config file).
+    * This method is useful for installing a fixed set of future events that
+    * belong to a specific configuration (e.g., from a database or config file).
     *
-    * The configHash and keyPrefix are used to identify and clean up messages when configurations
-    * are updated or deleted.
+    * The configHash and keyPrefix are used to identify and clean up messages
+    * when configurations are updated or deleted.
     *
     * @param configHash
     *   hash identifying this configuration (for detecting changes)
@@ -54,7 +54,8 @@ trait CronService[A] {
 
   /** Uninstalls all future messages for a specific cron configuration.
     *
-    * This removes all scheduled messages that match the given configHash and keyPrefix.
+    * This removes all scheduled messages that match the given configHash and
+    * keyPrefix.
     *
     * @param configHash
     *   hash identifying the configuration to remove
@@ -65,11 +66,12 @@ trait CronService[A] {
 
   /** Installs a cron-like schedule where messages are generated at intervals.
     *
-    * This method starts a background process that periodically generates and schedules messages.
-    * The returned Resource should be used to manage the lifecycle of the background process.
+    * This method starts a background process that periodically generates and
+    * schedules messages. The returned Resource should be used to manage the
+    * lifecycle of the background process.
     *
-    * When the configuration changes (detected by hash comparison), old messages are automatically
-    * removed and new ones are scheduled.
+    * When the configuration changes (detected by hash comparison), old messages
+    * are automatically removed and new ones are scheduled.
     *
     * @param configHash
     *   hash of the configuration (for detecting changes)
@@ -80,7 +82,8 @@ trait CronService[A] {
     * @param generateMany
     *   function that generates messages based on current time
     * @return
-    *   a Resource that manages the lifecycle of the background scheduling process
+    *   a Resource that manages the lifecycle of the background scheduling
+    *   process
     */
   def install(
       configHash: CronConfigHash,
@@ -91,8 +94,9 @@ trait CronService[A] {
 
   /** Installs a daily schedule with timezone-aware execution times.
     *
-    * This method starts a background process that schedules messages for specific hours each day.
-    * The schedule configuration determines when messages are generated.
+    * This method starts a background process that schedules messages for
+    * specific hours each day. The schedule configuration determines when
+    * messages are generated.
     *
     * @param keyPrefix
     *   unique prefix for generated message keys
@@ -101,7 +105,8 @@ trait CronService[A] {
     * @param generator
     *   function that creates a message for a given future instant
     * @return
-    *   a Resource that manages the lifecycle of the background scheduling process
+    *   a Resource that manages the lifecycle of the background scheduling
+    *   process
     */
   def installDailySchedule(
       keyPrefix: String,
@@ -111,8 +116,9 @@ trait CronService[A] {
 
   /** Installs a periodic tick that generates messages at fixed intervals.
     *
-    * This method starts a background process that generates a new message every `period` duration.
-    * The generator receives the scheduled time and produces the payload.
+    * This method starts a background process that generates a new message every
+    * `period` duration. The generator receives the scheduled time and produces
+    * the payload.
     *
     * @param keyPrefix
     *   unique prefix for generated message keys
@@ -121,7 +127,8 @@ trait CronService[A] {
     * @param generator
     *   function that creates a payload for a given instant
     * @return
-    *   a Resource that manages the lifecycle of the background scheduling process
+    *   a Resource that manages the lifecycle of the background scheduling
+    *   process
     */
   def installPeriodicTick(
       keyPrefix: String,

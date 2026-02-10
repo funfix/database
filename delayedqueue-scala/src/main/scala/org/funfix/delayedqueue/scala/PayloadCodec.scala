@@ -21,7 +21,8 @@ import scala.util.control.NonFatal
 
 /** Type-class for encoding and decoding message payloads to/from binary data.
   *
-  * This is used by JDBC implementations to store message payloads in the database.
+  * This is used by JDBC implementations to store message payloads in the
+  * database.
   *
   * @tparam A
   *   the type of message payloads
@@ -51,7 +52,8 @@ trait PayloadCodec[A] {
     * @param serialized
     *   the serialized bytes
     * @return
-    *   Either the deserialized payload or an IllegalArgumentException if parsing fails
+    *   Either the deserialized payload or an IllegalArgumentException if
+    *   parsing fails
     */
   def deserialize(serialized: Array[Byte]): Either[IllegalArgumentException, A]
 
@@ -77,7 +79,8 @@ object PayloadCodec {
   given forStrings: PayloadCodec[String] =
     fromJava(jvm.MessageSerializer.forStrings())
 
-  /** Wraps a JVM MessageSerializer to provide a Scala PayloadCodec interface. */
+  /** Wraps a JVM MessageSerializer to provide a Scala PayloadCodec interface.
+    */
   def fromJava[A](javaSerializer: jvm.MessageSerializer[A]): PayloadCodec[A] =
     new PayloadCodec[A] {
       override def typeName: String = javaSerializer.getTypeName()

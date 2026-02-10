@@ -26,8 +26,8 @@ import org.funfix.delayedqueue.scala.BatchedReply.asScala
 import org.funfix.delayedqueue.scala.DelayedQueueTimeConfig.asScala
 import scala.jdk.CollectionConverters.*
 
-/** Wrapper that implements the Scala DelayedQueue trait by delegating to a JVM DelayedQueue
-  * implementation.
+/** Wrapper that implements the Scala DelayedQueue trait by delegating to a JVM
+  * DelayedQueue implementation.
   */
 private[scala] class DelayedQueueWrapper[A](
     underlying: jvm.DelayedQueue[A]

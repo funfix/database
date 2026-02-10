@@ -21,10 +21,12 @@ import java.time.{Clock as JavaClock, Instant}
 import org.funfix.delayedqueue.jvm
 import cats.effect.std.Dispatcher
 
-/** In-memory implementation of [[DelayedQueue]] using concurrent data structures.
+/** In-memory implementation of [[DelayedQueue]] using concurrent data
+  * structures.
   *
-  * This implementation wraps the JVM [[org.funfix.delayedqueue.jvm.DelayedQueueInMemory]] and
-  * provides an idiomatic Scala API with Cats Effect IO for managing side effects.
+  * This implementation wraps the JVM
+  * [[org.funfix.delayedqueue.jvm.DelayedQueueInMemory]] and provides an
+  * idiomatic Scala API with Cats Effect IO for managing side effects.
   *
   * ==Example==
   *
@@ -66,7 +68,8 @@ object DelayedQueueInMemory {
     * @tparam A
     *   the type of message payloads
     * @param timeConfig
-    *   time configuration (defaults to [[DelayedQueueTimeConfig.DEFAULT_IN_MEMORY]])
+    *   time configuration (defaults to
+    *   [[DelayedQueueTimeConfig.DEFAULT_IN_MEMORY]])
     * @param ackEnvSource
     *   source identifier for envelopes (defaults to "delayed-queue-inmemory")
     * @param clock

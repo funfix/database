@@ -20,9 +20,9 @@ import org.funfix.delayedqueue.jvm
 
 /** Hash of a cron configuration, used to detect configuration changes.
   *
-  * When a cron schedule is installed, this hash is used to identify messages belonging to that
-  * configuration. If the configuration changes, the hash will differ, allowing the system to clean
-  * up old scheduled messages.
+  * When a cron schedule is installed, this hash is used to identify messages
+  * belonging to that configuration. If the configuration changes, the hash will
+  * differ, allowing the system to clean up old scheduled messages.
   */
 opaque type CronConfigHash = String
 

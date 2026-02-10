@@ -35,7 +35,8 @@ abstract class DelayedQueueJDBCSpec extends CatsEffectSuite {
   def createQueue(tableName: String = "delayed_queue", queueName: String = "test-queue") =
     DelayedQueueJDBC[String](createConfig(tableName, queueName))
 
-  /** Helper to run migrations and create a queue with unique table names to ensure test isolation.
+  /** Helper to run migrations and create a queue with unique table names to
+    * ensure test isolation.
     */
   def withQueue(test: DelayedQueue[String] => IO[Unit]): IO[Unit] = {
     // Use a unique table name for each test to avoid interference

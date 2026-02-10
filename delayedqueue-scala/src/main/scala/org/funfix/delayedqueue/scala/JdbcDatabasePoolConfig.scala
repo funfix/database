@@ -49,7 +49,9 @@ final case class JdbcDatabasePoolConfig(
     initializationFailTimeout: Option[Duration]
 ) {
 
-  /** Converts this Scala JdbcDatabasePoolConfig to a JVM JdbcDatabasePoolConfig. */
+  /** Converts this Scala JdbcDatabasePoolConfig to a JVM
+    * JdbcDatabasePoolConfig.
+    */
   def asJava: jvm.JdbcDatabasePoolConfig =
     new jvm.JdbcDatabasePoolConfig(
       connectionTimeout,
@@ -72,7 +74,8 @@ object JdbcDatabasePoolConfig {
   /** Conversion extension for JVM JdbcDatabasePoolConfig. */
   extension (javaConfig: jvm.JdbcDatabasePoolConfig) {
 
-    /** Converts a JVM JdbcDatabasePoolConfig to a Scala JdbcDatabasePoolConfig. */
+    /** Converts a JVM JdbcDatabasePoolConfig to a Scala JdbcDatabasePoolConfig.
+      */
     def asScala: JdbcDatabasePoolConfig =
       JdbcDatabasePoolConfig(
         connectionTimeout = javaConfig.connectionTimeout,

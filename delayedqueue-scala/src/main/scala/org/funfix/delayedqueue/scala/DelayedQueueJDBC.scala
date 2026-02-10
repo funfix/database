@@ -20,10 +20,12 @@ import cats.effect.{IO, Resource}
 import cats.effect.std.Dispatcher
 import org.funfix.delayedqueue.jvm
 
-/** JDBC-based implementation of [[DelayedQueue]] with support for multiple database backends.
+/** JDBC-based implementation of [[DelayedQueue]] with support for multiple
+  * database backends.
   *
-  * This implementation wraps the JVM [[org.funfix.delayedqueue.jvm.DelayedQueueJDBC]] and provides
-  * an idiomatic Scala API with Cats Effect IO for managing side effects.
+  * This implementation wraps the JVM
+  * [[org.funfix.delayedqueue.jvm.DelayedQueueJDBC]] and provides an idiomatic
+  * Scala API with Cats Effect IO for managing side effects.
   *
   * ==Example==
   *
@@ -70,7 +72,8 @@ object DelayedQueueJDBC {
     * @param config
     *   JDBC queue configuration
     * @param codec
-    *   implicit payload codec for serialization (e.g., PayloadCodec.forStrings for String)
+    *   implicit payload codec for serialization (e.g., PayloadCodec.forStrings
+    *   for String)
     * @return
     *   a Resource that manages the queue lifecycle
     */
