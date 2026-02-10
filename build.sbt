@@ -69,6 +69,53 @@ val sharedSettings = Seq(
     Wart.PublicInference,
     Wart.OptionPartial,
     Wart.ArrayEquals
+  ),
+  organization := "org.funfix",
+  organizationName := "Funfix",
+  organizationHomepage := Some(url("https://funfix.org")),
+
+  scmInfo := Some(
+    ScmInfo(
+      url("https://github.com/funfix/database"),
+      "scm:git@github.com:funfix/database.git"
+    )
+  ),
+  developers := List(
+    Developer(
+      id = "alexelcu",
+      name = "Alexandru Nedelcu",
+      email = "noreply@alexn.org",
+      url = url("https://alexn.org")
+    )
+  ),
+
+  description := "DelayedQueue implementation for Scala.",
+  licenses := List(License.Apache2),
+  homepage := Some(url("https://github.com/funfix/database")),
+
+  // Remove all additional repository other than Maven Central from POM
+  pomIncludeRepository := { _ => false },
+  publishMavenStyle := true,
+
+  // new setting for the Central Portal
+  publishTo := {
+    val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
+    if (version.value.endsWith("-SNAPSHOT")) Some("central-snapshots".at(centralSnapshots))
+    else localStaging.value
+  },
+
+  // ScalaDoc settings
+  autoAPIMappings := true,
+  scalacOptions ++= Seq(
+    // Note, this is used by the doc-source-url feature to determine the
+    // relative path of a given source file. If it's not a prefix of a the
+    // absolute path of the source file, the absolute path of that file
+    // will be put into the FILE_SOURCE variable, which is
+    // definitely not what we want.
+    "-sourcepath",
+    file(".").getAbsolutePath.replaceAll("[.]$", ""),
+    // Debug warnings
+    "-Wconf:any:warning-verbose"
   )
 )
 
@@ -116,3 +163,16 @@ lazy val delayedqueueJVM = project
       "org.xerial" % "sqlite-jdbc" % "3.51.1.0" % Test
     )
   )
+
+addCommandAlias(
+  "ci-test",
+  ";publishLocalGradleDependencies;+test;scalafmtCheckAll"
+)
+addCommandAlias(
+  "ci-publish-local",
+  ";publishLocalGradleDependencies; +Test/compile; +publishLocal"
+)
+addCommandAlias(
+  "ci-publish",
+  ";publishLocalGradleDependencies; +Test/compile; +publishSigned; sonaUpload"
+)

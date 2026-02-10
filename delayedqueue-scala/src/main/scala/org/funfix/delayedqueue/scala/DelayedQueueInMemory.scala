@@ -27,10 +27,6 @@ import org.funfix.delayedqueue.jvm
 /** In-memory implementation of [[DelayedQueue]] using concurrent data
   * structures.
   *
-  * This implementation wraps the JVM
-  * [[org.funfix.delayedqueue.jvm.DelayedQueueInMemory]] and provides an
-  * idiomatic Scala API with Cats Effect IO for managing side effects.
-  *
   * ==Example==
   *
   * {{{

@@ -24,10 +24,6 @@ import org.funfix.delayedqueue.jvm
 /** JDBC-based implementation of [[DelayedQueue]] with support for multiple
   * database backends.
   *
-  * This implementation wraps the JVM
-  * [[org.funfix.delayedqueue.jvm.DelayedQueueJDBC]] and provides an idiomatic
-  * Scala API with Cats Effect IO for managing side effects.
-  *
   * ==Example==
   *
   * {{{

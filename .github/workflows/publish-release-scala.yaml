@@ -1,0 +1,23 @@
+name: Publish Release for Scala
+
+on: workflow_dispatch
+
+permissions:
+  contents: write
+
+jobs:
+  publish-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: 'temurin'
+      - run: sbt ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          PGP_SECRET: ${{ secrets.SIGNING_KEY }}
+          SONATYPE_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.MAVEN_USERNAME }}

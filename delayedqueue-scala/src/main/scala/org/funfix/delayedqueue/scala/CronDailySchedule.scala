@@ -78,7 +78,7 @@ final case class CronDailySchedule(
 
 object CronDailySchedule {
 
-  /** Creates a [[DailyCronSchedule]] with the specified configuration. */
+  /** Creates a [[CronDailySchedule]] with the specified configuration. */
   def create(
     zoneId: ZoneId,
     hoursOfDay: List[LocalTime],

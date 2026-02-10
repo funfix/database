@@ -60,7 +60,7 @@ object DelayedQueueTimeConfig {
   val DEFAULT_TESTING: DelayedQueueTimeConfig =
     fromJava(jvm.DelayedQueueTimeConfig.DEFAULT_TESTING)
 
-  /** Converts a [[jvm.DelayedQueueTimeConfig]] to a Scala
+  /** Converts a Java `DelayedQueueTimeConfig` to a Scala
     * [[DelayedQueueTimeConfig]].
     */
   def fromJava(javaConfig: jvm.DelayedQueueTimeConfig): DelayedQueueTimeConfig =
