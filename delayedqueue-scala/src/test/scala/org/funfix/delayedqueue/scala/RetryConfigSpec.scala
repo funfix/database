@@ -17,7 +17,6 @@
 package org.funfix.delayedqueue.scala
 
 import java.time.Duration
-import org.funfix.delayedqueue.jvm
 import org.funfix.delayedqueue.scala.RetryConfig.asScala
 
 class RetryConfigSpec extends munit.FunSuite {

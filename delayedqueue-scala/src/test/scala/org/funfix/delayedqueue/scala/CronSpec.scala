@@ -20,9 +20,6 @@ import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.Duration
-import org.funfix.delayedqueue.scala.CronConfigHash.asScala
-import org.funfix.delayedqueue.scala.CronMessage.asScala as cronAsScala
-import org.funfix.delayedqueue.scala.CronDailySchedule.asScala as scheduleAsScala
 
 class CronSpec extends munit.FunSuite {
 
