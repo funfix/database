@@ -2,6 +2,7 @@ import java.io.FileInputStream
 import java.util.Properties
 import sbt.ThisBuild
 import scala.sys.process.Process
+import xerial.sbt.Sonatype.sonatypeCentralHost
 
 val scala3Version = "3.3.7"
 val scala2Version = "2.13.18"
@@ -16,6 +17,8 @@ inThisBuild(
   Seq(
     organization := "org.funfix",
     scalaVersion := scala2Version,
+    // Configure for Sonatype Central Portal
+    sonatypeCredentialHost := sonatypeCentralHost,
     // ---
     // Settings for dealing with the local Gradle-assembled artifacts
     // Also see: publishLocalGradleDependencies
@@ -102,7 +105,7 @@ val sharedSettings = Seq(
   publishTo := {
     val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
     if (version.value.endsWith("-SNAPSHOT")) Some("central-snapshots".at(centralSnapshots))
-    else localStaging.value
+    else sonatypePublishToBundle.value
   },
 
   // ScalaDoc settings
@@ -179,5 +182,5 @@ addCommandAlias(
 )
 addCommandAlias(
   "ci-publish",
-  ";publishLocalGradleDependencies; +Test/compile; +publishSigned; sonaUpload"
+  ";publishLocalGradleDependencies; +Test/compile; +publishSigned; sonatypeBundleRelease"
 )
