@@ -115,6 +115,27 @@ trait DelayedQueue[A] {
     */
   def containsMessage(key: String): IO[Boolean]
 
+  /** Returns the total number of messages currently in the queue.
+    *
+    * This includes both messages that are ready for processing and messages
+    * scheduled for the future.
+    */
+  def countMessages: IO[Int]
+
+  /** Returns a paginated, read-only list of messages currently in the queue,
+    * ordered by [[ScheduledMessage.scheduleAt]] ascending.
+    *
+    * This is intended for observability and visualization. The returned
+    * [[ScheduledMessage]] instances are snapshots with
+    * [[ScheduledMessage.canUpdate]] always set to `false`.
+    *
+    * @param limit
+    *   the maximum number of entries to return (must be positive)
+    * @param offset
+    *   the number of entries to skip (must be non-negative)
+    */
+  def listMessages(limit: Int, offset: Int): IO[List[ScheduledMessage[A]]]
+
   /** Drops all existing enqueued messages.
     *
     * This deletes all messages from the DB table of the configured type.

@@ -19,6 +19,7 @@ package org.funfix.delayedqueue.jvm
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
+import java.util.Collections
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -292,6 +293,7 @@ private constructor(
                                 )
                                 emptyMap() // Trigger fallback
                             }
+
                             else -> throw e // Other exceptions propagate
                         }
                     }
@@ -529,6 +531,37 @@ private constructor(
         database.withConnection { connection -> adapter.checkIfKeyExists(connection, key, pKind) }
     }
 
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    override fun countMessages(): Int = withRetries {
+        database.withConnection { connection -> adapter.countMessages(connection, pKind) }
+    }
+
+    @Throws(
+        IllegalArgumentException::class,
+        ResourceUnavailableException::class,
+        InterruptedException::class,
+    )
+    override fun listMessages(limit: Int, offset: Int): List<ScheduledMessage<A>> {
+        require(limit > 0) { "limit must be positive, got: $limit" }
+        require(offset >= 0) { "offset must be non-negative, got: $offset" }
+
+        return withRetries {
+            database.withConnection { connection ->
+                val rows = adapter.listMessages(connection, pKind, limit, offset)
+                Collections.unmodifiableList(
+                    rows.map { row ->
+                        ScheduledMessage(
+                            key = row.data.pKey,
+                            payload = serializer.deserialize(row.data.payload),
+                            scheduleAt = row.data.scheduledAt,
+                            canUpdate = false,
+                        )
+                    }
+                )
+            }
+        }
+    }
+
     @Throws(
         IllegalArgumentException::class,
         ResourceUnavailableException::class,
@@ -601,8 +634,10 @@ private constructor(
                             JdbcDriver.Sqlite -> SqliteMigrations.getMigrations(config.tableName)
                             JdbcDriver.PostgreSQL ->
                                 PostgreSQLMigrations.getMigrations(config.tableName)
+
                             JdbcDriver.MsSqlServer ->
                                 MsSqlServerMigrations.getMigrations(config.tableName)
+
                             JdbcDriver.MariaDB -> MariaDBMigrations.getMigrations(config.tableName)
                             JdbcDriver.MySQL -> MySQLMigrations.getMigrations(config.tableName)
                             JdbcDriver.Oracle -> OracleMigrations.getMigrations(config.tableName)

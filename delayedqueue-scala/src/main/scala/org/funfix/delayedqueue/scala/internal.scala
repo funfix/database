@@ -80,6 +80,15 @@ private[scala] class DelayedQueueWrapper[A](
   override def containsMessage(key: String): IO[Boolean] =
     IO(underlying.containsMessage(key))
 
+  override def countMessages: IO[Int] =
+    IO(underlying.countMessages())
+
+  override def listMessages(limit: Int, offset: Int): IO[List[ScheduledMessage[A]]] =
+    IO {
+      val javaEntries = underlying.listMessages(limit, offset)
+      javaEntries.asScala.toList.map(ScheduledMessage.fromJava)
+    }
+
   override def dropAllMessages(confirm: String): IO[Int] =
     IO(underlying.dropAllMessages(confirm))
 

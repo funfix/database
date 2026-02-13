@@ -591,4 +591,167 @@ public abstract class DelayedQueueJDBCContractTestBase {
         assertTrue(batch3.payload().contains("value offered (1.1)"));
         assertTrue(batch3.payload().contains("value offered (2.1)"));
     }
+
+    // ========== Count Messages ==========
+
+    @Test
+    public void countMessages_returnsZeroForEmptyQueue() throws Exception {
+        queue = createQueue();
+
+        assertEquals(0, queue.countMessages());
+    }
+
+    @Test
+    public void countMessages_returnsCorrectCount() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
+        queue = createQueueWithClock(clock);
+        var scheduleAt = clock.now().plusSeconds(10);
+
+        queue.offerOrUpdate("key1", "payload1", scheduleAt);
+        queue.offerOrUpdate("key2", "payload2", scheduleAt);
+        queue.offerOrUpdate("key3", "payload3", scheduleAt);
+
+        assertEquals(3, queue.countMessages());
+    }
+
+    @Test
+    public void countMessages_decreasesAfterDrop() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
+        queue = createQueueWithClock(clock);
+        var scheduleAt = clock.now().plusSeconds(10);
+
+        queue.offerOrUpdate("key1", "payload1", scheduleAt);
+        queue.offerOrUpdate("key2", "payload2", scheduleAt);
+        assertEquals(2, queue.countMessages());
+
+        queue.dropMessage("key1");
+        assertEquals(1, queue.countMessages());
+    }
+
+    @Test
+    public void countMessages_decreasesAfterAcknowledge() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
+        queue = createQueueWithClock(clock);
+        var scheduleAt = clock.now().minusSeconds(10);
+
+        queue.offerOrUpdate("key1", "payload1", scheduleAt);
+        queue.offerOrUpdate("key2", "payload2", scheduleAt);
+        assertEquals(2, queue.countMessages());
+
+        var envelope = queue.tryPoll();
+        assertNotNull(envelope);
+        envelope.acknowledge();
+        assertEquals(1, queue.countMessages());
+    }
+
+    // ========== List Messages ==========
+
+    @Test
+    public void listMessages_returnsEmptyListForEmptyQueue() throws Exception {
+        queue = createQueue();
+
+        var entries = queue.listMessages(10, 0);
+
+        assertNotNull(entries);
+        assertTrue(entries.isEmpty());
+    }
+
+    @Test
+    public void listMessages_returnsAllEntriesWithinLimit() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
+        queue = createQueueWithClock(clock);
+        var base = clock.now();
+
+        queue.offerOrUpdate("key1", "payload1", base.plusSeconds(10));
+        queue.offerOrUpdate("key2", "payload2", base.plusSeconds(20));
+        queue.offerOrUpdate("key3", "payload3", base.plusSeconds(30));
+
+        var entries = queue.listMessages(10, 0);
+
+        assertEquals(3, entries.size());
+        assertEquals("key1", entries.get(0).key());
+        assertEquals("payload1", entries.get(0).payload());
+        assertEquals("key2", entries.get(1).key());
+        assertEquals("key3", entries.get(2).key());
+    }
+
+    @Test
+    public void listMessages_orderedByScheduledAt() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
+        queue = createQueueWithClock(clock);
+        var base = clock.now();
+
+        // Insert out of order
+        queue.offerOrUpdate("key3", "payload3", base.plusSeconds(30));
+        queue.offerOrUpdate("key1", "payload1", base.plusSeconds(10));
+        queue.offerOrUpdate("key2", "payload2", base.plusSeconds(20));
+
+        var entries = queue.listMessages(10, 0);
+
+        assertEquals(3, entries.size());
+        assertEquals("key1", entries.get(0).key());
+        assertEquals("key2", entries.get(1).key());
+        assertEquals("key3", entries.get(2).key());
+    }
+
+    @Test
+    public void listMessages_respectsLimit() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
+        queue = createQueueWithClock(clock);
+        var base = clock.now();
+
+        queue.offerOrUpdate("key1", "payload1", base.plusSeconds(10));
+        queue.offerOrUpdate("key2", "payload2", base.plusSeconds(20));
+        queue.offerOrUpdate("key3", "payload3", base.plusSeconds(30));
+
+        var entries = queue.listMessages(2, 0);
+
+        assertEquals(2, entries.size());
+        assertEquals("key1", entries.get(0).key());
+        assertEquals("key2", entries.get(1).key());
+    }
+
+    @Test
+    public void listMessages_respectsOffset() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
+        queue = createQueueWithClock(clock);
+        var base = clock.now();
+
+        queue.offerOrUpdate("key1", "payload1", base.plusSeconds(10));
+        queue.offerOrUpdate("key2", "payload2", base.plusSeconds(20));
+        queue.offerOrUpdate("key3", "payload3", base.plusSeconds(30));
+
+        var entries = queue.listMessages(10, 1);
+
+        assertEquals(2, entries.size());
+        assertEquals("key2", entries.get(0).key());
+        assertEquals("key3", entries.get(1).key());
+    }
+
+    @Test
+    public void listMessages_throwsOnInvalidArguments() throws Exception {
+        queue = createQueue();
+
+        assertThrows(IllegalArgumentException.class, () -> queue.listMessages(0, 0));
+        assertThrows(IllegalArgumentException.class, () -> queue.listMessages(-1, 0));
+        assertThrows(IllegalArgumentException.class, () -> queue.listMessages(10, -1));
+    }
+
+    @Test
+    public void listMessages_isReadOnly_doesNotAffectQueue() throws Exception {
+        var clock = new MutableClock(Instant.parse("2024-01-01T10:00:00Z"));
+        queue = createQueueWithClock(clock);
+        var scheduleAt = clock.now().minusSeconds(10);
+
+        queue.offerOrUpdate("key1", "payload1", scheduleAt);
+
+        // List should not lock or remove messages
+        queue.listMessages(10, 0);
+        queue.listMessages(10, 0);
+
+        // Message should still be pollable
+        var envelope = queue.tryPoll();
+        assertNotNull(envelope);
+        assertEquals("payload1", envelope.payload());
+    }
 }

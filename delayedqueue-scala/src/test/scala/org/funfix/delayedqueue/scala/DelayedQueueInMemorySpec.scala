@@ -257,6 +257,130 @@ class DelayedQueueInMemorySpec extends CatsEffectSuite {
     }
   }
 
+  test("countMessages should return 0 for empty queue") {
+    DelayedQueueInMemory[String]().use { queue =>
+      queue.countMessages.assertEquals(0)
+    }
+  }
+
+  test("countMessages should return correct count") {
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().plusSeconds(10))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        _ <- queue.offerOrUpdate("key2", "payload2", scheduleAt)
+        _ <- queue.offerOrUpdate("key3", "payload3", scheduleAt)
+        count <- queue.countMessages
+      } yield assertEquals(count, 3)
+    }
+  }
+
+  test("countMessages should decrease after drop") {
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().plusSeconds(10))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        _ <- queue.offerOrUpdate("key2", "payload2", scheduleAt)
+        _ <- queue.dropMessage("key1")
+        count <- queue.countMessages
+      } yield assertEquals(count, 1)
+    }
+  }
+
+  test("listMessages should return empty list for empty queue") {
+    DelayedQueueInMemory[String]().use { queue =>
+      queue.listMessages(10, 0).map { entries =>
+        assertEquals(entries, List.empty[ScheduledMessage[String]])
+      }
+    }
+  }
+
+  test("listMessages should return entries ordered by scheduledAt") {
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        now <- IO(Instant.now())
+        _ <- queue.offerOrUpdate("key3", "payload3", now.plusSeconds(30))
+        _ <- queue.offerOrUpdate("key1", "payload1", now.plusSeconds(10))
+        _ <- queue.offerOrUpdate("key2", "payload2", now.plusSeconds(20))
+        entries <- queue.listMessages(10, 0)
+        _ <- IO {
+          assertEquals(entries.length, 3)
+          assertEquals(entries(0).key, "key1")
+          assertEquals(entries(0).payload, "payload1")
+          assertEquals(entries(1).key, "key2")
+          assertEquals(entries(2).key, "key3")
+        }
+      } yield ()
+    }
+  }
+
+  test("listMessages should respect limit") {
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        now <- IO(Instant.now())
+        _ <- queue.offerOrUpdate("key1", "payload1", now.plusSeconds(10))
+        _ <- queue.offerOrUpdate("key2", "payload2", now.plusSeconds(20))
+        _ <- queue.offerOrUpdate("key3", "payload3", now.plusSeconds(30))
+        entries <- queue.listMessages(2, 0)
+        _ <- IO {
+          assertEquals(entries.length, 2)
+          assertEquals(entries(0).key, "key1")
+          assertEquals(entries(1).key, "key2")
+        }
+      } yield ()
+    }
+  }
+
+  test("listMessages should respect offset") {
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        now <- IO(Instant.now())
+        _ <- queue.offerOrUpdate("key1", "payload1", now.plusSeconds(10))
+        _ <- queue.offerOrUpdate("key2", "payload2", now.plusSeconds(20))
+        _ <- queue.offerOrUpdate("key3", "payload3", now.plusSeconds(30))
+        entries <- queue.listMessages(10, 1)
+        _ <- IO {
+          assertEquals(entries.length, 2)
+          assertEquals(entries(0).key, "key2")
+          assertEquals(entries(1).key, "key3")
+        }
+      } yield ()
+    }
+  }
+
+  test("listMessages should reject invalid arguments") {
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        _ <- queue.listMessages(0, 0).attempt.map { r =>
+          assert(r.isLeft, "limit=0 should fail")
+          assert(r.left.exists(_.isInstanceOf[IllegalArgumentException]))
+        }
+        _ <- queue.listMessages(-1, 0).attempt.map { r =>
+          assert(r.isLeft, "limit=-1 should fail")
+        }
+        _ <- queue.listMessages(10, -1).attempt.map { r =>
+          assert(r.isLeft, "offset=-1 should fail")
+        }
+      } yield ()
+    }
+  }
+
+  test("listMessages is read-only and does not affect queue") {
+    DelayedQueueInMemory[String]().use { queue =>
+      for {
+        scheduleAt <- IO(Instant.now().minusSeconds(1))
+        _ <- queue.offerOrUpdate("key1", "payload1", scheduleAt)
+        _ <- queue.listMessages(10, 0)
+        _ <- queue.listMessages(10, 0)
+        envelope <- queue.tryPoll
+        _ <- IO {
+          assert(envelope.isDefined, "message should still be pollable after listing")
+          assertEquals(envelope.get.payload, "payload1")
+        }
+      } yield ()
+    }
+  }
+
   test("time passage: offer in future, tryPoll returns None, advance time, tryPoll succeeds") {
     DelayedQueueInMemory[String]().use { queue =>
       for {

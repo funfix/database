@@ -159,6 +159,40 @@ public interface DelayedQueue<A> {
     )
     public fun dropAllMessages(confirm: String): Int
 
+    /**
+     * Returns the total number of messages currently in the queue.
+     *
+     * This includes both messages that are ready for processing and messages scheduled for the
+     * future.
+     *
+     * @return the number of messages
+     * @throws ResourceUnavailableException if the operation fails after retries
+     * @throws InterruptedException if the current thread is interrupted
+     */
+    @Throws(ResourceUnavailableException::class, InterruptedException::class)
+    public fun countMessages(): Int
+
+    /**
+     * Returns a paginated, read-only list of messages currently in the queue, ordered by
+     * [ScheduledMessage.scheduleAt] ascending.
+     *
+     * This is intended for observability and visualization. The returned [ScheduledMessage]
+     * instances are snapshots with [ScheduledMessage.canUpdate] always set to `false`.
+     *
+     * @param limit the maximum number of entries to return (must be positive)
+     * @param offset the number of entries to skip (must be non-negative)
+     * @return an unmodifiable list of scheduled messages
+     * @throws IllegalArgumentException if limit is not positive or offset is negative
+     * @throws ResourceUnavailableException if the operation fails after retries
+     * @throws InterruptedException if the current thread is interrupted
+     */
+    @Throws(
+        IllegalArgumentException::class,
+        ResourceUnavailableException::class,
+        InterruptedException::class,
+    )
+    public fun listMessages(limit: Int, offset: Int): List<ScheduledMessage<A>>
+
     /** Utilities for installing cron-like schedules. */
     public fun getCron(): CronService<A>
 }

@@ -369,6 +369,57 @@ internal abstract class SQLVendorAdapter(val driver: JdbcDriver, protected val t
         }
     }
 
+    /** Counts all rows with a specific kind. */
+    fun countMessages(conn: SafeConnection, kind: String): Int {
+        val sql =
+            """
+            SELECT COUNT(*) FROM ${conn.quote(tableName)} 
+            WHERE ${conn.quote("pKind")} = ?
+            """
+        return conn.prepareStatement(sql) { stmt ->
+            stmt.setString(1, kind)
+            stmt.executeQuery().use { rs ->
+                rs.next()
+                rs.getInt(1)
+            }
+        }
+    }
+
+    /** Lists rows with a specific kind, ordered by scheduledAt ascending, with pagination. */
+    open fun listMessages(
+        conn: SafeConnection,
+        kind: String,
+        limit: Int,
+        offset: Int,
+    ): List<DBTableRowWithId> {
+        val sql =
+            """
+            SELECT 
+                ${conn.quote("id")}, 
+                ${conn.quote("pKey")}, 
+                ${conn.quote("pKind")}, 
+                ${conn.quote("payload")}, 
+                ${conn.quote("scheduledAt")}, 
+                ${conn.quote("scheduledAtInitially")}, 
+                ${conn.quote("lockUuid")}, 
+                ${conn.quote("createdAt")}
+            FROM ${conn.quote(tableName)}
+            WHERE ${conn.quote("pKind")} = ?
+            ORDER BY ${conn.quote("scheduledAt")}, ${conn.quote("pKey")}
+            LIMIT $limit OFFSET $offset
+            """
+        return conn.prepareStatement(sql) { stmt ->
+            stmt.setString(1, kind)
+            stmt.executeQuery().use { rs ->
+                val results = mutableListOf<DBTableRowWithId>()
+                while (rs.next()) {
+                    results.add(rs.toDBTableRowWithId())
+                }
+                results
+            }
+        }
+    }
+
     /**
      * Acquires many messages optimistically by updating them with a lock. Returns the number of
      * messages acquired.

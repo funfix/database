@@ -25,6 +25,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import kotlin.math.min
 import org.funfix.delayedqueue.jvm.internals.CronServiceImpl
 
 /**
@@ -307,6 +308,34 @@ private constructor(
 
     override fun containsMessage(key: String): Boolean {
         return lock.withLock { map.containsKey(key) }
+    }
+
+    override fun countMessages(): Int {
+        return lock.withLock { map.size }
+    }
+
+    override fun listMessages(limit: Int, offset: Int): List<ScheduledMessage<A>> {
+        require(limit > 0) { "limit must be positive, got: $limit" }
+        require(offset >= 0) { "offset must be non-negative, got: $offset" }
+
+        return lock.withLock {
+            val sorted = order.toList() // already sorted by scheduleAt via TreeSet
+            if (offset >= sorted.size) {
+                Collections.emptyList()
+            } else {
+                val end = min(offset + limit, sorted.size)
+                Collections.unmodifiableList(
+                    sorted.subList(offset, end).map { msg ->
+                        ScheduledMessage(
+                            key = msg.key,
+                            payload = msg.payload,
+                            scheduleAt = msg.scheduleAt,
+                            canUpdate = false,
+                        )
+                    }
+                )
+            }
+        }
     }
 
     override fun dropAllMessages(confirm: String): Int {

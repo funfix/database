@@ -176,6 +176,41 @@ internal class MsSqlServerAdapter(driver: JdbcDriver, tableName: String) :
         }
     }
 
+    override fun listMessages(
+        conn: SafeConnection,
+        kind: String,
+        limit: Int,
+        offset: Int,
+    ): List<DBTableRowWithId> {
+        val sql =
+            """
+            SELECT 
+                [id], 
+                [pKey], 
+                [pKind], 
+                [payload], 
+                [scheduledAt], 
+                [scheduledAtInitially], 
+                [lockUuid], 
+                [createdAt]
+            FROM [$tableName]
+            WHERE [pKind] = ?
+            ORDER BY [scheduledAt], [pKey]
+            OFFSET $offset ROWS FETCH NEXT $limit ROWS ONLY
+            """
+
+        return conn.prepareStatement(sql) { stmt ->
+            stmt.setString(1, kind)
+            stmt.executeQuery().use { rs ->
+                val results = mutableListOf<DBTableRowWithId>()
+                while (rs.next()) {
+                    results.add(rs.toDBTableRowWithId())
+                }
+                results
+            }
+        }
+    }
+
     override fun selectByKey(conn: SafeConnection, kind: String, key: String): DBTableRowWithId? {
         val sql =
             """

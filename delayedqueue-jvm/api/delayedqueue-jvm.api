@@ -144,10 +144,12 @@ public abstract interface class org/funfix/delayedqueue/jvm/CronService {
 
 public abstract interface class org/funfix/delayedqueue/jvm/DelayedQueue {
 	public abstract fun containsMessage (Ljava/lang/String;)Z
+	public abstract fun countMessages ()I
 	public abstract fun dropAllMessages (Ljava/lang/String;)I
 	public abstract fun dropMessage (Ljava/lang/String;)Z
 	public abstract fun getCron ()Lorg/funfix/delayedqueue/jvm/CronService;
 	public abstract fun getTimeConfig ()Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;
+	public abstract fun listMessages (II)Ljava/util/List;
 	public abstract fun offerBatch (Ljava/util/List;)Ljava/util/List;
 	public abstract fun offerIfNotExists (Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)Lorg/funfix/delayedqueue/jvm/OfferOutcome;
 	public abstract fun offerOrUpdate (Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)Lorg/funfix/delayedqueue/jvm/OfferOutcome;
@@ -161,6 +163,7 @@ public final class org/funfix/delayedqueue/jvm/DelayedQueueInMemory : org/funfix
 	public static final field Companion Lorg/funfix/delayedqueue/jvm/DelayedQueueInMemory$Companion;
 	public synthetic fun <init> (Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/time/Clock;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun containsMessage (Ljava/lang/String;)Z
+	public fun countMessages ()I
 	public static final fun create ()Lorg/funfix/delayedqueue/jvm/DelayedQueueInMemory;
 	public static final fun create (Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueInMemory;
 	public static final fun create (Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;)Lorg/funfix/delayedqueue/jvm/DelayedQueueInMemory;
@@ -169,6 +172,7 @@ public final class org/funfix/delayedqueue/jvm/DelayedQueueInMemory : org/funfix
 	public fun dropMessage (Ljava/lang/String;)Z
 	public fun getCron ()Lorg/funfix/delayedqueue/jvm/CronService;
 	public fun getTimeConfig ()Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;
+	public fun listMessages (II)Ljava/util/List;
 	public fun offerBatch (Ljava/util/List;)Ljava/util/List;
 	public fun offerIfNotExists (Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)Lorg/funfix/delayedqueue/jvm/OfferOutcome;
 	public fun offerOrUpdate (Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)Lorg/funfix/delayedqueue/jvm/OfferOutcome;
@@ -191,12 +195,14 @@ public final class org/funfix/delayedqueue/jvm/DelayedQueueJDBC : java/lang/Auto
 	public synthetic fun <init> (Lorg/funfix/delayedqueue/jvm/internals/jdbc/Database;Lorg/funfix/delayedqueue/jvm/internals/jdbc/SQLVendorAdapter;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Ljava/time/Clock;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun close ()V
 	public fun containsMessage (Ljava/lang/String;)Z
+	public fun countMessages ()I
 	public static final fun create (Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
 	public static final fun create (Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Ljava/time/Clock;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
 	public fun dropAllMessages (Ljava/lang/String;)I
 	public fun dropMessage (Ljava/lang/String;)Z
 	public fun getCron ()Lorg/funfix/delayedqueue/jvm/CronService;
 	public fun getTimeConfig ()Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;
+	public fun listMessages (II)Ljava/util/List;
 	public fun offerBatch (Ljava/util/List;)Ljava/util/List;
 	public fun offerIfNotExists (Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)Lorg/funfix/delayedqueue/jvm/OfferOutcome;
 	public fun offerOrUpdate (Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)Lorg/funfix/delayedqueue/jvm/OfferOutcome;
