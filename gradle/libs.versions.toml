@@ -29,7 +29,7 @@ jdbc-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version = "3.5
 jdbc-mysql = { module = "com.mysql:mysql-connector-j", version = "9.3.0" }
 jdbc-postgresql = { module = "org.postgresql:postgresql", version = "42.7.9" }
 jdbc-oracle = { module = "com.oracle.database.jdbc:ojdbc11", version = "23.26.1.0.0" }
-junit-bom = { module = "org.junit:junit-bom", version = "6.0.2" }
+junit-bom = { module = "org.junit:junit-bom", version = "6.0.3" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 
