@@ -68,12 +68,11 @@ class DatabaseTests {
     fun `Database withConnection executes block and closes connection`() {
         var connectionClosedAfter: Boolean
         var connectionRef: SafeConnection? = null
-        val result =
-            database.withConnection { safeConn ->
-                connectionRef = safeConn
-                safeConn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-                "done"
-            }
+        val result = database.withConnection { safeConn ->
+            connectionRef = safeConn
+            safeConn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+            "done"
+        }
         // Connection is closed after block
         connectionClosedAfter = connectionRef?.underlying?.isClosed ?: false
         assertEquals("done", result)
@@ -88,13 +87,12 @@ class DatabaseTests {
         database.withTransaction { safeConn ->
             safeConn.execute("INSERT INTO test (name) VALUES ('foo')")
         }
-        val count =
-            database.withConnection { safeConn ->
-                safeConn.query("SELECT COUNT(*) FROM test") { rs ->
-                    rs.next()
-                    rs.getInt(1)
-                }
+        val count = database.withConnection { safeConn ->
+            safeConn.query("SELECT COUNT(*) FROM test") { rs ->
+                rs.next()
+                rs.getInt(1)
             }
+        }
         assertEquals(1, count)
     }
 
@@ -111,13 +109,12 @@ class DatabaseTests {
                 safeConn.execute("INSERT INTO test (id, name) VALUES (1, 'baz')")
             }
         }
-        val count =
-            database.withConnection { safeConn ->
-                safeConn.query("SELECT COUNT(*) FROM test") { rs ->
-                    rs.next()
-                    rs.getInt(1)
-                }
+        val count = database.withConnection { safeConn ->
+            safeConn.query("SELECT COUNT(*) FROM test") { rs ->
+                rs.next()
+                rs.getInt(1)
             }
+        }
         assertEquals(0, count)
     }
 

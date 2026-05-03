@@ -5,7 +5,7 @@ kotlin = "2.3.21"
 kover = "0.9.8"
 publish-plugin = "0.36.0"
 versions-plugin = "0.53.0"
-ktfmt-plugin = "0.25.0"
+ktfmt-plugin = "0.26.0"
 
 [libraries]
 # Plugins specified in buildSrc/build.gradle.kts

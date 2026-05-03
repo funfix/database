@@ -48,7 +48,8 @@ public class JdbcDriver private constructor(public val className: String) {
          * @return the [JdbcDriver] if found, null otherwise
          */
         @JvmStatic
-        public operator fun invoke(className: String): JdbcDriver? =
-            entries.firstOrNull { it.className.equals(className, ignoreCase = true) }
+        public operator fun invoke(className: String): JdbcDriver? = entries.firstOrNull {
+            it.className.equals(className, ignoreCase = true)
+        }
     }
 }

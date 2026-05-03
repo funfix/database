@@ -187,26 +187,25 @@ private constructor(
         // Step 2: Retry loop for SELECT FOR UPDATE + UPDATE (in single transaction)
         // This matches the Scala implementation which retries on concurrent modification
         while (true) {
-            val outcome =
-                database.withTransaction { connection ->
-                    // Use locking SELECT to prevent concurrent modifications
-                    val existing =
-                        adapter.selectForUpdateOneRow(connection, pKind, key)
-                            ?: return@withTransaction null // Row disappeared, retry
+            val outcome = database.withTransaction { connection ->
+                // Use locking SELECT to prevent concurrent modifications
+                val existing =
+                    adapter.selectForUpdateOneRow(connection, pKind, key)
+                        ?: return@withTransaction null // Row disappeared, retry
 
-                    // Check if the row is a duplicate
-                    if (existing.data.isDuplicate(newRow)) {
-                        return@withTransaction OfferOutcome.Ignored
-                    }
-
-                    // Try to update with guarded CAS (compare-and-swap)
-                    val updated = adapter.guardedUpdate(connection, existing.data, newRow)
-                    if (updated) {
-                        OfferOutcome.Updated
-                    } else {
-                        null // CAS failed, retry
-                    }
+                // Check if the row is a duplicate
+                if (existing.data.isDuplicate(newRow)) {
+                    return@withTransaction OfferOutcome.Ignored
                 }
+
+                // Try to update with guarded CAS (compare-and-swap)
+                val updated = adapter.guardedUpdate(connection, existing.data, newRow)
+                if (updated) {
+                    OfferOutcome.Updated
+                } else {
+                    null // CAS failed, retry
+                }
+            }
 
             // If outcome is not null, we succeeded (either Updated or Ignored)
             if (outcome != null) {
@@ -238,76 +237,74 @@ private constructor(
 
         // Step 1: Try batch INSERT (optimistic)
         // This matches the original Scala implementation's insertMany function
-        val insertOutcomes: Map<String, OfferOutcome> =
-            database.withTransaction { connection ->
-                // Find existing keys in a SINGLE query (not N queries)
-                val keys = messages.map { it.message.key }
-                val existingKeys = adapter.searchAvailableKeys(connection, pKind, keys)
+        val insertOutcomes: Map<String, OfferOutcome> = database.withTransaction { connection ->
+            // Find existing keys in a SINGLE query (not N queries)
+            val keys = messages.map { it.message.key }
+            val existingKeys = adapter.searchAvailableKeys(connection, pKind, keys)
 
-                // Filter to only insert non-existing keys
-                val rowsToInsert =
-                    messages
-                        .filter { !existingKeys.contains(it.message.key) }
-                        .map { msg ->
-                            DBTableRow(
-                                pKey = msg.message.key,
-                                pKind = pKind,
-                                payload = serializer.serialize(msg.message.payload),
-                                scheduledAt = msg.message.scheduleAt,
-                                scheduledAtInitially = msg.message.scheduleAt,
-                                lockUuid = null,
-                                createdAt = now,
+            // Filter to only insert non-existing keys
+            val rowsToInsert =
+                messages
+                    .filter { !existingKeys.contains(it.message.key) }
+                    .map { msg ->
+                        DBTableRow(
+                            pKey = msg.message.key,
+                            pKind = pKind,
+                            payload = serializer.serialize(msg.message.payload),
+                            scheduledAt = msg.message.scheduleAt,
+                            scheduledAtInitially = msg.message.scheduleAt,
+                            lockUuid = null,
+                            createdAt = now,
+                        )
+                    }
+
+            // Attempt batch insert
+            if (rowsToInsert.isEmpty()) {
+                // All keys already exist
+                messages.associate { it.message.key to OfferOutcome.Ignored }
+            } else {
+                try {
+                    val inserted = adapter.insertBatch(connection, rowsToInsert)
+                    if (inserted.isNotEmpty()) {
+                        lock.withLock { condition.signalAll() }
+                    }
+
+                    // Build outcome map: Created for inserted, Ignored for existing
+                    messages.associate { msg ->
+                        if (existingKeys.contains(msg.message.key)) {
+                            msg.message.key to OfferOutcome.Ignored
+                        } else if (inserted.contains(msg.message.key)) {
+                            msg.message.key to OfferOutcome.Created
+                        } else {
+                            // Failed to insert (shouldn't happen with no exception, but be
+                            // safe)
+                            msg.message.key to OfferOutcome.Ignored
+                        }
+                    }
+                } catch (e: Exception) {
+                    when {
+                        filters.duplicateKey.matches(e) -> {
+                            logger.debug(
+                                "Batch insert failed due to duplicate key (concurrent insert), " +
+                                    "falling back to one-by-one offers"
                             )
+                            emptyMap() // Trigger fallback
                         }
-
-                // Attempt batch insert
-                if (rowsToInsert.isEmpty()) {
-                    // All keys already exist
-                    messages.associate { it.message.key to OfferOutcome.Ignored }
-                } else {
-                    try {
-                        val inserted = adapter.insertBatch(connection, rowsToInsert)
-                        if (inserted.isNotEmpty()) {
-                            lock.withLock { condition.signalAll() }
-                        }
-
-                        // Build outcome map: Created for inserted, Ignored for existing
-                        messages.associate { msg ->
-                            if (existingKeys.contains(msg.message.key)) {
-                                msg.message.key to OfferOutcome.Ignored
-                            } else if (inserted.contains(msg.message.key)) {
-                                msg.message.key to OfferOutcome.Created
-                            } else {
-                                // Failed to insert (shouldn't happen with no exception, but be
-                                // safe)
-                                msg.message.key to OfferOutcome.Ignored
-                            }
-                        }
-                    } catch (e: Exception) {
-                        when {
-                            filters.duplicateKey.matches(e) -> {
-                                logger.debug(
-                                    "Batch insert failed due to duplicate key (concurrent insert), " +
-                                        "falling back to one-by-one offers"
-                                )
-                                emptyMap() // Trigger fallback
-                            }
-                            else -> throw e // Other exceptions propagate
-                        }
+                        else -> throw e // Other exceptions propagate
                     }
                 }
             }
+        }
 
         // Step 2: Fallback to one-by-one for failures or updates
         // This matches the Scala implementation's fallback logic
-        val needsRetry =
-            messages.filter { msg ->
-                when (insertOutcomes[msg.message.key]) {
-                    null -> true // Error/not in map, retry
-                    is OfferOutcome.Ignored -> msg.message.canUpdate // Needs update
-                    else -> false // Created successfully
-                }
+        val needsRetry = messages.filter { msg ->
+            when (insertOutcomes[msg.message.key]) {
+                null -> true // Error/not in map, retry
+                is OfferOutcome.Ignored -> msg.message.canUpdate // Needs update
+                else -> false // Created successfully
             }
+        }
 
         val results = insertOutcomes.toMutableMap()
 
@@ -352,51 +349,50 @@ private constructor(
         // Retry loop to handle failed acquires (concurrent modifications)
         // This matches the original Scala implementation which retries if acquire fails
         while (true) {
-            val result =
-                database.withTransaction { connection ->
-                    val now = Instant.now(clock)
-                    val lockUuid = UUID.randomUUID().toString()
+            val result = database.withTransaction { connection ->
+                val now = Instant.now(clock)
+                val lockUuid = UUID.randomUUID().toString()
 
-                    // Select first available message (with locking if supported by DB)
-                    val row =
-                        adapter.selectFirstAvailableWithLock(connection, pKind, now)
-                            ?: return@withTransaction PollResult.NoMessages
+                // Select first available message (with locking if supported by DB)
+                val row =
+                    adapter.selectFirstAvailableWithLock(connection, pKind, now)
+                        ?: return@withTransaction PollResult.NoMessages
 
-                    // Try to acquire the row by updating it with our lock
-                    val acquired =
-                        adapter.acquireRowByUpdate(
-                            conn = connection,
-                            row = row.data,
-                            lockUuid = lockUuid,
-                            timeout = config.time.acquireTimeout,
-                            now = now,
-                        )
+                // Try to acquire the row by updating it with our lock
+                val acquired =
+                    adapter.acquireRowByUpdate(
+                        conn = connection,
+                        row = row.data,
+                        lockUuid = lockUuid,
+                        timeout = config.time.acquireTimeout,
+                        now = now,
+                    )
 
-                    if (!acquired) {
-                        return@withTransaction PollResult.Retry
+                if (!acquired) {
+                    return@withTransaction PollResult.Retry
+                }
+
+                // Successfully acquired the message
+                val payload = serializer.deserialize(row.data.payload)
+                val deliveryType =
+                    if (row.data.scheduledAtInitially.isBefore(row.data.scheduledAt)) {
+                        DeliveryType.REDELIVERY
+                    } else {
+                        DeliveryType.FIRST_DELIVERY
                     }
 
-                    // Successfully acquired the message
-                    val payload = serializer.deserialize(row.data.payload)
-                    val deliveryType =
-                        if (row.data.scheduledAtInitially.isBefore(row.data.scheduledAt)) {
-                            DeliveryType.REDELIVERY
-                        } else {
-                            DeliveryType.FIRST_DELIVERY
-                        }
+                val envelope =
+                    AckEnvelope(
+                        payload = payload,
+                        messageId = MessageId(row.data.pKey),
+                        timestamp = now,
+                        source = config.ackEnvSource,
+                        deliveryType = deliveryType,
+                        acknowledge = acknowledgeByLockUuid(lockUuid),
+                    )
 
-                    val envelope =
-                        AckEnvelope(
-                            payload = payload,
-                            messageId = MessageId(row.data.pKey),
-                            timestamp = now,
-                            source = config.ackEnvSource,
-                            deliveryType = deliveryType,
-                            acknowledge = acknowledgeByLockUuid(lockUuid),
-                        )
-
-                    PollResult.Success(envelope)
-                }
+                PollResult.Success(envelope)
+            }
 
             return when (result) {
                 is PollResult.NoMessages -> null

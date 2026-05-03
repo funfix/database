@@ -57,5 +57,9 @@ object OfferOutcome {
       case _: jvm.OfferOutcome.Created => OfferOutcome.Created
       case _: jvm.OfferOutcome.Updated => OfferOutcome.Updated
       case _: jvm.OfferOutcome.Ignored => OfferOutcome.Ignored
+      case _ =>
+        throw new IllegalArgumentException(
+          s"Unknown OfferOutcome: $javaOutcome"
+        )
     }
 }

@@ -120,9 +120,12 @@ val sharedSettings = Seq(
     // definitely not what we want.
     "-sourcepath",
     file(".").getAbsolutePath.replaceAll("[.]$", ""),
-    // Debug warnings
-    "-Wconf:any:warning-verbose"
-  )
+  ) ++ {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((3, _)) => Seq.empty
+      case _ => Seq("-Wconf:any:warning-verbose")
+    }
+  }
 )
 
 lazy val root = project

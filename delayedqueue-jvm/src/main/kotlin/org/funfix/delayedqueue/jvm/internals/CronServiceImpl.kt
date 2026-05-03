@@ -159,18 +159,17 @@ internal class CronServiceImpl<A>(
         deleteOldCron(configHash, keyPrefix)
 
         // Batch offer all messages
-        val batchedMessages =
-            messages.map { cronMessage ->
-                BatchedMessage(
-                    input = Unit,
-                    message =
-                        cronMessage.toScheduled(
-                            configHash = configHash,
-                            keyPrefix = keyPrefix,
-                            canUpdate = canUpdate,
-                        ),
-                )
-            }
+        val batchedMessages = messages.map { cronMessage ->
+            BatchedMessage(
+                input = Unit,
+                message =
+                    cronMessage.toScheduled(
+                        configHash = configHash,
+                        keyPrefix = keyPrefix,
+                        canUpdate = canUpdate,
+                    ),
+            )
+        }
 
         if (batchedMessages.isNotEmpty()) {
             queue.offerBatch(batchedMessages)
