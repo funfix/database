@@ -33,4 +33,6 @@ jobs:
           model: opencode-go/deepseek-v4-pro
           prompt: |
             Upgrade the project's dependencies according to the recipe in this file:
-            ./.github/prompts/upgrades.md
+            {PROJECT_ROOT}/.github/prompts/upgrades.md
+
+            Respect the requirements to the letter!
