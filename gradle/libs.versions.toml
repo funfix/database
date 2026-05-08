@@ -23,7 +23,7 @@ hikaricp = { module = "com.zaxxer:HikariCP", version = "7.0.2" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version = "1.5.32" }
 jdbc-hsqldb = { module = "org.hsqldb:hsqldb", version = "2.7.4" }
 jdbc-h2 = { module = "com.h2database:h2", version = "2.4.240" }
-jdbc-sqlite = { module = "org.xerial:sqlite-jdbc", version = "3.53.0.0" }
+jdbc-sqlite = { module = "org.xerial:sqlite-jdbc", version = "3.53.1.0" }
 jdbc-mssql = { module = "com.microsoft.sqlserver:mssql-jdbc", version = "13.4.0.jre11" }
 jdbc-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version = "3.5.8" }
 jdbc-mysql = { module = "com.mysql:mysql-connector-j", version = "9.7.0" }
