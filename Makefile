@@ -50,4 +50,4 @@ test:
 	./gradlew test && ./sbt testQuick
 
 check-all:
-	./gradlew check && ./sbt check
+	./gradlew check && ./sbt ci-test
