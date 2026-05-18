@@ -4,7 +4,7 @@ dokka = "2.2.0"
 kotlin = "2.3.21"
 kover = "0.9.8"
 publish-plugin = "0.36.0"
-versions-plugin = "0.53.0"
+versions-plugin = "0.54.0"
 ktfmt-plugin = "0.26.0"
 
 [libraries]
@@ -28,7 +28,7 @@ jdbc-mssql = { module = "com.microsoft.sqlserver:mssql-jdbc", version = "13.4.0.
 jdbc-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version = "3.5.8" }
 jdbc-mysql = { module = "com.mysql:mysql-connector-j", version = "9.7.0" }
 jdbc-postgresql = { module = "org.postgresql:postgresql", version = "42.7.11" }
-jdbc-oracle = { module = "com.oracle.database.jdbc:ojdbc11", version = "23.26.1.0.0" }
+jdbc-oracle = { module = "com.oracle.database.jdbc:ojdbc11", version = "23.26.2.0.0" }
 junit-bom = { module = "org.junit:junit-bom", version = "6.0.3" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
