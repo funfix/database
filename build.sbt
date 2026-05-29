@@ -119,7 +119,7 @@ val sharedSettings = Seq(
     // will be put into the FILE_SOURCE variable, which is
     // definitely not what we want.
     "-sourcepath",
-    file(".").getAbsolutePath.replaceAll("[.]$", ""),
+    file(".").getAbsolutePath.replaceAll("[.]$", "")
   ) ++ {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) => Seq.empty
@@ -166,7 +166,7 @@ lazy val delayedqueueJVM = project
       "org.funfix" % "delayedqueue-jvm" % version.value,
       "org.typelevel" %% "cats-effect" % "3.7.0",
       // Testing
-      "org.scalameta" %% "munit" % "1.3.0" % Test,
+      "org.scalameta" %% "munit" % "1.3.1" % Test,
       "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
       "org.typelevel" %% "cats-effect-testkit" % "3.7.0" % Test,
       "org.scalacheck" %% "scalacheck" % "1.19.0" % Test,
