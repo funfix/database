@@ -4,7 +4,7 @@ dokka = "2.2.0"
 kotlin = "2.3.21"
 kover = "0.9.8"
 publish-plugin = "0.36.0"
-versions-plugin = "0.53.0"
+versions-plugin = "0.54.0"
 ktfmt-plugin = "0.26.0"
 
 [libraries]
