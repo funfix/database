@@ -168,7 +168,7 @@ lazy val delayedqueueJVM = project
       // Testing
       "org.scalameta" %% "munit" % "1.3.0" % Test,
       "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
-      "org.typelevel" %% "cats-effect-testkit" % "3.7.0" % Test,
+      "org.typelevel" %% "cats-effect-testkit" % "3.7-4972921" % Test,
       "org.scalacheck" %% "scalacheck" % "1.19.0" % Test,
       "org.scalameta" %% "munit-scalacheck" % "1.3.0" % Test,
       // JDBC drivers for testing
