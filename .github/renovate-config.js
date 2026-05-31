@@ -5,6 +5,7 @@ module.exports = {
   branchPrefix: "renovate/",
   onboarding: false,
   requireConfig: "optional",
+  recreateWhen: "always",
 
   extends: [":dependencyDashboard"],
 
@@ -18,7 +19,6 @@ module.exports = {
       matchManagers: ["github-actions", "gradle", "gradle-wrapper", "sbt"],
       groupName: "dependencies",
       groupSlug: "all-dependencies",
-      recreateWhen: "always",
       group: {
         commitMessageTopic: "dependencies",
         commitMessageExtra: "",
