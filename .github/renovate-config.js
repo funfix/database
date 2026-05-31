@@ -6,6 +6,8 @@ module.exports = {
   onboarding: false,
   requireConfig: "optional",
   recreateWhen: "always",
+  prHourlyLimit: 0,
+  separateMajorMinor: false,
 
   extends: [":dependencyDashboard"],
 
