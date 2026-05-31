@@ -35,6 +35,12 @@ jobs:
           distribution: temurin
       - uses: sbt/setup-sbt@v1
 
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global credential.helper '!f() { echo username=x-access-token; echo password=$GITHUB_TOKEN; }; f'
+
       - name: Load prompt file
         id: load-prompt
         run: |
@@ -47,6 +53,7 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: opencode-go/deepseek-v4-pro
           use_github_token: true

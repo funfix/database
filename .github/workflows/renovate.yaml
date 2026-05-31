@@ -3,7 +3,8 @@ name: Renovate
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 4 * * 1'
+    # Runs every Monday at 09:00 UTC
+    - cron: "0 9 * * 1"
 
 jobs:
   renovate:
@@ -17,5 +18,5 @@ jobs:
         with:
           configurationFile: .github/renovate-config.js
           token: ${{ secrets.RENOVATE_TOKEN }}
-        env:
-          LOG_LEVEL: debug
+        # env:
+        #   LOG_LEVEL: debug
