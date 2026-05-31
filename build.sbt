@@ -164,7 +164,7 @@ lazy val delayedqueueJVM = project
     name := "delayedqueue-scala",
     libraryDependencies ++= Seq(
       "org.funfix" % "delayedqueue-jvm" % version.value,
-      "org.typelevel" %% "cats-effect" % "3.7.0",
+      "org.typelevel" %% "cats-effect" % "3.7-4972921",
       // Testing
       "org.scalameta" %% "munit" % "1.3.0" % Test,
       "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
