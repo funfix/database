@@ -39,7 +39,7 @@ module.exports = {
     {
       description: "Wait one week before proposing dependency updates",
       matchManagers: ["github-actions", "gradle", "gradle-wrapper", "sbt"],
-      minimumReleaseAge: "1 days",
+      minimumReleaseAge: "7 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
     },
   ],
