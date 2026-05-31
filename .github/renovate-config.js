@@ -1,6 +1,8 @@
 module.exports = {
   platform: 'github',
-  repositories: [process.env.GITHUB_REPOSITORY],
+  repositories: ['funfix/database'],
+  gitAuthor: 'Renovate Bot <renovate@funfix.org>',
+  branchPrefix: 'renovate/',
   onboarding: false,
   requireConfig: 'optional',
 
