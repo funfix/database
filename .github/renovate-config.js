@@ -6,7 +6,7 @@ module.exports = {
   onboarding: false,
   requireConfig: "optional",
 
-  extends: ["config:recommended"],
+  extends: [":dependencyDashboard"],
 
   enabledManagers: ["github-actions", "gradle", "gradle-wrapper", "sbt"],
 
@@ -32,6 +32,7 @@ module.exports = {
       description: "Wait one week before proposing dependency updates",
       matchManagers: ["github-actions", "gradle", "gradle-wrapper", "sbt"],
       minimumReleaseAge: "1 days",
+      minimumReleaseAgeBehaviour: "timestamp-optional",
     },
   ],
 };
