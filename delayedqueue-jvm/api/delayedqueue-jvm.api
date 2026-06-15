@@ -159,7 +159,6 @@ public abstract interface class org/funfix/delayedqueue/jvm/DelayedQueue {
 
 public final class org/funfix/delayedqueue/jvm/DelayedQueueInMemory : org/funfix/delayedqueue/jvm/DelayedQueue {
 	public static final field Companion Lorg/funfix/delayedqueue/jvm/DelayedQueueInMemory$Companion;
-	public synthetic fun <init> (Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;Ljava/lang/String;Ljava/time/Clock;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun containsMessage (Ljava/lang/String;)Z
 	public static final fun create ()Lorg/funfix/delayedqueue/jvm/DelayedQueueInMemory;
 	public static final fun create (Lorg/funfix/delayedqueue/jvm/DelayedQueueTimeConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueInMemory;
@@ -188,7 +187,6 @@ public final class org/funfix/delayedqueue/jvm/DelayedQueueInMemory$Companion {
 
 public final class org/funfix/delayedqueue/jvm/DelayedQueueJDBC : java/lang/AutoCloseable, org/funfix/delayedqueue/jvm/DelayedQueue {
 	public static final field Companion Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC$Companion;
-	public synthetic fun <init> (Lorg/funfix/delayedqueue/jvm/internals/jdbc/Database;Lorg/funfix/delayedqueue/jvm/internals/jdbc/SQLVendorAdapter;Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;Ljava/time/Clock;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun close ()V
 	public fun containsMessage (Ljava/lang/String;)Z
 	public static final fun create (Lorg/funfix/delayedqueue/jvm/MessageSerializer;Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBCConfig;)Lorg/funfix/delayedqueue/jvm/DelayedQueueJDBC;
