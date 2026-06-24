@@ -166,7 +166,7 @@ lazy val delayedqueueJVM = project
       "org.funfix" % "delayedqueue-jvm" % version.value,
       "org.typelevel" %% "cats-effect" % "3.7.0",
       // Testing
-      "org.scalameta" %% "munit" % "1.3.1" % Test,
+      "org.scalameta" %% "munit" % "1.3.2" % Test,
       "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
       "org.typelevel" %% "cats-effect-testkit" % "3.7.0" % Test,
       "org.scalacheck" %% "scalacheck" % "1.19.0" % Test,
@@ -174,7 +174,7 @@ lazy val delayedqueueJVM = project
       // JDBC drivers for testing
       "com.h2database" % "h2" % "2.4.240" % Test,
       "org.hsqldb" % "hsqldb" % "2.7.4" % Test,
-      "org.xerial" % "sqlite-jdbc" % "3.53.1.0" % Test
+      "org.xerial" % "sqlite-jdbc" % "3.53.2.0" % Test
     )
   )
 
