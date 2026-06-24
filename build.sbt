@@ -4,7 +4,7 @@ import sbt.ThisBuild
 import scala.sys.process.Process
 import xerial.sbt.Sonatype.sonatypeCentralHost
 
-val scala3Version = "3.3.7"
+val scala3Version = "3.3.8"
 val scala2Version = "2.13.18"
 
 val publishLocalGradleDependencies =
@@ -166,7 +166,7 @@ lazy val delayedqueueJVM = project
       "org.funfix" % "delayedqueue-jvm" % version.value,
       "org.typelevel" %% "cats-effect" % "3.7.0",
       // Testing
-      "org.scalameta" %% "munit" % "1.3.0" % Test,
+      "org.scalameta" %% "munit" % "1.3.1" % Test,
       "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
       "org.typelevel" %% "cats-effect-testkit" % "3.7.0" % Test,
       "org.scalacheck" %% "scalacheck" % "1.19.0" % Test,
