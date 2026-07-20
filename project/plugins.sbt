@@ -1,5 +1,5 @@
 addSbtPlugin("com.github.sbt" % "sbt-pgp" % "2.3.1")
-addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.6.1")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.6.2")
 addSbtPlugin("org.typelevel" % "sbt-tpolecat" % "0.5.7")
 addSbtPlugin("org.wartremover" % "sbt-wartremover" % "3.6.1")
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.12.2")
