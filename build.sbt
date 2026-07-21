@@ -166,7 +166,7 @@ lazy val delayedqueueJVM = project
       "org.funfix" % "delayedqueue-jvm" % version.value,
       "org.typelevel" %% "cats-effect" % "3.7.0",
       // Testing
-      "org.scalameta" %% "munit" % "1.3.3" % Test,
+      "org.scalameta" %% "munit" % "1.3.4" % Test,
       "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
       "org.typelevel" %% "cats-effect-testkit" % "3.7.0" % Test,
       "org.scalacheck" %% "scalacheck" % "1.19.0" % Test,
