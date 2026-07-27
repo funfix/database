@@ -1,8 +1,8 @@
 [versions]
 binary-compatibility-validator = "0.18.1"
 dokka = "2.2.0"
-kotlin = "2.4.0"
-kover = "0.9.8"
+kotlin = "2.4.10"
+kover = "0.9.9"
 publish-plugin = "0.37.0"
 versions-plugin = "0.54.0"
 ktfmt-plugin = "0.26.0"
