@@ -2,7 +2,6 @@ import java.io.FileInputStream
 import java.util.Properties
 import sbt.ThisBuild
 import scala.sys.process.Process
-import xerial.sbt.Sonatype.sonatypeCentralHost
 
 val scala3Version = "3.3.8"
 val scala2Version = "2.13.18"
@@ -18,8 +17,12 @@ inThisBuild(
     organization := "org.funfix",
     scalaVersion := scala3Version,
     // Configure for Sonatype Central Portal
-    sonatypeCredentialHost := sonatypeCentralHost,
     usePgpKeyHex(sys.env.get("PGP_KEY_ID").getOrElse("")),
+    publishTo := {
+      val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
+      if (version.value.endsWith("-SNAPSHOT")) Some("central-snapshots" at centralSnapshots)
+      else localStaging.value
+    },
     // ---
     // Settings for dealing with the local Gradle-assembled artifacts
     // Also see: publishLocalGradleDependencies
@@ -103,13 +106,6 @@ val sharedSettings = Seq(
   pomIncludeRepository := { _ => false },
   publishMavenStyle := true,
 
-  // new setting for the Central Portal
-  publishTo := {
-    val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
-    if (version.value.endsWith("-SNAPSHOT")) Some("central-snapshots".at(centralSnapshots))
-    else sonatypePublishToBundle.value
-  },
-
   // ScalaDoc settings
   autoAPIMappings := true,
   scalacOptions ++= Seq(
@@ -187,6 +183,10 @@ addCommandAlias(
   ";publishLocalGradleDependencies; +Test/compile; +publishLocal"
 )
 addCommandAlias(
+  "ci-snapshot",
+  ";publishLocalGradleDependencies; +Test/compile; +publishSigned"
+)
+addCommandAlias(
   "ci-publish",
-  ";publishLocalGradleDependencies; +Test/compile; +publishSigned; sonatypeBundleRelease"
+  ";publishLocalGradleDependencies; +Test/compile; +publishSigned; sonaRelease"
 )

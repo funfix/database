@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+: "${PUBLISH_STABLE_VERSION:?PUBLISH_STABLE_VERSION is required}"
+: "${RELEASE_REF:?RELEASE_REF is required}"
+
+project_version=
+while IFS='=' read -r key value; do
+  if [[ "$key" == "project.version" ]]; then
+    project_version=$value
+    break
+  fi
+done < gradle.properties
+
+if [[ -z "$project_version" ]]; then
+  echo "project.version is missing from gradle.properties" >&2
+  exit 1
+fi
+
+if [[ "$project_version" == *-SNAPSHOT ]]; then
+  echo "project.version must contain the base version without -SNAPSHOT" >&2
+  exit 1
+fi
+
+: "${GITHUB_TOKEN:?GITHUB_TOKEN is required}"
+: "${ORG_GRADLE_PROJECT_mavenCentralUsername:?Maven Central username is required}"
+: "${ORG_GRADLE_PROJECT_mavenCentralPassword:?Maven Central password is required}"
+: "${ORG_GRADLE_PROJECT_signingInMemoryKeyId:?Gradle signing key ID is required}"
+: "${ORG_GRADLE_PROJECT_signingInMemoryKeyPassword:?Gradle signing key password is required}"
+: "${ORG_GRADLE_PROJECT_signingInMemoryKey:?Gradle signing key is required}"
+: "${PGP_KEY_ID:?PGP_KEY_ID is required for signing}"
+: "${PGP_PASSPHRASE:?PGP_PASSPHRASE is required for signing}"
+: "${PGP_SECRET:?PGP_SECRET is required for signing}"
+: "${SONATYPE_USERNAME:?SONATYPE_USERNAME is required for publishing}"
+: "${SONATYPE_PASSWORD:?SONATYPE_PASSWORD is required for publishing}"
+
+case "$PUBLISH_STABLE_VERSION" in
+  true | 1 | yes)
+    stable=true
+    ;;
+  false | 0 | no)
+    stable=false
+    ;;
+  *)
+    echo "PUBLISH_STABLE_VERSION must be true, 1, yes, false, 0, or no" >&2
+    exit 1
+    ;;
+esac
+
+if [[ "$stable" == true ]]; then
+  expected_ref="refs/tags/v${project_version}"
+  if [[ "$RELEASE_REF" != "$expected_ref" ]]; then
+    echo "Stable releases require RELEASE_REF=$expected_ref" >&2
+    exit 1
+  fi
+
+  git fetch --depth=100 origin +refs/tags/*:refs/tags/*
+  if ! git show-ref --verify --quiet "refs/tags/v${project_version}"; then
+    echo "Missing tag refs/tags/v${project_version}" >&2
+    exit 1
+  fi
+  if [[ "$(git rev-parse "refs/tags/v${project_version}^{commit}")" != "$(git rev-parse HEAD^{commit})" ]]; then
+    echo "Tag refs/tags/v${project_version} must point to HEAD" >&2
+    exit 1
+  fi
+
+  effective_version=$project_version
+else
+  effective_version="${project_version}-SNAPSHOT"
+fi
+
+printf 'Effective version: %s\n' "$effective_version"
+printf 'Effective ref: %s\n' "$RELEASE_REF"
+
+./gradlew check --no-daemon
+BUILD_RELEASE=false ./sbt ci-test
+
+printf '%s' "$PGP_SECRET" | base64 --decode | gpg --batch --yes --import
+
+if [[ "$stable" == true ]]; then
+  export BUILD_RELEASE=true
+  ./gradlew -PbuildRelease=true publishAndReleaseToMavenCentral --no-daemon
+else
+  export BUILD_RELEASE=false
+  ./gradlew publishToMavenCentral --no-daemon
+fi
+
+if [[ "$stable" == true ]]; then
+  ./sbt ci-publish
+else
+  ./sbt ci-snapshot
+fi

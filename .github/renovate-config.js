@@ -1,7 +1,6 @@
 module.exports = {
   platform: "github",
   repositories: ["funfix/database"],
-  gitAuthor: "Renovate Bot <renovate@funfix.org>",
   branchPrefix: "renovate/",
   onboarding: false,
   requireConfig: "optional",
@@ -30,6 +29,25 @@ module.exports = {
       description: "Only use stable dotted numeric JVM dependency versions",
       matchManagers: ["gradle", "gradle-wrapper", "sbt"],
       allowedVersions: "/^\\d+(?:\\.\\d+)+$/",
+    },
+    {
+      description: "Keep sbt on the 1.x line",
+      matchManagers: ["sbt"],
+      matchPackageNames: ["org.scala-sbt:sbt"],
+      allowedVersions: "/^1\\.\\d+\\.\\d+$/",
+    },
+    {
+      description: "Keep Scala 2 on the 2.13.x line",
+      matchManagers: ["sbt"],
+      matchPackageNames: ["org.scala-lang:scala-library"],
+      allowedVersions: "/^2\\.13\\.\\d+$/",
+    },
+    {
+      description: "Ignore derived Scala binary versions",
+      matchManagers: ["sbt"],
+      matchPackageNames: ["org.scala-lang:scala-library"],
+      matchCurrentValue: "/^\\d+\\.\\d+$/",
+      enabled: false,
     },
     {
       description: "Keep Scala on the 3.3.x line",

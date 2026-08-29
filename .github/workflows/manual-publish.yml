@@ -1,0 +1,66 @@
+name: manual-publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref_to_publish:
+        description: "Git ref. Stable releases require refs/tags/vX.Y.Z"
+        required: true
+        type: string
+        default: refs/heads/main
+      stable_version:
+        description: "Stable release"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manual-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to Maven Central
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_HOST: unix:///var/run/docker.sock
+      TESTCONTAINERS_HOST_OVERRIDE: localhost
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 100
+          ref: ${{ inputs.ref_to_publish }}
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - uses: gradle/actions/setup-gradle@v6
+      - uses: sbt/setup-sbt@v1
+
+      - name: Docker Info
+        run: docker info
+
+      - name: Publish
+        run: bash .github/scripts/release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.GRADLE_SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GRADLE_SIGNING_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GRADLE_SIGNING_KEY }}
+          PGP_KEY_ID: ${{ secrets.SBT_PGP_KEY_ID }}
+          PGP_PASSPHRASE: ${{ secrets.SBT_PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.SBT_PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          PUBLISH_STABLE_VERSION: ${{ inputs.stable_version }}
+          RELEASE_REF: ${{ inputs.ref_to_publish }}
