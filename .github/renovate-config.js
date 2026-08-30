@@ -7,8 +7,8 @@ module.exports = {
   recreateWhen: "always",
   prHourlyLimit: 0,
   separateMajorMinor: false,
-
-  extends: [":dependencyDashboard"],
+  dependencyDashboard: false,
+  gitIgnoredAuthors: ["github-actions[bot]@users.noreply.github.com"],
 
   enabledManagers: ["github-actions", "gradle", "gradle-wrapper", "sbt"],
 
@@ -33,7 +33,7 @@ module.exports = {
     {
       description: "Keep sbt on the 1.x line",
       matchManagers: ["sbt"],
-      matchPackageNames: ["org.scala-sbt:sbt"],
+      matchPackageNames: ["sbt/sbt"],
       allowedVersions: "/^1\\.\\d+\\.\\d+$/",
     },
     {

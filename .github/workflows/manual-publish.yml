@@ -51,7 +51,6 @@ jobs:
       - name: Publish
         run: bash .github/scripts/release
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.GRADLE_SIGNING_KEY_ID }}

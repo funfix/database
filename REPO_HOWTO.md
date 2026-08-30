@@ -32,7 +32,6 @@ enable `stable_version`.
 
 The manual publication workflow uses these existing repository secrets:
 
-- `GH_TOKEN`
 - `MAVEN_USERNAME`
 - `MAVEN_PASSWORD`
 - `GRADLE_SIGNING_KEY_ID`

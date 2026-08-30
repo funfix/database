@@ -26,7 +26,6 @@ if [[ "$project_version" == *-SNAPSHOT ]]; then
   exit 1
 fi
 
-: "${GITHUB_TOKEN:?GITHUB_TOKEN is required}"
 : "${ORG_GRADLE_PROJECT_mavenCentralUsername:?Maven Central username is required}"
 : "${ORG_GRADLE_PROJECT_mavenCentralPassword:?Maven Central password is required}"
 : "${ORG_GRADLE_PROJECT_signingInMemoryKeyId:?Gradle signing key ID is required}"
