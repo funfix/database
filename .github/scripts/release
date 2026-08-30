@@ -78,7 +78,7 @@ printf 'Effective ref: %s\n' "$RELEASE_REF"
 ./gradlew check --no-daemon
 BUILD_RELEASE=false ./sbt ci-test
 
-printf '%s' "$PGP_SECRET" | base64 --decode | gpg --batch --yes --import
+printf '%s' "$PGP_SECRET" | gpg --batch --yes --import
 
 if [[ "$stable" == true ]]; then
   export BUILD_RELEASE=true

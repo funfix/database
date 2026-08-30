@@ -41,7 +41,7 @@ The manual publication workflow uses these existing repository secrets:
 - `SBT_PGP_PASSPHRASE`
 - `SBT_PGP_SECRET`
 
-`SBT_PGP_SECRET` is the base64-encoded private PGP key. `MAVEN_USERNAME` and
+`SBT_PGP_SECRET` is the ASCII-armored private PGP key. `MAVEN_USERNAME` and
 `MAVEN_PASSWORD` provide both Gradle Maven Central and sbt Sonatype
 credentials.
 
