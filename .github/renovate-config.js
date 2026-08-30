@@ -2,13 +2,15 @@ module.exports = {
   platform: "github",
   repositories: ["funfix/database"],
   branchPrefix: "renovate/",
+  gitAuthor: "Renovate Bot <renovate@funfix.org>",
   onboarding: false,
   requireConfig: "optional",
   recreateWhen: "always",
   prHourlyLimit: 0,
   separateMajorMinor: false,
-  dependencyDashboard: false,
   gitIgnoredAuthors: ["github-actions[bot]@users.noreply.github.com"],
+
+  extends: [":dependencyDashboard"],
 
   enabledManagers: ["github-actions", "gradle", "gradle-wrapper", "sbt"],
 
