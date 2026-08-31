@@ -56,7 +56,6 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.GRADLE_SIGNING_KEY_ID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GRADLE_SIGNING_KEY_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GRADLE_SIGNING_KEY }}
-          PGP_KEY_ID: ${{ secrets.SBT_PGP_KEY_ID }}
           PGP_PASSPHRASE: ${{ secrets.SBT_PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.SBT_PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.MAVEN_USERNAME }}

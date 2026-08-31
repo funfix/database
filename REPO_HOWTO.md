@@ -37,7 +37,6 @@ The manual publication workflow uses these existing repository secrets:
 - `GRADLE_SIGNING_KEY_ID`
 - `GRADLE_SIGNING_KEY_PASSWORD`
 - `GRADLE_SIGNING_KEY`
-- `SBT_PGP_KEY_ID`
 - `SBT_PGP_PASSPHRASE`
 - `SBT_PGP_SECRET`
 

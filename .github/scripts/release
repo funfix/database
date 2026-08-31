@@ -31,7 +31,6 @@ fi
 : "${ORG_GRADLE_PROJECT_signingInMemoryKeyId:?Gradle signing key ID is required}"
 : "${ORG_GRADLE_PROJECT_signingInMemoryKeyPassword:?Gradle signing key password is required}"
 : "${ORG_GRADLE_PROJECT_signingInMemoryKey:?Gradle signing key is required}"
-: "${PGP_KEY_ID:?PGP_KEY_ID is required for signing}"
 : "${PGP_PASSPHRASE:?PGP_PASSPHRASE is required for signing}"
 : "${PGP_SECRET:?PGP_SECRET is required for signing}"
 : "${SONATYPE_USERNAME:?SONATYPE_USERNAME is required for publishing}"
@@ -79,6 +78,16 @@ printf 'Effective ref: %s\n' "$RELEASE_REF"
 BUILD_RELEASE=false ./sbt ci-test
 
 printf '%s' "$PGP_SECRET" | gpg --batch --yes --import
+
+PGP_KEY_ID=$(
+  gpg --batch --with-colons --list-secret-keys --fingerprint |
+    awk -F: '$1 == "sec" { secret_key = 1; next } secret_key && $1 == "fpr" { print $10; exit }'
+)
+if [[ -z "$PGP_KEY_ID" ]]; then
+  echo "The imported PGP secret does not contain a signing key" >&2
+  exit 1
+fi
+export PGP_KEY_ID
 
 if [[ "$stable" == true ]]; then
   export BUILD_RELEASE=true
