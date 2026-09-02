@@ -31,6 +31,7 @@ fi
 : "${ORG_GRADLE_PROJECT_signingInMemoryKeyId:?Gradle signing key ID is required}"
 : "${ORG_GRADLE_PROJECT_signingInMemoryKeyPassword:?Gradle signing key password is required}"
 : "${ORG_GRADLE_PROJECT_signingInMemoryKey:?Gradle signing key is required}"
+: "${PGP_KEY_ID:?PGP_KEY_ID is required for signing}"
 : "${PGP_PASSPHRASE:?PGP_PASSPHRASE is required for signing}"
 : "${PGP_SECRET:?PGP_SECRET is required for signing}"
 : "${SONATYPE_USERNAME:?SONATYPE_USERNAME is required for publishing}"
@@ -79,12 +80,15 @@ BUILD_RELEASE=false ./sbt ci-test
 
 printf '%s' "$PGP_SECRET" | gpg --batch --yes --import
 
-PGP_KEY_ID=$(
-  gpg --batch --with-colons --list-secret-keys --fingerprint |
-    awk -F: '$1 == "sec" { secret_key = 1; next } secret_key && $1 == "fpr" { print $10; exit }'
-)
-if [[ -z "$PGP_KEY_ID" ]]; then
-  echo "The imported PGP secret does not contain a signing key" >&2
+if [[ "$ORG_GRADLE_PROJECT_signingInMemoryKey" == *"-----BEGIN PGP PRIVATE KEY BLOCK-----"* ]]; then
+  printf '%s' "$ORG_GRADLE_PROJECT_signingInMemoryKey" | gpg --batch --yes --import
+else
+  printf '%s' "$ORG_GRADLE_PROJECT_signingInMemoryKey" | base64 --decode | gpg --batch --yes --import
+fi
+
+PGP_KEY_ID=${PGP_KEY_ID#0x}
+if ! gpg --batch --list-secret-keys "$PGP_KEY_ID" >/dev/null 2>&1; then
+  echo "The Gradle signing key does not contain the configured sbt PGP key ID" >&2
   exit 1
 fi
 export PGP_KEY_ID

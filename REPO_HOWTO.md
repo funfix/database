@@ -37,12 +37,14 @@ The manual publication workflow uses these existing repository secrets:
 - `GRADLE_SIGNING_KEY_ID`
 - `GRADLE_SIGNING_KEY_PASSWORD`
 - `GRADLE_SIGNING_KEY`
+- `SBT_PGP_KEY_ID`
 - `SBT_PGP_PASSPHRASE`
 - `SBT_PGP_SECRET`
 
-`SBT_PGP_SECRET` is the ASCII-armored private PGP key. `MAVEN_USERNAME` and
-`MAVEN_PASSWORD` provide both Gradle Maven Central and sbt Sonatype
-credentials.
+The workflow imports `SBT_PGP_SECRET` as the ASCII-armored public key and
+`GRADLE_SIGNING_KEY` as the private key used by both builds. `SBT_PGP_KEY_ID`
+selects that key for sbt. `MAVEN_USERNAME` and `MAVEN_PASSWORD` provide both
+Gradle Maven Central and sbt Sonatype credentials.
 
 ## Automation
 
