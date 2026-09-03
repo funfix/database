@@ -30,10 +30,10 @@ Built on Java 21+, making good use of virtual threads. Has Scala (2.13, 3.x) int
 
 - For Java: 
   - [Java Usage Guide](./docs/java-usage-guide.md)
-  - [Javadoc](https://javadoc.io/doc/org.funfix/delayedqueue-jvm/0.5.1/)
+  - [Javadoc](https://javadoc.io/doc/org.funfix/delayedqueue-jvm/0.5.2/)
 - For Scala: 
   - [Scala Usage Guide](./docs/scala-usage-guide.md)
-  - [Scaladoc](https://javadoc.io/doc/org.funfix/delayedqueue-scala_3/0.5.1/)
+  - [Scaladoc](https://javadoc.io/doc/org.funfix/delayedqueue-scala_3/0.5.2/)
 - [Internals](./docs/internals.md)
 
 ---
@@ -44,13 +44,13 @@ Maven:
 <dependency>
   <groupId>org.funfix</groupId>
   <artifactId>delayedqueue-jvm</artifactId>
-  <version>0.5.1</version>
+  <version>0.5.2</version>
 </dependency>
 <!-- Scala 3 integration-->
 <dependency>
   <groupId>org.funfix</groupId>
   <artifactId>delayedqueue-scala_3</artifactId>
-  <version>0.5.1</version>
+  <version>0.5.2</version>
 </dependency>
 ```
 
@@ -58,18 +58,18 @@ Gradle:
 ```kotlin
 dependencies {
     // Java or Kotlin
-    implementation("org.funfix:delayedqueue-jvm:0.5.1")
+    implementation("org.funfix:delayedqueue-jvm:0.5.2")
     // Scala 3 integration
-    implementation("org.funfix:delayedqueue-scala_3:0.5.1")
+    implementation("org.funfix:delayedqueue-scala_3:0.5.2")
 }
 ```
 
 sbt:
 ```scala
 // Base JVM library
-libraryDependencies += "org.funfix" %% "delayedqueue-jvm" % "0.5.1"
+libraryDependencies += "org.funfix" %% "delayedqueue-jvm" % "0.5.2"
 // Scala integration (2.13 or 3)
-libraryDependencies += "org.funfix" %% "delayedqueue-scala" % "0.5.1"
+libraryDependencies += "org.funfix" %% "delayedqueue-scala" % "0.5.2"
 ```
 
 You will need to add a supported JDBC driver:
