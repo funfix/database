@@ -18,12 +18,12 @@ vanniktech-publish-plugin = { module = "com.vanniktech:gradle-maven-publish-plug
 ktfmt-gradle-plugin = { module = "com.ncorti.ktfmt.gradle:com.ncorti.ktfmt.gradle.gradle.plugin", version.ref = "ktfmt-plugin" }
 
 # Libraries
-funfix-tasks-jvm = { module = "org.funfix:tasks-jvm", version = "0.4.1" }
+funfix-tasks-jvm = { module = "org.funfix:tasks-jvm", version = "0.5.0" }
 hikaricp = { module = "com.zaxxer:HikariCP", version = "7.1.0" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version = "1.6.3" }
 jdbc-hsqldb = { module = "org.hsqldb:hsqldb", version = "2.7.4" }
 jdbc-h2 = { module = "com.h2database:h2", version = "2.4.240" }
-jdbc-sqlite = { module = "org.xerial:sqlite-jdbc", version = "3.53.2.1" }
+jdbc-sqlite = { module = "org.xerial:sqlite-jdbc", version = "3.53.4.0" }
 jdbc-mssql = { module = "com.microsoft.sqlserver:mssql-jdbc", version = "13.4.0.jre11" }
 jdbc-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version = "3.5.10" }
 jdbc-mysql = { module = "com.mysql:mysql-connector-j", version = "26.7.0" }
