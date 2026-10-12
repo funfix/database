@@ -14,7 +14,7 @@ module.exports = {
 
   enabledManagers: ["github-actions", "gradle", "gradle-wrapper", "sbt"],
 
-  ignorePaths: ["**/.gradle/**"],
+  ignorePaths: ["**/.gradle/**", ".github/workflows/*.lock.yml"],
 
   packageRules: [
     {
@@ -31,6 +31,12 @@ module.exports = {
       description: "Only use stable dotted numeric JVM dependency versions",
       matchManagers: ["gradle", "gradle-wrapper", "sbt"],
       allowedVersions: "/^\\d+(?:\\.\\d+)+$/",
+    },
+    {
+      description: "Pin java-jdk to 21 (major upgrades are not allowed)",
+      matchManagers: ["github-actions"],
+      matchPackageNames: ["java-jdk"],
+      allowedVersions: "/^21(\\.\\d+)*$/",
     },
     {
       description: "Keep sbt on the 1.x line",
