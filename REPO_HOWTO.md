@@ -48,11 +48,11 @@ Gradle Maven Central and sbt Sonatype credentials.
 
 ## Automation
 
-Renovate and OpenCode use the existing organization-owned `Funfix` GitHub App.
+Renovate and the agent use the existing organization-owned `Funfix` GitHub App.
 Its installation includes `funfix/database`. Each workflow requests an
 installation token scoped to this repository. The repository Actions secrets
 are `AUTOMATION_APP_ID` and `AUTOMATION_APP_PRIVATE_KEY`, along with
-`OPENCODE_API_KEY` for OpenCode.
+`DEEPSEEK_API_KEY` for the agent.
 
 The app uses these permissions:
 
@@ -69,3 +69,26 @@ The app uses these permissions:
 
 `Contents: read and write` permits Git pushes. `Workflows: read and write` is
 needed when automation changes files under `.github/workflows`.
+
+## Agent workflow
+
+Pi uses DeepSeek's API and the Funfix credentials above. Add the repository
+Actions secret `DEEPSEEK_API_KEY`.
+
+Users with write access or higher can start an issue or PR conversation comment
+with `/agent`, followed by a request:
+
+```text
+/agent Please take care of this issue, but pin the JDK version to 21.
+/agent Please review this PR, especially cancellation and binary compatibility.
+```
+
+The agent can review contributor PRs, but cannot push to their forks. On fork PRs,
+use a conversation comment, not an inline comment.
+
+Edit `.github/workflows/agent.md`, then regenerate the lock file with
+[gh-aw v0.91.7](https://github.com/github/gh-aw/releases/tag/v0.91.7):
+
+```bash
+gh aw compile agent --strict --validate
+```
