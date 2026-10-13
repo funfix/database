@@ -33,6 +33,12 @@ module.exports = {
       allowedVersions: "/^\\d+(?:\\.\\d+)+$/",
     },
     {
+      description: "Pin java-jdk to 21 (major upgrades are not allowed)",
+      matchManagers: ["github-actions"],
+      matchPackageNames: ["java-jdk"],
+      allowedVersions: "/^21(\\.\\d+)*$/",
+    },
+    {
       description: "Keep sbt on the 1.x line",
       matchManagers: ["sbt"],
       matchPackageNames: ["sbt/sbt"],

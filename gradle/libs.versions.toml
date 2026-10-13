@@ -1,8 +1,8 @@
 [versions]
-binary-compatibility-validator = "0.18.1"
+binary-compatibility-validator = "0.18.2"
 dokka = "2.2.0"
-kotlin = "2.4.10"
-kover = "0.9.9"
+kotlin = "2.4.20"
+kover = "0.9.11"
 publish-plugin = "0.37.0"
 versions-plugin = "0.54.0"
 ktfmt-plugin = "0.27.0"
@@ -20,9 +20,9 @@ ktfmt-gradle-plugin = { module = "com.ncorti.ktfmt.gradle:com.ncorti.ktfmt.gradl
 # Libraries
 funfix-tasks-jvm = { module = "org.funfix:tasks-jvm", version = "0.5.0" }
 hikaricp = { module = "com.zaxxer:HikariCP", version = "7.1.0" }
-logback-classic = { module = "ch.qos.logback:logback-classic", version = "1.6.3" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version = "1.6.5" }
 jdbc-hsqldb = { module = "org.hsqldb:hsqldb", version = "2.7.4" }
-jdbc-h2 = { module = "com.h2database:h2", version = "2.4.240" }
+jdbc-h2 = { module = "com.h2database:h2", version = "2.5.252" }
 jdbc-sqlite = { module = "org.xerial:sqlite-jdbc", version = "3.53.4.0" }
 jdbc-mssql = { module = "com.microsoft.sqlserver:mssql-jdbc", version = "13.4.0.jre11" }
 jdbc-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version = "3.5.10" }
