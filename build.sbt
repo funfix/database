@@ -3,7 +3,7 @@ import java.util.Properties
 import sbt.ThisBuild
 import scala.sys.process.Process
 
-val scala3Version = "3.3.8"
+val scala3Version = "3.3.9"
 val scala2Version = "2.13.18"
 
 val publishLocalGradleDependencies =
